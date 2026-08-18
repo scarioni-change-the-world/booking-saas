@@ -26,8 +26,14 @@ test.describe('prospect flow', () => {
     await page.goto(`/t/${TENANT}`);
 
     await page.getByRole('textbox').first().fill('More clients');
-    await page.getByRole('radio', { name: 'Yes' }).check();
-    await page.getByRole('radio', { name: "I can't afford this right now" }).check();
+    // exact: true throughout. Playwright matches accessible names as
+    // case-insensitive substrings, so a bare name: 'No' also matches
+    // "I can't afford this right now" — "now" contains "no" — and the locator
+    // fails as ambiguous rather than clicking the wrong thing.
+    await page.getByRole('radio', { name: 'Yes', exact: true }).check();
+    await page
+      .getByRole('radio', { name: "I can't afford this right now", exact: true })
+      .check();
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await expect(page.getByText('not the right fit right now')).toBeVisible();
@@ -39,8 +45,8 @@ test.describe('prospect flow', () => {
     await page.goto(`/t/${TENANT}`);
 
     await page.getByRole('textbox').first().fill('More clients');
-    await page.getByRole('radio', { name: 'No' }).check();
-    await page.getByRole('radio', { name: 'Over 2.000 €' }).check();
+    await page.getByRole('radio', { name: 'No', exact: true }).check();
+    await page.getByRole('radio', { name: 'Over 2.000 €', exact: true }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
 
     // Only one event type is available to prospects, so the picker auto-skips.
