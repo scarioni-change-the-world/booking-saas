@@ -249,6 +249,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
       throw new CalendarUnavailableError(
         `Google Calendar ${init.method ?? 'GET'} ${path} failed (${response.status}): ${detail.slice(0, 300)}`,
         this.id,
+        response.status,
       );
     }
 
@@ -339,8 +340,13 @@ export class GoogleCalendarProvider implements CalendarProvider {
       if (!GoogleCalendarProvider.isConferencePending(current)) return null;
 
       await new Promise((resolve) => setTimeout(resolve, MEET_POLL_DELAY_MS));
+      // conferenceDataVersion=1 on the re-read too. Without it the response can
+      // come back without conferenceData at all, so the poll would only ever
+      // see hangoutLink — which is the field that is still empty at this point,
+      // and the whole reason for reading entryPoints[] instead.
       current = await this.call<GoogleEvent>(
-        `/calendars/${encodeURIComponent(this.connection.calendar_id)}/events/${encodeURIComponent(current.id)}`,
+        `/calendars/${encodeURIComponent(this.connection.calendar_id)}` +
+          `/events/${encodeURIComponent(current.id)}?conferenceDataVersion=1`,
       );
     }
 
@@ -391,10 +397,111 @@ export class GoogleCalendarProvider implements CalendarProvider {
       );
     } catch (error) {
       // An event already gone is the outcome we wanted. Anything else is real.
-      if (error instanceof CalendarUnavailableError && /\((?:404|410)\)/.test(error.message)) {
+      if (
+        error instanceof CalendarUnavailableError &&
+        (error.status === 404 || error.status === 410)
+      ) {
         return;
       }
       throw error;
+    }
+  }
+
+  /**
+   * Read the meeting link off an event that already exists.
+   *
+   * Backfills bookings written while the conference was still pending — their
+   * stored link is null even though the calendar event has one. Without this,
+   * the only remedy for an affected booking is asking the client to rebook.
+   */
+  async readMeetingUrl(eventId: string): Promise<string | null> {
+    if (!eventId) return null;
+
+    try {
+      const event = await this.call<GoogleEvent>(
+        `/calendars/${encodeURIComponent(this.connection.calendar_id)}` +
+          `/events/${encodeURIComponent(eventId)}?conferenceDataVersion=1`,
+      );
+      return GoogleCalendarProvider.meetUrl(event);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Create a throwaway event, report exactly what Google said, then delete it.
+   *
+   * Exists to separate two failures that look identical from the outside: a
+   * link read too early, and Google refusing to create the conference at all.
+   * The second shows up as createRequest.status.statusCode === 'failure', and
+   * no amount of polling will ever fix it — the tenant's Workspace policy is
+   * blocking Meet creation. Without a probe like this the two are
+   * indistinguishable, and the natural response to a missing link is to add
+   * more retries, which is precisely the wrong fix for the second case.
+   *
+   * Scheduled a week out and deleted in a finally block, so a failure part-way
+   * through does not leave debris on the tenant's calendar.
+   */
+  async diagnoseConference(): Promise<Record<string, unknown>> {
+    const calendar = encodeURIComponent(this.connection.calendar_id);
+    const start = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+    const end = new Date(start.getTime() + 15 * 60_000);
+    let eventId: string | null = null;
+
+    try {
+      const created = await this.call<GoogleEvent>(
+        `/calendars/${calendar}/events?conferenceDataVersion=1&sendUpdates=none`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            summary: '[diagnostic] safe to delete',
+            start: { dateTime: start.toISOString() },
+            end: { dateTime: end.toISOString() },
+            conferenceData: {
+              createRequest: {
+                requestId: `diag-${Date.now()}`,
+                conferenceSolutionKey: { type: 'hangoutsMeet' },
+              },
+            },
+          }),
+        },
+      );
+      eventId = created.id;
+
+      const immediate = {
+        hangoutLink: created.hangoutLink ?? null,
+        status: created.conferenceData?.createRequest?.status?.statusCode ?? null,
+        entryPoints: (created.conferenceData?.entryPoints ?? []).map((e) => e.entryPointType),
+      };
+
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const after = await this.call<GoogleEvent>(
+        `/calendars/${calendar}/events/${encodeURIComponent(eventId)}?conferenceDataVersion=1`,
+      );
+
+      return {
+        ok: true,
+        calendarId: this.connection.calendar_id,
+        immediate,
+        afterRetry: {
+          hangoutLink: after.hangoutLink ?? null,
+          status: after.conferenceData?.createRequest?.status?.statusCode ?? null,
+          entryPoints: (after.conferenceData?.entryPoints ?? []).map((e) => e.entryPointType),
+          resolvedUrl: GoogleCalendarProvider.meetUrl(after),
+        },
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: (error as Error).message,
+        status: (error as CalendarUnavailableError).status ?? null,
+      };
+    } finally {
+      if (eventId) {
+        await this.deleteEvent(eventId).catch(() => {
+          console.error(`[google] diagnostic event ${eventId} could not be removed`);
+        });
+      }
     }
   }
 

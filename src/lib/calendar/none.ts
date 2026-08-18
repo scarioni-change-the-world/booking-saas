@@ -35,6 +35,10 @@ export class NoCalendarProvider implements CalendarProvider {
     // Nothing to delete.
   }
 
+  async readMeetingUrl(_eventId: string): Promise<string | null> {
+    return null;
+  }
+
   async healthCheck(): Promise<CalendarHealth> {
     return { connected: false, accountEmail: null, checkedAt: new Date().toISOString() };
   }

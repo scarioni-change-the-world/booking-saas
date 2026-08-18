@@ -64,6 +64,17 @@ export interface CalendarProvider {
   updateEvent(eventId: string, input: CalendarEventInput): Promise<CalendarEvent>;
   deleteEvent(eventId: string): Promise<void>;
   healthCheck(): Promise<CalendarHealth>;
+
+  /**
+   * Read the meeting link off an event that already exists.
+   *
+   * The repair path. A conference link is provisioned asynchronously, so a
+   * booking can be written with a null link that the calendar event does in
+   * fact have moments later. Without this there is no way to backfill those
+   * rows short of asking the tenant to rebook, and the client's confirmation
+   * has already gone out without the link.
+   */
+  readMeetingUrl(eventId: string): Promise<string | null>;
 }
 
 /**
@@ -78,6 +89,14 @@ export class CalendarUnavailableError extends Error {
   constructor(
     message: string,
     readonly providerId: string,
+    /**
+     * HTTP status, when the failure came from an API call.
+     *
+     * Carried explicitly so callers can branch on it. Reading a status back out
+     * of the message text works until someone rewords the message, or until a
+     * provider's own error body happens to contain a parenthesised number.
+     */
+    readonly status?: number,
   ) {
     super(message);
     this.name = 'CalendarUnavailableError';
