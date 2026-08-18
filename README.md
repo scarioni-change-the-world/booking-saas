@@ -71,9 +71,15 @@ them.
 npm install
 cp .env.example .env.local        # Supabase URL + service role key, and APP_SECRET
 openssl rand -base64 32           # -> APP_SECRET (required; encrypts stored tokens)
-npm run test                      # 83 unit tests, no database or network required
-npm run dev
+npm run test                      # 86 unit tests, no database or network required
+npm run dev                       # Turbopack; first compile is seconds, not minutes
 ```
+
+If `npm run dev` feels pathologically slow — tens of seconds to compile a single
+API route — check whether the project sits under `~/Desktop` or `~/Documents`
+with iCloud's "Desktop & Documents Folders" sync switched on. Every read of
+`node_modules` then goes through the sync layer. Move the checkout somewhere
+unsynced, such as `~/dev/`.
 
 To exercise the flow end to end you need a database:
 
