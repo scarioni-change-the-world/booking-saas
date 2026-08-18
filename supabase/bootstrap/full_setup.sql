@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0006 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0007 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -554,6 +554,49 @@ create policy calendar_connections_read on calendar_connections
 -- writes, so there is deliberately no insert/update/delete policy here.
 
 -- ==========================================================================
+-- supabase/migrations/0007_service_role_grants.sql
+-- ==========================================================================
+
+-- Table privileges for service_role.
+--
+-- Supabase's "Automatically expose new tables" setting is what normally grants
+-- table privileges to the Data API roles. Disabling it — the right call, since
+-- it stops anon being granted access to every new table by default — also
+-- withholds them from `service_role`, which is the role every server-side
+-- request in this app runs as.
+--
+-- The distinction that makes this easy to get wrong: service_role carries
+-- BYPASSRLS, so it ignores every policy in 0005. It does NOT bypass GRANTs.
+-- Row-level security and table privileges are independent checks, and a role
+-- needs to pass both. Without this migration the whole app fails with
+-- "permission denied for table tenants" while the RLS model is perfectly fine.
+--
+-- Granting explicitly here is better than relying on the dashboard toggle
+-- anyway: the privileges live in version control next to the policies they
+-- accompany, rather than in a setting someone can flip without a trace.
+
+grant usage on schema public to service_role;
+
+grant select, insert, update, delete on all tables in schema public to service_role;
+
+-- Future tables. Without this, migration 0008 would reintroduce the same
+-- outage for whatever it creates.
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to service_role;
+
+-- Deliberately NOT granted here:
+--
+--   anon           nothing, on any table. The public booking widget is served
+--                  by route handlers, never by direct PostgREST access.
+--
+--   authenticated  nothing yet. The dashboard talks to this app's own /api
+--                  routes, which authenticate the caller and then use
+--                  service_role. The policies in 0005 are defence in depth
+--                  until the day the browser queries Supabase directly — at
+--                  which point add the grants in their own migration, so that
+--                  opening the surface is a deliberate, reviewable act.
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -628,14 +671,19 @@ values
 commit;
 
 -- =============================================================================
--- Verification — should return: 12 tables, 19 policies, 0 anon policies,
--- 1 tenant, 2 event types, 3 questions, 5 availability rules.
+-- Verification — expect: 12 tables, 12 rls enabled, 19 policies, 0 anon
+-- policies, 12 tables granted to service_role, 1 tenant, 2 event types,
+-- 3 questions, 5 availability rules.
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
 union all select 'rls enabled',      count(*)::text from pg_tables t join pg_class c on c.relname = t.tablename
                                      where t.schemaname = 'public' and c.relrowsecurity
 union all select 'policies',         count(*)::text from pg_policies where schemaname = 'public'
 union all select 'policies for anon', count(*)::text from pg_policies where schemaname = 'public' and 'anon' = any(roles)
+union all select 'service_role tables', count(distinct table_name)::text from information_schema.role_table_grants
+                                     where table_schema = 'public' and grantee = 'service_role'
+union all select 'anon tables',      count(distinct table_name)::text from information_schema.role_table_grants
+                                     where table_schema = 'public' and grantee = 'anon'
 union all select 'tenants',          count(*)::text from tenants
 union all select 'event types',      count(*)::text from event_types
 union all select 'questions',        count(*)::text from qualification_questions

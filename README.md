@@ -117,7 +117,7 @@ src/
 ├── components/
 └── middleware.ts             # per-tenant frame-ancestors (§7.2)
 
-supabase/migrations/          # 0001 tenancy … 0005 RLS
+supabase/migrations/          # 0001 tenancy … 0005 RLS, 0007 grants
 tests/                        # Vitest — pure logic, no database
 e2e/                          # Playwright — needs a seeded database
 ```
@@ -125,6 +125,23 @@ e2e/                          # Playwright — needs a seeded database
 ---
 
 ## The two decisions worth reviewing
+
+### 0. Privileges and RLS are separate checks
+
+Worth knowing before anything else, because getting it wrong takes the whole app
+down with a message that points at the wrong thing.
+
+`service_role` carries `BYPASSRLS`, so none of the policies in `0005` apply to
+it. It does **not** bypass `GRANT`s. A role must pass both checks, and Supabase's
+"Automatically expose new tables" setting is what normally supplies the grants
+to the Data API roles — `service_role` included.
+
+Turn that setting off (which you should, so `anon` is not granted access to
+every new table by default) and the app dies with `permission denied for table
+tenants` while the RLS model is entirely correct. `0007_service_role_grants.sql`
+grants them explicitly instead, including default privileges for future tables.
+Keeping them in a migration beside the policies is better than depending on a
+dashboard toggle nobody can see the history of.
 
 ### 1. Isolation is enforced twice, because there are two surfaces
 
