@@ -334,8 +334,11 @@ export async function cancelBooking(
   if (error) throw error;
 
   if (booking.calendar_event_id) {
-    const provider = await providerForTenant(tenant.id);
     try {
+      // Inside the try: resolving the provider throws when the connection is
+      // broken, and a cancellation must never fail because of that. The client
+      // asked to cancel and the slot is already free.
+      const provider = await providerForTenant(tenant.id);
       await provider.deleteEvent(booking.calendar_event_id);
     } catch (cause) {
       // The booking is cancelled either way; the orphaned event is recorded so
@@ -397,8 +400,8 @@ export async function rescheduleBooking(
   const moved: BookingRow = { ...booking, starts_at: startsAt.toISO()!, ends_at: endsAt.toISO()! };
 
   if (booking.calendar_event_id) {
-    const provider = await providerForTenant(tenant.id);
     try {
+      const provider = await providerForTenant(tenant.id);
       await provider.updateEvent(booking.calendar_event_id, {
         summary: `${eventType.name} — ${booking.name}`,
         description: booking.notes ?? undefined,

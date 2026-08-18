@@ -13,6 +13,8 @@ export type BookingStatus = 'confirmed' | 'cancelled';
 export type SyncStatus = 'pending' | 'synced' | 'failed' | 'not_configured';
 export type QuestionKind = 'text' | 'yes_no' | 'single_choice';
 export type QualificationOutcome = 'qualified' | 'redirected';
+export type CalendarProviderId = 'google' | 'microsoft';
+export type CalendarConnectionStatus = 'active' | 'needs_reconnect' | 'revoked';
 
 export interface TenantBranding {
   logoUrl?: string;
@@ -128,6 +130,23 @@ export interface BookingRow {
   created_at: string;
 }
 
+export interface CalendarConnectionRow {
+  id: string;
+  tenant_id: string;
+  provider: CalendarProviderId;
+  account_email: string;
+  calendar_id: string;
+  refresh_token_encrypted: string;
+  access_token_encrypted: string | null;
+  access_token_expires_at: string | null;
+  granted_scopes: string[];
+  status: CalendarConnectionStatus;
+  last_checked_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Every table whose rows belong to exactly one tenant. */
 export interface TenantScopedTables {
   tenant_settings: TenantSettingsRow;
@@ -138,6 +157,7 @@ export interface TenantScopedTables {
   qualification_questions: QualificationQuestionRow;
   qualification_responses: QualificationResponseRow;
   bookings: BookingRow;
+  calendar_connections: CalendarConnectionRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

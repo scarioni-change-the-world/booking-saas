@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { AuthError } from './auth';
 import { BookingError } from './booking-service';
 import { CalendarUnavailableError } from './calendar';
 import { QualificationError } from './qualification';
@@ -40,6 +41,7 @@ export function isResponse(value: unknown): value is NextResponse {
  * provider errors.
  */
 export function handleError(error: unknown) {
+  if (error instanceof AuthError) return fail(error.message, error.status);
   if (error instanceof BookingError) return fail(error.message, error.status);
   if (error instanceof QualificationError) return fail(error.message, 400);
 

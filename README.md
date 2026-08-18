@@ -13,10 +13,10 @@ brief.
 
 ## Status
 
-**Milestone 1 of 3 — foundation and booking flow.** The tenancy model, the slot
-engine and the full prospect → booking → manage path are implemented and
-covered by tests. Google Calendar, email, Stripe, signup and the admin dashboard
-are not yet built; the interfaces they will plug into are.
+**Milestone 1 complete; Google Calendar landed.** The tenancy model, the slot
+engine, the full prospect → booking → manage path and the Google Calendar
+integration are implemented and covered by tests. Email, Stripe, signup and the
+admin dashboard UI are not yet built.
 
 | Area | State |
 |---|---|
@@ -27,9 +27,11 @@ are not yet built; the interfaces they will plug into are.
 | Qualification gate | Built — 11 tests, enforced server-side |
 | Prospect widget, existing-client widget | Built |
 | Booking write path, reschedule, cancel | Built |
-| Calendar provider interface | Built — only the `none` provider |
+| Calendar provider interface | Built |
+| Google Calendar (busy, events, Meet, health) | Built — 20 tests, unverified against the live API |
+| Google OAuth connect / disconnect | Built — routes only, no dashboard UI |
+| Encrypted token storage | Built — AES-256-GCM, 12 tests |
 | Email provider interface | Built — only the console provider |
-| Google Calendar | Not built (§6, milestone 2) |
 | Transactional email + templates | Not built (§7.5, milestone 2) |
 | Signup, onboarding, admin dashboard | Not built (§7.3, milestone 2) |
 | Stripe billing | Not built (§7.4, milestone 3) |
@@ -40,8 +42,10 @@ The reference implementation at `DoceMinutos/booking/` was not available when
 this was written — only the brief was. Three things the brief says to keep
 therefore need porting from the original rather than trusting what is here:
 
-1. **`lib/google.js`** (~300 lines). Not written at all. The interface it must
-   satisfy is `src/lib/calendar/provider.ts`.
+1. **`lib/google.js`** (~300 lines). `src/lib/calendar/google.ts` implements the
+   same surface from the brief's §6 landmines rather than from the original
+   code. Every §6 hazard is handled and tested, but against a mocked `fetch` —
+   see the caveat below.
 2. **The email templates.** The brief calls them clean and tested and says to
    keep them, making branding tenant-driven. Nothing here reproduces them.
 3. **`public/widget.html`'s UX.** `src/components/BookingFlow.tsx` implements
@@ -65,8 +69,9 @@ them.
 
 ```bash
 npm install
-cp .env.example .env.local        # fill in SUPABASE_URL and the service role key
-npm run test                      # 51 unit tests, no database required
+cp .env.example .env.local        # Supabase URL + service role key, and APP_SECRET
+openssl rand -base64 32           # -> APP_SECRET (required; encrypts stored tokens)
+npm run test                      # 83 unit tests, no database or network required
 npm run dev
 ```
 
@@ -99,7 +104,9 @@ src/
 │   │   ├── scope.ts          # TenantScope — structural tenant scoping
 │   │   ├── tenants.ts        # the only two unscoped lookups
 │   │   └── types.ts          # row types
-│   ├── calendar/             # provider interface (§7.6) + the `none` provider
+│   │   ├── crypto.ts             # AES-256-GCM for tokens, HMAC for OAuth state
+│   ├── auth.ts               # dashboard session + tenant-admin check
+├── calendar/                 # provider interface (§7.6), `none`, Google
 │   └── email/                # provider interface (§7.5) + console provider
 ├── app/
 │   ├── page.tsx              # public homepage, doubles as OAuth homepage (§6.5)
@@ -191,16 +198,99 @@ excluded from it, which is what frees the slot.
 
 ---
 
+## Google Calendar
+
+### The one thing that is not verified
+
+Every §6 hazard is handled and has a test, but those tests run against a mocked
+`fetch`. **No line of this has touched the live Google API.** The tests prove the
+code does what the brief says to do; they cannot prove Google behaves as the
+brief describes. Treat the first real connection as the actual test, and check
+in this order:
+
+1. Connect, then confirm a booking creates a real event with a working Meet
+   link. `bookings.sync_status` should read `synced`.
+2. Confirm the attendee received **no** email from Google (`sendUpdates=none`).
+3. Reschedule, and confirm the Meet link still works — this is what `PATCH`
+   rather than `PUT` protects.
+4. Leave it a week without touching it, then check health. This is where §6.3
+   bites: a refresh token issued while the OAuth app is in Testing mode dies
+   after ~7 days regardless of use.
+
+### Setting up the OAuth client
+
+Scopes are `calendar.events` and `calendar.freebusy` — both **Sensitive**, which
+requires verification but **not** the paid annual CASA assessment (§6.6). Do not
+"simplify" this to the broad `calendar` scope: it buys nothing this app uses and
+moves the whole grant into a higher scrutiny tier. Verify the tier in the Cloud
+Console scope picker, which is authoritative — third-party write-ups on this are
+frequently wrong.
+
+The consent-screen homepage must be **this app's `/` route**, not a customer's
+site (§6.5). Squarespace's default `robots.txt` blocks `GoogleOther`, so Google's
+branding reviewer could not read the page at all and reported "homepage does not
+explain the purpose of your app" — an error no amount of editing the copy could
+fix, because the copy was never being read. `src/app/page.tsx` is written for
+that reviewer: publicly reachable, no login, and explicit about what the app does
+with calendar data.
+
+**Start verification before you need it.** It takes days to weeks and blocks
+launch. A multi-tenant app needs External + Production publishing, which makes
+verification mandatory rather than optional (§9.5).
+
+And the trap in §6.3 that costs a day if you hit it cold: **publishing to
+Production does not extend an already-issued refresh token.** Every tenant
+connected during Testing must disconnect and reconnect once to get a durable
+grant. The `needs_reconnect` status exists to make that visible rather than
+mysterious.
+
+### What the integration does
+
+| Concern | Handling |
+|---|---|
+| HTTP client | Native `fetch`. **Never add `googleapis`** — 114 MB, 120-second cold starts (§6.1). `tests/dependencies.test.ts` fails CI if anyone does. |
+| Token refresh | Access token cached with its expiry and refreshed only when stale, with a 2-minute skew (§7.7). The reference implementation refreshed on every request; Google's quota is per OAuth client and shared across all tenants. |
+| Dead grants | `invalid_grant` sets `needs_reconnect` and stops retrying. A 5xx is transient and does not (§6.3). |
+| Meet links | Reads `conferenceData.entryPoints[]`, not just `hangoutLink`, and re-reads the event while the request is `pending` (§6.7). |
+| Client email | `sendUpdates=none` everywhere. This app owns all client communication (§2.7). |
+| Reschedule | `PATCH`, so the existing conference data survives. A `PUT` would break the client's video link. |
+| Health check | Makes a real one-minute `freeBusy` call. The reference implementation reported "Connected" whenever an email string existed in the database (§6.8). |
+| Unreadable calendar | `freeBusy` returns 200 with a per-calendar `errors` array; that throws rather than reading as "no busy times", which would offer every slot as free. |
+| Token storage | Encrypted at rest with AES-256-GCM under `APP_SECRET`. `service_role` can read every row, so a plaintext column would make a database dump a set of live mailbox grants. |
+| OAuth state | HMAC-signed and time-bounded, so nobody can hand an admin a start URL that attaches their grant to another tenant. |
+
+### A correction to milestone 1
+
+Milestone 1 resolved a broken connection to `NoCalendarProvider`. That was
+wrong, and writing these tests surfaced it: it meant a tenant whose grant had
+just died would silently go back to serving unchecked times — the exact failure
+§6.8 describes. `providerForTenant` now distinguishes the two cases. No
+connection row means the tenant deliberately books without a calendar. A row in
+`needs_reconnect` means they believe theirs is connected, so the booking path
+fails closed with a 503 and they are told to reconnect.
+
+### Endpoints
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `POST /api/admin/[slug]/calendar` | Bearer, tenant admin | Returns the Google consent URL. Returns rather than redirects, because a top-level navigation cannot carry a bearer token. |
+| `GET /api/admin/[slug]/calendar` | Bearer, tenant admin | Connection status with a **live** health check. |
+| `DELETE /api/admin/[slug]/calendar` | Bearer, tenant admin | Revokes at Google and deletes the local grant. A revoke failure does not block the local delete. |
+| `GET /api/auth/google/callback` | Signed `state` | Exchanges the code and stores the connection. |
+
+`src/lib/auth.ts` arrived with these — the dashboard UI does not exist yet, but
+these routes change what a whole tenant can book, so they are gated on
+owner/admin membership rather than left open until the UI lands.
+
+---
+
 ## Roadmap
 
-**Milestone 2 — integrations and the dashboard**
-- Google Calendar provider. Read §6.1–6.7 first: native `fetch` only, never the
-  `googleapis` package (114 MB, 120-second cold starts); read
-  `conferenceData.entryPoints[]` and not just `hangoutLink`; publish the OAuth
-  app to Production or refresh tokens expire every 7 days; stay on
-  `calendar.events` + `calendar.freebusy` to avoid the CASA assessment.
-  **Start the OAuth verification early — it takes days to weeks and blocks
-  launch** (§9.5).
+**Milestone 2 — the rest of the integrations and the dashboard**
+- ~~Google Calendar provider~~ — done, but unverified against the live API. See
+  the checklist above.
+- **Start OAuth verification now.** It is the only remaining item with a lead
+  time you cannot compress (§9.5).
 - Transactional email via Resend or Postmark, product-owned sending domain with
   the tenant on `Reply-To`, tenant-driven branding (§7.5). SPF/DKIM is the step
   that gets skipped and then causes "our emails go to spam" tickets.
