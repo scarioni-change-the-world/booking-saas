@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0007 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0008 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -597,6 +597,41 @@ alter default privileges in schema public
 --                  opening the surface is a deliberate, reviewable act.
 
 -- ==========================================================================
+-- supabase/migrations/0008_revoke_anon.sql
+-- ==========================================================================
+
+-- Close the anon grant on calendar_connections.
+--
+-- 0005 ends with `revoke all on all tables in schema public from anon`, which
+-- covers every table existing at that moment. 0006 then creates
+-- calendar_connections — after the revoke has already run. On a project where
+-- Supabase's "automatically expose new tables" was enabled, that table therefore
+-- received an anon grant that nothing took back.
+--
+-- It was not exploitable: calendar_connections has RLS enabled and forced with
+-- no policy for anon, so the grant passed but the policy check denied. That is
+-- one layer of defence on the table holding every tenant's encrypted Google
+-- refresh token, where the design calls for two.
+--
+-- The lasting fix is the default-privileges line: a revoke is a snapshot and
+-- goes stale the moment another migration adds a table, which is exactly how
+-- this arose.
+
+revoke all on all tables in schema public from anon;
+revoke all on all sequences in schema public from anon;
+revoke all on all functions in schema public from anon;
+
+alter default privileges in schema public revoke all on tables from anon;
+alter default privileges in schema public revoke all on sequences from anon;
+
+-- authenticated keeps its grants. Every table it can reach is gated by the
+-- membership policies in 0005, verified to isolate tenants from each other, so
+-- those policies now act as live enforcement rather than dormant defence. The
+-- app does not rely on this — the dashboard goes through its own /api routes —
+-- but leaving it working means a future browser-side query is not blocked by a
+-- missing grant that looks like a policy bug.
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -682,7 +717,7 @@ union all select 'policies',         count(*)::text from pg_policies where schem
 union all select 'policies for anon', count(*)::text from pg_policies where schemaname = 'public' and 'anon' = any(roles)
 union all select 'service_role tables', count(distinct table_name)::text from information_schema.role_table_grants
                                      where table_schema = 'public' and grantee = 'service_role'
-union all select 'anon tables',      count(distinct table_name)::text from information_schema.role_table_grants
+union all select 'anon tables (must be 0)', count(distinct table_name)::text from information_schema.role_table_grants
                                      where table_schema = 'public' and grantee = 'anon'
 union all select 'tenants',          count(*)::text from tenants
 union all select 'event types',      count(*)::text from event_types
