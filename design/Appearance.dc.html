@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #23211D; background: #F6F3ED; -webkit-font-smoothing: antialiased; }
+    a { color: #A65A3C; } a:hover { color: #7E4029; }
+    h1, h2, h3 { font-family: 'Newsreader', Georgia, serif; font-weight: 400; margin: 0; letter-spacing: -0.015em; }
+    .app { display: grid; grid-template-columns: 236px 1fr; min-height: 880px; }
+    .side { background: #F0EAE0; border-right: 1px solid #E2DCD0; padding: 26px 18px; display: flex; flex-direction: column; gap: 26px; }
+    .brand { display: flex; gap: 10px; align-items: center; padding-left: 3px; }
+    .wordmark { font-family: 'Newsreader', Georgia, serif; font-size: 22px; letter-spacing: -0.01em; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 8px; font-size: 13.5px; color: #55503F; text-decoration: none; }
+    .nav-item svg { flex: 0 0 auto; opacity: .7; }
+    .nav-item.on { background: #FDFBF7; color: #23211D; font-weight: 500; box-shadow: 0 1px 2px rgba(60,45,30,.05); }
+    .nav-item.on svg { opacity: 1; color: #A65A3C; }
+    .side-foot { margin-top: auto; font-size: 11.5px; color: #8F887C; border-top: 1px solid #E2DCD0; padding-top: 14px; line-height: 1.6; }
+    .main { padding: 34px 40px 44px; display: flex; flex-direction: column; gap: 26px; overflow: hidden; }
+    .eyebrow { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: #8F887C; margin-bottom: 7px; }
+    .card { background: #FDFBF7; border: 1px solid #E2DCD0; border-radius: 12px; padding: 22px 24px; }
+    .card-title { font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8F887C; margin-bottom: 16px; }
+    .btn { font: inherit; font-size: 13px; border: 1px solid #E2DCD0; background: #FDFBF7; color: #23211D; padding: 8px 15px; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: #A65A3C; border-color: #A65A3C; color: #FFF8F4; font-weight: 500; }
+    .pill { font-size: 11.5px; padding: 4px 10px; border-radius: 100px; }
+    .muted { color: #6B6459; }
+  </style>
+</helmet>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg><span class="wordmark">Cerca</span></div>
+    <nav class="nav">
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Overview</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9"/></svg>Screening</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Bookings</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.4"/><path d="M2.6 20a6.6 6.6 0 0 1 12.8 0M17 11.5a3 3 0 1 0-1.8-5.4M18 20a5.6 5.6 0 0 0-1.4-3.6"/></svg>Clients</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Availability</a>
+      <a class="nav-item on" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.4"/></svg>Settings</a>
+    </nav>
+    <div class="side-foot">Amelia Rivera · trial, 12 days left<br><a href="#">Choose a plan</a></div>
+  </aside>
+
+  <main class="main">
+    <div><div class="eyebrow">Appearance</div><h1 style="font-size:34px;">Your practice, not ours</h1>
+      <p style="font-size:14px; color:#6B6459; margin:9px 0 0; max-width:560px; line-height:1.65;">The booking page belongs to you. Cerca appears on it once, in small type at the bottom, and nowhere else.</p></div>
+
+    <div style="display:grid; grid-template-columns:1fr 372px; gap:22px; align-items:start;">
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="card"><div class="card-title">Your accent</div>
+          <div style="display:flex; gap:9px; margin-bottom:14px;">
+            <span style="width:32px; height:32px; border-radius:8px; background:#A65A3C; box-shadow:0 0 0 2px #FDFBF7, 0 0 0 3.5px #A65A3C;"></span>
+            <span style="width:32px; height:32px; border-radius:8px; background:#56645A;"></span>
+            <span style="width:32px; height:32px; border-radius:8px; background:#3B5876;"></span>
+            <span style="width:32px; height:32px; border-radius:8px; background:#6B4A6B;"></span>
+            <span style="width:32px; height:32px; border-radius:8px; background:#B07A1E;"></span>
+            <span style="width:32px; height:32px; border-radius:8px; background:#23211D;"></span>
+            <span style="width:32px; height:32px; border-radius:8px; border:1px dashed #C2B9A9; display:flex; align-items:center; justify-content:center; color:#8F887C; font-size:16px;">+</span>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:14px 16px; background:#F0EAE0; border-radius:10px;">
+            <span style="width:11px; height:11px; border-radius:3px; background:#2C6A63; margin-top:3px; flex:0 0 auto;"></span>
+            <p style="font-size:12.5px; color:#4A4438; margin:0; line-height:1.6;">Your accent colours buttons, links and headings. It never colours a status. <strong style="font-weight:500;">Confirmed stays teal for everyone</strong>, so a client can always tell a taken slot from a free one — whatever you choose.</p>
+          </div>
+        </div>
+
+        <div class="card"><div class="card-title">Type &amp; logo</div>
+          <div style="display:flex; gap:9px;">
+            <div style="border:1px solid #A65A3C; border-radius:9px; padding:10px 15px; font-family:'Newsreader', Georgia, serif; font-size:15px;">Serif</div>
+            <div style="border:1px solid #E2DCD0; border-radius:9px; padding:10px 15px; font-size:15px;">Sans</div></div>
+          <div style="display:flex; align-items:center; gap:13px; margin-top:18px;">
+            <div style="width:46px; height:46px; border-radius:10px; background:#F0EAE0; border:1px solid #E2DCD0; display:flex; align-items:center; justify-content:center; font-family:'Newsreader', Georgia, serif; font-size:19px; color:#7E4029;">AR</div>
+            <button class="btn">Upload your logo</button></div>
+        </div>
+
+        <div class="card"><div class="card-title">Put it on your site</div>
+          <div style="background:#23211D; border-radius:10px; padding:16px 18px; font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:12px; color:#E5DCCC; line-height:1.75;">&lt;iframe src=&quot;https://cerca.app/<span style="color:#DC9E7C;">amelia-rivera</span>&quot;<br>&nbsp;&nbsp;style=&quot;width:100%;border:0&quot;&gt;&lt;/iframe&gt;</div>
+          <button class="btn" style="margin-top:13px;">Copy</button>
+          <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin:22px 0 11px;">Sites allowed to show it</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:13.5px; padding:9px 12px; border:1px solid #E2DCD0; border-radius:8px;">
+            <span>ameliarivera.es</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7E3028" stroke-width="1.7"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+          <button class="btn" style="font-size:12.5px; padding:7px 12px; margin-top:8px;">Add a site</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:12px;">What they will see</div>
+        <div style="width:300px; border:1px solid #E2DCD0; border-radius:26px; background:#FDFBF7; padding:13px; box-shadow:0 6px 22px rgba(60,45,30,.07);">
+          <div style="border-radius:17px; overflow:hidden; background:#F6F3ED; padding:22px 18px 20px;">
+            <div style="width:34px; height:34px; border-radius:9px; background:#F0EAE0; border:1px solid #E2DCD0; display:flex; align-items:center; justify-content:center; font-family:'Newsreader', Georgia, serif; font-size:15px; color:#7E4029; margin-bottom:14px;">AR</div>
+            <h2 style="font-size:20px;">Amelia Rivera</h2>
+            <p style="font-size:13px; color:#6B6459; margin:6px 0 18px;">A few questions before we find a time.</p>
+            <div style="font-size:13.5px; font-weight:500; margin-bottom:9px;">What are you able to invest?</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div style="border:1.5px solid #A65A3C; background:#F4E6DE; border-radius:10px; padding:0 13px; font-size:13.5px; min-height:48px; display:flex; align-items:center;">Over 2.000 €</div>
+              <div style="border:1px solid #E2DCD0; border-radius:10px; padding:0 13px; font-size:13.5px; color:#4A4438; min-height:48px; display:flex; align-items:center;">500 – 2.000 €</div>
+              <div style="border:1px solid #E2DCD0; border-radius:10px; padding:0 13px; font-size:13.5px; color:#4A4438; min-height:48px; display:flex; align-items:center;">Not right now</div>
+            </div>
+            <div style="margin-top:18px; background:#A65A3C; color:#FFF8F4; font-size:14px; font-weight:500; padding:14px 0; border-radius:10px; text-align:center;">Continue</div>
+            <div style="text-align:center; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:5px; opacity:.5;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6B6459" stroke-width="2" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg><span style="font-size:10.5px; color:#6B6459;">Powered by Cerca</span></div>
+          </div>
+        </div>
+        <p style="font-size:12px; color:#8F887C; margin:14px 0 0; line-height:1.6; width:300px;">Two per cent Cerca, ninety-eight per cent you. That ratio is deliberate and it does not change on a higher plan.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #23211D; background: #F6F3ED; -webkit-font-smoothing: antialiased; }
+    a { color: #A65A3C; } a:hover { color: #7E4029; }
+    h1, h2, h3 { font-family: 'Newsreader', Georgia, serif; font-weight: 400; margin: 0; letter-spacing: -0.015em; }
+    .app { display: grid; grid-template-columns: 236px 1fr; min-height: 880px; }
+    .side { background: #F0EAE0; border-right: 1px solid #E2DCD0; padding: 26px 18px; display: flex; flex-direction: column; gap: 26px; }
+    .brand { display: flex; gap: 10px; align-items: center; padding-left: 3px; }
+    .wordmark { font-family: 'Newsreader', Georgia, serif; font-size: 22px; letter-spacing: -0.01em; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 8px; font-size: 13.5px; color: #55503F; text-decoration: none; }
+    .nav-item svg { flex: 0 0 auto; opacity: .7; }
+    .nav-item.on { background: #FDFBF7; color: #23211D; font-weight: 500; box-shadow: 0 1px 2px rgba(60,45,30,.05); }
+    .nav-item.on svg { opacity: 1; color: #A65A3C; }
+    .side-foot { margin-top: auto; font-size: 11.5px; color: #8F887C; border-top: 1px solid #E2DCD0; padding-top: 14px; line-height: 1.6; }
+    .main { padding: 34px 40px 44px; display: flex; flex-direction: column; gap: 26px; overflow: hidden; }
+    .eyebrow { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: #8F887C; margin-bottom: 7px; }
+    .card { background: #FDFBF7; border: 1px solid #E2DCD0; border-radius: 12px; padding: 22px 24px; }
+    .card-title { font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8F887C; margin-bottom: 16px; }
+    .btn { font: inherit; font-size: 13px; border: 1px solid #E2DCD0; background: #FDFBF7; color: #23211D; padding: 8px 15px; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: #A65A3C; border-color: #A65A3C; color: #FFF8F4; font-weight: 500; }
+    .pill { font-size: 11.5px; padding: 4px 10px; border-radius: 100px; }
+    .muted { color: #6B6459; }
+  </style>
+</helmet>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg><span class="wordmark">Cerca</span></div>
+    <nav class="nav">
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Overview</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9"/></svg>Screening</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Bookings</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.4"/><path d="M2.6 20a6.6 6.6 0 0 1 12.8 0M17 11.5a3 3 0 1 0-1.8-5.4M18 20a5.6 5.6 0 0 0-1.4-3.6"/></svg>Clients</a>
+      <a class="nav-item on" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Availability</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.4"/></svg>Settings</a>
+    </nav>
+    <div class="side-foot">Amelia Rivera · trial, 12 days left<br><a href="#">Choose a plan</a></div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+      <div><div class="eyebrow">Availability</div><h1 style="font-size:34px;">When you are free</h1></div>
+      <button class="btn">Add a closed day</button>
+    </div>
+    <div style="display:grid; grid-template-columns:316px 1fr; gap:22px; align-items:start;">
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="card"><div class="card-title">Weekly hours</div>
+          <div style="display:flex; flex-direction:column; gap:11px;"><div style="display:flex; justify-content:space-between; font-size:13.5px;"><span>Monday</span><span style="font-variant-numeric:tabular-nums; color:#4A4438;">09:00 – 17:00</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px;"><span>Tuesday</span><span style="font-variant-numeric:tabular-nums; color:#4A4438;">09:00 – 17:00</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px;"><span>Wednesday</span><span style="font-variant-numeric:tabular-nums; color:#4A4438;">09:00 – 17:00</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px;"><span>Thursday</span><span style="font-variant-numeric:tabular-nums; color:#4A4438;">09:00 – 17:00</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px;"><span>Friday</span><span style="font-variant-numeric:tabular-nums; color:#4A4438;">09:00 – 14:00</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px;"><span style="color:#ABA396;">Saturday</span><span style="color:#ABA396;">Closed</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px;"><span style="color:#ABA396;">Sunday</span><span style="color:#ABA396;">Closed</span></div></div></div>
+        <div class="card"><div class="card-title">Exceptions</div>
+          <div style="display:flex; flex-direction:column; gap:11px; font-size:13.5px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div><div>15 August</div><div style="font-size:12.5px; color:#8F887C; margin-top:2px;">Closed · public holiday</div></div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7E3028" stroke-width="1.7"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+            <div style="height:1px; background:#EDE5D9;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div><div>29 August</div><div style="font-size:12.5px; color:#8F887C; margin-top:2px;">09:00 – 13:00 only</div></div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7E3028" stroke-width="1.7"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+          </div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+          <div class="card-title" style="margin:0;">Week of 18 August</div>
+          <div style="display:flex; gap:6px;"><button class="btn" style="padding:5px 10px;">‹</button><button class="btn" style="padding:5px 10px;">›</button></div></div>
+        <div style="display:grid; grid-template-columns:52px repeat(7, minmax(0,1fr)); gap:5px;"><div></div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Mon</div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Tue</div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Wed</div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Thu</div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Fri</div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Sat</div><div style="font-size:11.5px; color:#8F887C; text-align:center; padding-bottom:3px;">Sun</div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">08:00</div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">09:00</div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">10:00</div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">11:00</div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">12:00</div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">13:00</div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#8F887C;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">14:00</div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">15:00</div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#2C6A63;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">16:00</div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;"></div>
+          <div style="height:19px; border-radius:3px; background:#C2B9A9;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#FDFBF7; border:1px solid #E7DFD2;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="font-size:11px; color:#ABA396; text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; line-height:19px;">17:00</div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div>
+          <div style="height:19px; border-radius:3px; background:#EAE2D5;"></div></div>
+        <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:20px; font-size:12px; color:#6B6459;">
+          <span style="display:flex; align-items:center; gap:7px;"><span style="width:11px; height:11px; border-radius:3px; background:#FDFBF7; border:1px solid #E2DCD0;"></span>Free</span><span style="display:flex; align-items:center; gap:7px;"><span style="width:11px; height:11px; border-radius:3px; background:#2C6A63;"></span>Booked</span><span style="display:flex; align-items:center; gap:7px;"><span style="width:11px; height:11px; border-radius:3px; background:#C2B9A9;"></span>Busy elsewhere</span><span style="display:flex; align-items:center; gap:7px;"><span style="width:11px; height:11px; border-radius:3px; background:#8F887C;"></span>Blocked by you</span><span style="display:flex; align-items:center; gap:7px;"><span style="width:11px; height:11px; border-radius:3px; background:#EAE2D5;"></span>Outside hours</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

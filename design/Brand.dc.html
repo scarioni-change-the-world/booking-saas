@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #23211D; background: #F6F3ED; -webkit-font-smoothing: antialiased; }
+    a { color: #A65A3C; } a:hover { color: #7E4029; }
+    h1, h2, h3 { font-family: 'Newsreader', Georgia, serif; font-weight: 400; margin: 0; letter-spacing: -0.015em; }
+    .app { display: grid; grid-template-columns: 236px 1fr; min-height: 880px; }
+    .side { background: #F0EAE0; border-right: 1px solid #E2DCD0; padding: 26px 18px; display: flex; flex-direction: column; gap: 26px; }
+    .brand { display: flex; gap: 10px; align-items: center; padding-left: 3px; }
+    .wordmark { font-family: 'Newsreader', Georgia, serif; font-size: 22px; letter-spacing: -0.01em; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 8px; font-size: 13.5px; color: #55503F; text-decoration: none; }
+    .nav-item svg { flex: 0 0 auto; opacity: .7; }
+    .nav-item.on { background: #FDFBF7; color: #23211D; font-weight: 500; box-shadow: 0 1px 2px rgba(60,45,30,.05); }
+    .nav-item.on svg { opacity: 1; color: #A65A3C; }
+    .side-foot { margin-top: auto; font-size: 11.5px; color: #8F887C; border-top: 1px solid #E2DCD0; padding-top: 14px; line-height: 1.6; }
+    .main { padding: 34px 40px 44px; display: flex; flex-direction: column; gap: 26px; overflow: hidden; }
+    .eyebrow { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: #8F887C; margin-bottom: 7px; }
+    .card { background: #FDFBF7; border: 1px solid #E2DCD0; border-radius: 12px; padding: 22px 24px; }
+    .card-title { font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8F887C; margin-bottom: 16px; }
+    .btn { font: inherit; font-size: 13px; border: 1px solid #E2DCD0; background: #FDFBF7; color: #23211D; padding: 8px 15px; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: #A65A3C; border-color: #A65A3C; color: #FFF8F4; font-weight: 500; }
+    .pill { font-size: 11.5px; padding: 4px 10px; border-radius: 100px; }
+    .muted { color: #6B6459; }
+  </style>
+</helmet>
+
+<div style="width:1280px; min-height:1180px; background:#F6F3ED; padding:48px 52px; display:flex; flex-direction:column; gap:42px;">
+
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #E2DCD0; padding-bottom:38px;">
+    <div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg>
+        <span style="font-family:'Newsreader', Georgia, serif; font-size:56px; letter-spacing:-0.02em;">Cerca</span>
+      </div>
+      <h2 style="font-size:27px; margin-top:22px; color:#7E4029;">Start with fit, not availability.</h2>
+      <p style="font-size:15px; color:#6B6459; margin:9px 0 0;">Know the fit before the conversation.</p>
+    </div>
+    <div style="max-width:330px; font-size:13px; line-height:1.7; color:#6B6459;">
+      <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:10px;">The mark</div>
+      A threshold — open at the base. A way through, not a barrier. Not a calendar, clock, tick, funnel or gate. Legible at 16px.
+      <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg>
+        <div style="width:32px; height:32px; border-radius:7px; background:#A65A3C; display:flex; align-items:center; justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFF8F4" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:6px;">Colour</div>
+    <p style="font-size:13.5px; color:#6B6459; margin:0 0 22px; max-width:760px; line-height:1.65;">One rule: a colour either identifies Cerca or carries meaning — never both. That is why the accent sits outside the green–amber–red band that meaning already occupies, and why a tenant recolouring their booking page can never change what a status means.</p>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+      <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#F6F3ED; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Canvas</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#F6F3ED</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Application ground</div>
+      </div>
+      <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#FDFBF7; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Surface</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#FDFBF7</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Cards, forms, panels</div>
+      </div>
+      <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#E2DCD0; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Border</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#E2DCD0</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Dividers, inputs</div>
+      </div>
+      <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#23211D; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Ink</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#23211D</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Primary text</div>
+      </div>
+      <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#6B6459; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Secondary</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#6B6459</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Supporting text</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:44px;">
+    <div>
+      <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:14px;">Brand · tenant-facing</div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#A65A3C; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Terracotta</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#A65A3C</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Buttons, links, the mark. Swappable per tenant.</div>
+      </div>
+        <div style="width:126px;">
+        <div style="height:74px; border-radius:9px; background:#F4E6DE; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Terracotta tint</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#F4E6DE</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Selected states</div>
+      </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:14px;">Meaning · fixed for everyone</div>
+      <div style="display:flex; gap:16px;">
+        <div style="width:118px;">
+        <div style="height:74px; border-radius:9px; background:#2C6A63; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Teal</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#2C6A63</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Live — booked, confirmed, connected</div>
+      </div>
+        <div style="width:118px;">
+        <div style="height:74px; border-radius:9px; background:#8A6A22; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Ochre</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#8A6A22</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Needs attention</div>
+      </div>
+        <div style="width:118px;">
+        <div style="height:74px; border-radius:9px; background:#7E3028; border:1px solid rgba(35,33,29,.08);"></div>
+        <div style="font-size:12.5px; margin-top:9px; font-weight:500;">Oxblood</div>
+        <div style="font-size:11.5px; color:#8F887C; font-variant-numeric:tabular-nums; margin-top:2px;">#7E3028</div>
+        <div style="font-size:11.5px; color:#6B6459; margin-top:5px; line-height:1.45;">Broken. Never colour alone.</div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:44px; border-top:1px solid #E2DCD0; padding-top:38px;">
+    <div>
+      <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:16px;">Type</div>
+      <div style="font-size:12px; color:#8F887C; margin-bottom:6px;">Display · Newsreader</div>
+      <h2 style="font-size:38px; line-height:1.15; letter-spacing:-0.02em;">A clear answer,<br>delivered with care.</h2>
+      <div style="font-size:12px; color:#8F887C; margin:26px 0 6px;">Interface · IBM Plex Sans</div>
+      <div style="font-size:15px; font-weight:500;">Built for independent professionals.</div>
+      <p style="font-size:13.5px; color:#6B6459; margin:7px 0 0; line-height:1.65; max-width:420px;">Cerca helps you understand fit before the calendar opens, so your time goes to the right conversations.</p>
+      <p style="font-size:12px; color:#8F887C; margin:18px 0 0; line-height:1.6; max-width:420px;">Newsreader over a high-contrast display serif: it holds at 19px in the interface as well as 52px on a page, and it is less of its moment. Plex over Inter for the same reason — Inter is the house style of everything this brand says it is not.</p>
+    </div>
+
+    <div>
+      <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin-bottom:16px;">Voice</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="background:#FDFBF7; border:1px solid #E2DCD0; border-radius:11px; padding:16px 18px;">
+          <div style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#1E4C46; margin-bottom:7px;">To the client</div>
+          <div style="font-size:14.5px; line-height:1.6;">“Not the right time? That’s completely okay.”</div>
+          <div style="font-size:12.5px; color:#8F887C; margin-top:8px;">Never <em>rejected</em>, <em>unqualified</em>, <em>declined</em>.</div>
+        </div>
+        <div style="background:#FDFBF7; border:1px solid #E2DCD0; border-radius:11px; padding:16px 18px;">
+          <div style="font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#7E4029; margin-bottom:7px;">To the professional</div>
+          <div style="font-size:14.5px; line-height:1.6;">“Seventeen conversations you did not have to have.”</div>
+          <div style="font-size:12.5px; color:#8F887C; margin-top:8px;">Warm to the client, commercially plain to the person paying. Softening both would sell nothing.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

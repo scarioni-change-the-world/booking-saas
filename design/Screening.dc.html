@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #23211D; background: #F6F3ED; -webkit-font-smoothing: antialiased; }
+    a { color: #A65A3C; } a:hover { color: #7E4029; }
+    h1, h2, h3 { font-family: 'Newsreader', Georgia, serif; font-weight: 400; margin: 0; letter-spacing: -0.015em; }
+    .app { display: grid; grid-template-columns: 236px 1fr; min-height: 880px; }
+    .side { background: #F0EAE0; border-right: 1px solid #E2DCD0; padding: 26px 18px; display: flex; flex-direction: column; gap: 26px; }
+    .brand { display: flex; gap: 10px; align-items: center; padding-left: 3px; }
+    .wordmark { font-family: 'Newsreader', Georgia, serif; font-size: 22px; letter-spacing: -0.01em; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 8px; font-size: 13.5px; color: #55503F; text-decoration: none; }
+    .nav-item svg { flex: 0 0 auto; opacity: .7; }
+    .nav-item.on { background: #FDFBF7; color: #23211D; font-weight: 500; box-shadow: 0 1px 2px rgba(60,45,30,.05); }
+    .nav-item.on svg { opacity: 1; color: #A65A3C; }
+    .side-foot { margin-top: auto; font-size: 11.5px; color: #8F887C; border-top: 1px solid #E2DCD0; padding-top: 14px; line-height: 1.6; }
+    .main { padding: 34px 40px 44px; display: flex; flex-direction: column; gap: 26px; overflow: hidden; }
+    .eyebrow { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: #8F887C; margin-bottom: 7px; }
+    .card { background: #FDFBF7; border: 1px solid #E2DCD0; border-radius: 12px; padding: 22px 24px; }
+    .card-title { font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8F887C; margin-bottom: 16px; }
+    .btn { font: inherit; font-size: 13px; border: 1px solid #E2DCD0; background: #FDFBF7; color: #23211D; padding: 8px 15px; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: #A65A3C; border-color: #A65A3C; color: #FFF8F4; font-weight: 500; }
+    .pill { font-size: 11.5px; padding: 4px 10px; border-radius: 100px; }
+    .muted { color: #6B6459; }
+  </style>
+</helmet>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#A65A3C" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 21V11a7.5 7.5 0 0 1 15 0v10"/></svg><span class="wordmark">Cerca</span></div>
+    <nav class="nav">
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Overview</a>
+      <a class="nav-item on" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9"/></svg>Screening</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Bookings</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.4"/><path d="M2.6 20a6.6 6.6 0 0 1 12.8 0M17 11.5a3 3 0 1 0-1.8-5.4M18 20a5.6 5.6 0 0 0-1.4-3.6"/></svg>Clients</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Availability</a>
+      <a class="nav-item" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.4"/></svg>Settings</a>
+    </nav>
+    <div class="side-foot">Amelia Rivera · trial, 12 days left<br><a href="#">Choose a plan</a></div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:20px;">
+      <div><div class="eyebrow">Screening</div><h1 style="font-size:34px;">What you ask first</h1>
+        <p style="font-size:14px; color:#6B6459; margin:9px 0 0; max-width:540px; line-height:1.65;">Everyone answers these on one page before any times are shown. Mark the answers that mean this is not the right moment for someone.</p></div>
+      <button class="btn btn-primary">Add question</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:22px; align-items:start;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="card" style="display:flex; gap:14px; padding:18px 20px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C2B9A9" stroke-width="2" style="margin-top:4px; flex:0 0 auto;"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>
+          <div><div style="font-size:14.5px;">What are you hoping to achieve?</div>
+          <div style="font-size:12.5px; color:#8F887C; margin-top:5px;">Free text · required · never rules anyone out</div></div></div>
+        <div class="card" style="display:flex; gap:14px; padding:18px 20px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C2B9A9" stroke-width="2" style="margin-top:4px; flex:0 0 auto;"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>
+          <div><div style="font-size:14.5px;">Have you worked with a coach before?</div>
+          <div style="font-size:12.5px; color:#8F887C; margin-top:5px;">Yes / No · both continue</div></div></div>
+
+        <div class="card" style="padding:20px; border-color:#A65A3C; box-shadow:0 0 0 3px #F4E6DE;">
+          <div style="display:flex; gap:14px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C2B9A9" stroke-width="2" style="margin-top:4px; flex:0 0 auto;"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>
+            <div style="flex:1;">
+              <input value="What are you able to invest in this right now?" style="font:inherit; font-size:14.5px; width:100%; border:1px solid #E2DCD0; background:#FCF9F3; border-radius:8px; padding:9px 12px; color:#23211D;">
+              <div style="font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:#8F887C; margin:20px 0 11px;">Answers</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 13px; border:1px solid #E2DCD0; border-radius:9px; background:#FCF9F3;">
+                  <span style="flex:1; font-size:14px;">Over 2.000 €</span><span style="font-size:12px; color:#1E4C46;">Continues</span><div style="width:34px; height:19px; border-radius:100px; background:#2C6A63; position:relative; flex:0 0 auto;"><span style="position:absolute; right:2.5px; top:2.5px; width:14px; height:14px; border-radius:50%; background:#FDFBF7;"></span></div></div>
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 13px; border:1px solid #E2DCD0; border-radius:9px; background:#FCF9F3;">
+                  <span style="flex:1; font-size:14px;">500 – 2.000 €</span><span style="font-size:12px; color:#1E4C46;">Continues</span><div style="width:34px; height:19px; border-radius:100px; background:#2C6A63; position:relative; flex:0 0 auto;"><span style="position:absolute; right:2.5px; top:2.5px; width:14px; height:14px; border-radius:50%; background:#FDFBF7;"></span></div></div>
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 13px; border:1px solid #E8D2C6; border-radius:9px; background:#F4E6DE;">
+                  <span style="flex:1; font-size:14px; color:#5C3527;">Not right now</span><span style="font-size:12px; color:#7E4029; font-weight:500;">Offers another path</span><div style="width:34px; height:19px; border-radius:100px; background:#DBD2C2; position:relative; flex:0 0 auto;"><span style="position:absolute; left:2.5px; top:2.5px; width:14px; height:14px; border-radius:50%; background:#FDFBF7;"></span></div></div>
+              </div>
+              <button class="btn" style="margin-top:12px; font-size:12.5px; padding:7px 12px;">Add an answer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="card" style="background:#F0EAE0;">
+          <div class="card-title">Where the other path leads</div>
+          <p style="font-size:13.5px; line-height:1.65; margin:0; color:#4A4438;">Not the right time? That’s completely okay. You’re always welcome back when the timing feels right — and the guide below covers the same ground for free.</p>
+          <div style="margin-top:14px; display:inline-block; font-size:12.5px; background:#23211D; color:#FBF8F2; padding:8px 15px; border-radius:8px;">Get the free guide</div>
+          <div style="font-size:12px; color:#8F887C; margin-top:14px; line-height:1.6;">Fourteen people read this last month. None of them were told no.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Starting points</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <a href="#" style="font-size:13.5px; text-decoration:none; color:#23211D; padding:10px 12px; border:1px solid #E2DCD0; border-radius:8px;">Coach <span style="color:#8F887C; font-size:12.5px;">· 3 questions</span></a>
+            <a href="#" style="font-size:13.5px; text-decoration:none; color:#23211D; padding:10px 12px; border:1px solid #E2DCD0; border-radius:8px;">Therapist <span style="color:#8F887C; font-size:12.5px;">· 4 questions</span></a>
+            <a href="#" style="font-size:13.5px; text-decoration:none; color:#23211D; padding:10px 12px; border:1px solid #E2DCD0; border-radius:8px;">Consultant <span style="color:#8F887C; font-size:12.5px;">· 3 questions</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
