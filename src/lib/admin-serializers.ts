@@ -3,6 +3,7 @@ import type {
   DateOverrideRow,
   EventTypeRow,
   QualificationQuestionRow,
+  TenantSettingsRow,
 } from './db/types';
 
 /**
@@ -77,3 +78,18 @@ export function serializeDateOverride(row: DateOverrideRow) {
 }
 
 export type SerializedDateOverride = ReturnType<typeof serializeDateOverride>;
+
+export function serializeSettings(row: TenantSettingsRow) {
+  return {
+    bookingNoticeHours: row.booking_notice_hours,
+    bookingWindowDays: row.booking_window_days,
+    disqualificationMessage: row.disqualification_message,
+    disqualificationRedirectUrl: row.disqualification_redirect_url,
+    disqualificationRedirectLabel: row.disqualification_redirect_label,
+    notificationEmail: row.notification_email,
+    replyToEmail: row.reply_to_email,
+    updatedAt: row.updated_at,
+  };
+}
+
+export type SerializedSettings = ReturnType<typeof serializeSettings>;

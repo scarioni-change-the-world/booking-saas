@@ -95,6 +95,29 @@ export function optionalString(
   return value.trim();
 }
 
+/**
+ * A nullable field, for a PATCH where the caller must be able to clear a
+ * value, not just change it — `optionalString` cannot do this, because it
+ * treats an omitted key and an empty string the same way ("leave it alone"),
+ * so there is no way to ask it for "blank this out".
+ *
+ * Returns `undefined` when the key is genuinely absent (leave unchanged),
+ * `null` when the caller sent `null` or `''` (clear it), or the validated
+ * string otherwise.
+ */
+export function optionalNullableString(
+  body: Record<string, unknown>,
+  key: string,
+  { maxLength = 2000 }: { maxLength?: number } = {},
+): string | null | undefined {
+  if (!(key in body)) return undefined;
+  const value = body[key];
+  if (value === null || value === '') return null;
+  if (typeof value !== 'string') throw new BookingError(`"${key}" must be a string`, 400);
+  if (value.length > maxLength) throw new BookingError(`"${key}" is too long`, 400);
+  return value.trim();
+}
+
 /** A whole number within an inclusive range, e.g. a duration in minutes. */
 export function requireInt(
   body: Record<string, unknown>,

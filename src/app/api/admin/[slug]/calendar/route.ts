@@ -1,4 +1,4 @@
-import { handleError, ok } from '@/lib/api';
+import { fail, handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { GOOGLE_SCOPES, providerForTenant } from '@/lib/calendar';
 import { signState } from '@/lib/crypto';
@@ -66,6 +66,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
   try {
     const { slug } = await ctx.params;
     const { tenant } = await requireTenantAdmin(request, slug);
+
+    // Google isn't wired up yet in every environment — say so plainly instead
+    // of letting this fall through to a generic 500 further down.
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REDIRECT_URI) {
+      return fail('Google Calendar is not set up yet.', 503);
+    }
 
     const state = signState({ tenantId: tenant.id, slug: tenant.slug });
 

@@ -46,6 +46,18 @@ const KIND_LABEL: Record<Kind, string> = {
   single_choice: 'Choose one',
 };
 
+interface OtherPathForm {
+  disqualificationMessage: string;
+  disqualificationRedirectUrl: string;
+  disqualificationRedirectLabel: string;
+}
+
+const EMPTY_OTHER_PATH: OtherPathForm = {
+  disqualificationMessage: '',
+  disqualificationRedirectUrl: '',
+  disqualificationRedirectLabel: '',
+};
+
 function formToPayload(form: FormState) {
   return {
     prompt: form.prompt,
@@ -215,11 +227,17 @@ function QuestionForm({
 export default function ScreeningPage() {
   const { slug } = useParams<{ slug: string }>();
   const base = `/api/admin/${slug}/questions`;
+  const settingsUrl = `/api/admin/${slug}/settings`;
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [otherPath, setOtherPath] = useState<OtherPathForm>(EMPTY_OTHER_PATH);
+  const [otherPathLoading, setOtherPathLoading] = useState(true);
+  const [savingOtherPath, setSavingOtherPath] = useState(false);
+  const [otherPathSaved, setOtherPathSaved] = useState(false);
 
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -240,10 +258,58 @@ export default function ScreeningPage() {
     }
   }
 
+  async function loadOtherPath() {
+    setOtherPathLoading(true);
+    try {
+      const result = await adminFetchJson<{
+        settings: {
+          disqualificationMessage: string;
+          disqualificationRedirectUrl: string | null;
+          disqualificationRedirectLabel: string | null;
+        } | null;
+      }>(settingsUrl);
+      if (result.settings) {
+        setOtherPath({
+          disqualificationMessage: result.settings.disqualificationMessage,
+          disqualificationRedirectUrl: result.settings.disqualificationRedirectUrl ?? '',
+          disqualificationRedirectLabel: result.settings.disqualificationRedirectLabel ?? '',
+        });
+      }
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setOtherPathLoading(false);
+    }
+  }
+
   useEffect(() => {
     void load();
+    void loadOtherPath();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable for the life of this page
   }, [slug]);
+
+  async function submitOtherPath(event: React.FormEvent) {
+    event.preventDefault();
+    setSavingOtherPath(true);
+    setError(null);
+    setOtherPathSaved(false);
+    try {
+      await adminFetchJson(settingsUrl, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          disqualificationMessage: otherPath.disqualificationMessage,
+          disqualificationRedirectUrl: otherPath.disqualificationRedirectUrl || null,
+          disqualificationRedirectLabel: otherPath.disqualificationRedirectLabel || null,
+        }),
+      });
+      setOtherPathSaved(true);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSavingOtherPath(false);
+    }
+  }
 
   async function submitCreate(event: React.FormEvent) {
     event.preventDefault();
@@ -469,6 +535,61 @@ export default function ScreeningPage() {
           ),
         )}
       </div>
+
+      {!otherPathLoading && (
+        <form className="card" onSubmit={submitOtherPath} style={{ marginTop: 14 }}>
+          <div className="admin-card-title">Where the other path leads</div>
+          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-4px 0 16px', maxWidth: 560 }}>
+            What someone sees when an answer means this isn't the right moment for them — instead
+            of the calendar.
+          </p>
+
+          <div className="field">
+            <label htmlFor="other-path-message">Message</label>
+            <textarea
+              id="other-path-message"
+              value={otherPath.disqualificationMessage}
+              onChange={(e) => setOtherPath({ ...otherPath, disqualificationMessage: e.target.value })}
+            />
+          </div>
+
+          <div className="admin-field-row">
+            <div className="field">
+              <label htmlFor="other-path-url">Send them here instead (optional)</label>
+              <input
+                id="other-path-url"
+                type="url"
+                placeholder="https://…"
+                value={otherPath.disqualificationRedirectUrl}
+                onChange={(e) =>
+                  setOtherPath({ ...otherPath, disqualificationRedirectUrl: e.target.value })
+                }
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="other-path-label">Link text</label>
+              <input
+                id="other-path-label"
+                type="text"
+                placeholder="Learn more"
+                value={otherPath.disqualificationRedirectLabel}
+                onChange={(e) =>
+                  setOtherPath({ ...otherPath, disqualificationRedirectLabel: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="actions">
+            <button type="submit" className="btn-primary" disabled={savingOtherPath}>
+              {savingOtherPath ? 'Saving…' : 'Save'}
+            </button>
+            {otherPathSaved && !savingOtherPath && (
+              <span style={{ fontSize: '0.85rem', color: 'var(--status-live-ink)' }}>Saved</span>
+            )}
+          </div>
+        </form>
+      )}
     </>
   );
 }
