@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import Toggle from '@/components/admin/Toggle';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 
 /** Cerca currently offers up to this many active session types per tenant —
@@ -29,25 +30,6 @@ const EMPTY_FORM: FormState = {
   availableToProspects: false,
   availableToExistingClients: false,
 };
-
-function Toggle({
-  on,
-  label,
-  onClick,
-}: {
-  on: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button type="button" className="admin-toggle" onClick={onClick}>
-      <span className={`admin-toggle-track${on ? ' on' : ''}`}>
-        <span className="admin-toggle-thumb" />
-      </span>
-      {label}
-    </button>
-  );
-}
 
 export default function SessionsPage() {
   const { slug } = useParams<{ slug: string }>();

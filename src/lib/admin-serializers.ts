@@ -1,4 +1,4 @@
-import type { EventTypeRow } from './db/types';
+import type { EventTypeRow, QualificationQuestionRow } from './db/types';
 
 /**
  * Database rows use snake_case column names; the public booking API already
@@ -25,3 +25,16 @@ export function serializeEventType(row: EventTypeRow) {
 }
 
 export type SerializedEventType = ReturnType<typeof serializeEventType>;
+
+export function serializeQuestion(row: QualificationQuestionRow) {
+  return {
+    id: row.id,
+    prompt: row.prompt,
+    kind: row.kind,
+    options: row.options,
+    required: row.required,
+    sortOrder: row.sort_order,
+  };
+}
+
+export type SerializedQuestion = ReturnType<typeof serializeQuestion>;
