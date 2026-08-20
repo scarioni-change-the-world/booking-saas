@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { accentStyle, initials } from './brand';
 import { useAutoResize } from './useAutoResize';
 import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from './types';
 
@@ -36,13 +37,6 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Request failed');
   return body as T;
-}
-
-/** Two-letter initials for a tenant with no logo: "Amelia Rivera" → "AR". */
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
-  return letters.join('') || '?';
 }
 
 /**
@@ -261,13 +255,6 @@ export default function BookingFlow({ slug, audience }: Props) {
 
   const answeredCount = questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length;
 
-  // A tenant's own accent overrides the neutral default. Status colour
-  // (booked, confirmed, connected — the CSS --status-* tokens) is never part
-  // of this override; only --accent moves.
-  const accentStyle = config?.branding.accentColor
-    ? ({ '--accent': config.branding.accentColor } as React.CSSProperties)
-    : undefined;
-
   if (step === 'loading' && !error) {
     return (
       <main className="widget">
@@ -279,7 +266,7 @@ export default function BookingFlow({ slug, audience }: Props) {
   const activeDay = days.find((d) => d.date === selectedDate) ?? null;
 
   return (
-    <main className="widget" style={accentStyle}>
+    <main className="widget" style={accentStyle(config?.branding.accentColor)}>
       {config && (
         <div className="brand-row">
           <div className="brand-mark">

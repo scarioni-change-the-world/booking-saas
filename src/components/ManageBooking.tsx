@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { accentStyle, initials } from './brand';
 import type { DaySlots } from './types';
 
 interface BookingView {
@@ -17,7 +18,11 @@ interface BookingView {
 
 interface Payload {
   booking: BookingView;
-  tenant: { name: string; timezone: string };
+  tenant: {
+    name: string;
+    timezone: string;
+    branding: { logoUrl?: string; accentColor?: string; buttonColor?: string };
+  };
 }
 
 /**
@@ -26,6 +31,11 @@ interface Payload {
  * The reschedule picker runs the same availability endpoint as a new booking,
  * so every rule — notice, buffers, overrides, blocks, calendar busy — applies
  * identically. A second implementation here would drift from the first.
+ *
+ * Shares its visual language with BookingFlow deliberately: this is the same
+ * client, days or weeks later, and a booking flow that looks like one product
+ * and a manage page that looks like another would read as broken trust, not
+ * just inconsistent styling.
  */
 export default function ManageBooking({ token }: { token: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
@@ -33,6 +43,7 @@ export default function ManageBooking({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'view' | 'reschedule' | 'cancel'>('view');
   const [days, setDays] = useState<DaySlots[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
   const load = useCallback(async () => {
@@ -80,9 +91,12 @@ export default function ManageBooking({ token }: { token: string }) {
         `/api/manage/${encodeURIComponent(token)}/availability`,
       );
       if (response.ok) {
-        setDays(((await response.json()) as { days: DaySlots[] }).days);
+        const result = (await response.json()) as { days: DaySlots[] };
+        setDays(result.days);
+        setSelectedDate(result.days.find((d) => d.slots.length > 0)?.date ?? null);
       } else {
         setDays([]);
+        setSelectedDate(null);
         setError('We could not load available times just now.');
       }
     } finally {
@@ -90,19 +104,17 @@ export default function ManageBooking({ token }: { token: string }) {
     }
   }
 
-  const formatWhen = (iso: string) =>
-    new Intl.DateTimeFormat(undefined, {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso));
+  const dayFormat = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const dowFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
-  const formatTime = (iso: string) =>
-    new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(
-      new Date(iso),
-    );
+  const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00:00`));
+  const formatInstantDay = (iso: string) => dayFormat.format(new Date(iso));
+  const formatTime = (iso: string) => timeFormat.format(new Date(iso));
 
   if (error && !payload) {
     return (
@@ -122,9 +134,33 @@ export default function ManageBooking({ token }: { token: string }) {
 
   const { booking, tenant } = payload;
 
+  // The existing booking's own span is its duration — a reschedule keeps the
+  // same session length, so there is no need to fetch the event type again
+  // just to compute the range shown on each slot.
+  const durationMinutes = Math.round(
+    (new Date(booking.endsAt).getTime() - new Date(booking.startsAt).getTime()) / 60_000,
+  );
+  const formatTimeRange = (iso: string) => {
+    const start = new Date(iso);
+    const end = new Date(start.getTime() + durationMinutes * 60_000);
+    return `${timeFormat.format(start)} – ${timeFormat.format(end)}`;
+  };
+
+  const activeDay = days.find((d) => d.date === selectedDate) ?? null;
+
   return (
-    <main className="widget">
-      <h1>{tenant.name}</h1>
+    <main className="widget" style={accentStyle(tenant.branding.accentColor)}>
+      <div className="brand-row">
+        <div className="brand-mark">
+          {tenant.branding.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
+            <img src={tenant.branding.logoUrl} alt="" />
+          ) : (
+            initials(tenant.name)
+          )}
+        </div>
+        <span className="brand-name">{tenant.name}</span>
+      </div>
 
       {error && (
         <div className="notice notice-error" role="alert">
@@ -132,25 +168,41 @@ export default function ManageBooking({ token }: { token: string }) {
         </div>
       )}
 
-      <div className="card">
-        <h2>{booking.eventTypeName ?? 'Your booking'}</h2>
-        <p style={{ margin: '0 0 6px' }}>{formatWhen(booking.startsAt)}</p>
-        <p className="status" style={{ margin: 0 }}>
-          {booking.status === 'cancelled' ? 'Cancelled' : `Booked for ${booking.name}`}
-        </p>
-        {booking.meetingUrl && booking.status === 'confirmed' && (
-          <p style={{ margin: '10px 0 0' }}>
-            <a href={booking.meetingUrl}>Join the video call</a>
+      {booking.status === 'confirmed' ? (
+        <div className="hero">
+          <div className="eyebrow">{formatInstantDay(booking.startsAt)}</div>
+          <div className="when">{formatTime(booking.startsAt)}</div>
+          <div className="what">{booking.eventTypeName ?? 'Your booking'}</div>
+        </div>
+      ) : (
+        <div className="card">
+          <h2>{booking.eventTypeName ?? 'Your booking'}</h2>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
+            {formatInstantDay(booking.startsAt)} at {formatTime(booking.startsAt)}
           </p>
-        )}
-      </div>
+          <p className="status" style={{ margin: '10px 0 0' }}>
+            Cancelled
+          </p>
+        </div>
+      )}
+
+      {booking.meetingUrl && booking.status === 'confirmed' && (
+        <a className="hero-link" href={booking.meetingUrl} style={{ marginBottom: 14 }}>
+          Join the video call
+        </a>
+      )}
 
       {booking.status === 'confirmed' && mode === 'view' && (
-        <div className="actions">
-          <button type="button" className="btn-secondary" onClick={openReschedule}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button type="button" className="btn-secondary btn-full" onClick={openReschedule}>
             Reschedule
           </button>
-          <button type="button" className="btn-link" onClick={() => setMode('cancel')}>
+          <button
+            type="button"
+            className="btn-link"
+            style={{ alignSelf: 'center' }}
+            onClick={() => setMode('cancel')}
+          >
             Cancel this booking
           </button>
         </div>
@@ -163,33 +215,51 @@ export default function ManageBooking({ token }: { token: string }) {
           {!busy && days.length === 0 && (
             <p className="notice notice-muted">No other times are available right now.</p>
           )}
-          <div className="grid-days">
-            {days.map((day) => (
-              <div className="day" key={day.date}>
-                <h3>
-                  {new Intl.DateTimeFormat(undefined, {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  }).format(new Date(`${day.date}T12:00:00`))}
-                </h3>
-                <div className="slots">
-                  {day.slots.map((iso) => (
+
+          {days.length > 0 && (
+            <>
+              <div className="date-strip">
+                {days.map((day) => {
+                  const date = new Date(`${day.date}T12:00:00`);
+                  const has = day.slots.length > 0;
+                  const active = day.date === selectedDate;
+                  return (
                     <button
-                      key={iso}
+                      key={day.date}
                       type="button"
-                      className="slot"
-                      disabled={busy}
-                      onClick={() => act({ action: 'reschedule', startsAt: iso })}
+                      className={`date-chip${active ? ' active' : ''}${has ? '' : ' empty'}`}
+                      disabled={!has || busy}
+                      onClick={() => setSelectedDate(day.date)}
                     >
-                      {formatTime(iso)}
+                      <span className="dow">{dowFormat.format(date)}</span>
+                      <span className="num">{date.getDate()}</span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-          <div className="actions">
+
+              {activeDay && (
+                <>
+                  <p className="day-label">{formatDay(activeDay.date)}</p>
+                  <div className="slots">
+                    {activeDay.slots.map((iso) => (
+                      <button
+                        key={iso}
+                        type="button"
+                        className="slot"
+                        disabled={busy}
+                        onClick={() => act({ action: 'reschedule', startsAt: iso })}
+                      >
+                        {formatTimeRange(iso)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          <div className="actions" style={{ justifyContent: 'center' }}>
             <button type="button" className="btn-link" onClick={() => setMode('view')}>
               Keep my current time
             </button>
@@ -213,16 +283,18 @@ export default function ManageBooking({ token }: { token: string }) {
               onChange={(event) => setReason(event.target.value)}
             />
           </div>
-          <div className="actions">
-            <button type="submit" className="btn-primary" disabled={busy}>
-              {busy ? 'Cancelling…' : 'Cancel booking'}
-            </button>
+          <button type="submit" className="btn-primary btn-full" disabled={busy}>
+            {busy ? 'Cancelling…' : 'Cancel booking'}
+          </button>
+          <div className="actions" style={{ justifyContent: 'center' }}>
             <button type="button" className="btn-link" onClick={() => setMode('view')}>
               Keep it
             </button>
           </div>
         </form>
       )}
+
+      <p className="footer-credit">Powered by Cerca</p>
     </main>
   );
 }

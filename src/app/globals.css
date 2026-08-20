@@ -388,19 +388,8 @@ button {
   margin: 4px 0 12px;
 }
 
-/* Legacy multi-day stacked view — still used by ManageBooking's reschedule
-   picker. Kept working, restyled to the same tokens; not restructured into
-   the date-strip pattern in this pass. */
-.grid-days {
-  display: grid;
-  gap: 18px;
-}
-.day h3 {
-  margin: 0 0 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--muted);
-}
+/* The single active day's times, under the date strip above — used by both
+   BookingFlow and ManageBooking's reschedule picker. */
 .slots {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
