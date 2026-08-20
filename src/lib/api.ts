@@ -95,6 +95,34 @@ export function optionalString(
   return value.trim();
 }
 
+/** A whole number within an inclusive range, e.g. a duration in minutes. */
+export function requireInt(
+  body: Record<string, unknown>,
+  key: string,
+  { min = -Infinity, max = Infinity }: { min?: number; max?: number } = {},
+): number {
+  const value = body[key];
+  const num = typeof value === 'number' ? value : Number(value);
+  if (typeof value !== 'number' && typeof value !== 'string') {
+    throw new BookingError(`Missing "${key}"`, 400);
+  }
+  if (!Number.isInteger(num) || num < min || num > max) {
+    throw new BookingError(`"${key}" must be a whole number between ${min} and ${max}`, 400);
+  }
+  return num;
+}
+
+/** A boolean toggle. Missing means "leave unchanged" — see the callers. */
+export function optionalBoolean(
+  body: Record<string, unknown>,
+  key: string,
+): boolean | undefined {
+  const value = body[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'boolean') throw new BookingError(`"${key}" must be true or false`, 400);
+  return value;
+}
+
 /**
  * Validate an email address well enough to reject an obvious mistake.
  *

@@ -2,6 +2,12 @@ import { __unsafeServiceClient } from './db/client';
 import { resolveTenantBySlug, type ResolvedTenant } from './db';
 import type { MemberRole } from './db/types';
 
+export interface TenantMembership {
+  slug: string;
+  name: string;
+  role: MemberRole;
+}
+
 /**
  * Dashboard authentication.
  *
@@ -71,4 +77,34 @@ export async function requireTenantAdmin(
   }
 
   return { ...resolved, userId: data.user.id, role };
+}
+
+/**
+ * Which businesses a signed-in person belongs to, and what they may do there.
+ *
+ * Unlike requireTenantAdmin, this takes no slug — it exists for the moment
+ * right after login, before the browser knows which tenant's dashboard to
+ * open. A person with no memberships gets an empty list, not an error: that
+ * is a legitimate state (an account exists but nobody has added them to a
+ * business yet), for the caller to explain.
+ */
+export async function resolveTenantMemberships(request: Request): Promise<TenantMembership[]> {
+  const token = bearerToken(request);
+
+  const { data: userData, error: userError } = await __unsafeServiceClient().auth.getUser(token);
+  if (userError || !userData.user) throw new AuthError('Sign in required', 401);
+
+  const { data, error } = await __unsafeServiceClient()
+    .from('tenant_members')
+    .select('role, tenants(slug, name)')
+    .eq('user_id', userData.user.id);
+
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as Array<{
+    role: MemberRole;
+    tenants: { slug: string; name: string } | null;
+  }>)
+    .filter((row) => row.tenants !== null)
+    .map((row) => ({ slug: row.tenants!.slug, name: row.tenants!.name, role: row.role }));
 }

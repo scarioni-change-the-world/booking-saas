@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans, Newsreader } from 'next/font/google';
+import { Cormorant_Garamond, IBM_Plex_Sans, Newsreader } from 'next/font/google';
 import './globals.css';
 
 /**
@@ -7,11 +7,11 @@ import './globals.css';
  * type pairing. Self-hosted via next/font rather than a runtime stylesheet
  * link: no request to Google at page load, no flash of fallback type.
  *
- * The wordmark itself (Cormorant Garamond) is deliberately not loaded here.
- * The customer-facing widget carries almost none of Cerca's own branding —
- * "Powered by Cerca" in the ordinary body font is the full extent of it — so
- * the display logotype face has no page to appear on yet. It belongs with
- * the admin dashboard and marketing chrome, when those exist.
+ * Cormorant Garamond is the wordmark face — "Cerca" itself, nowhere else.
+ * It stayed unloaded until now because it had nowhere to appear: the
+ * customer widget carries almost none of Cerca's own identity, just
+ * "Powered by Cerca" in the ordinary body font. The admin dashboard's own
+ * sidebar is the first real page that shows the wordmark.
  */
 const newsreader = Newsreader({
   subsets: ['latin'],
@@ -27,6 +27,13 @@ const plexSans = IBM_Plex_Sans({
   display: 'swap',
 });
 
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-cormorant',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Cerca',
   // Plain and factual on purpose — the positioning line is not settled yet
@@ -36,7 +43,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${plexSans.variable}`}>
+    <html
+      lang="en"
+      className={`${newsreader.variable} ${plexSans.variable} ${cormorant.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
