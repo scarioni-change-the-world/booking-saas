@@ -38,6 +38,13 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
   return body as T;
 }
 
+/** Two-letter initials for a tenant with no logo: "Amelia Rivera" → "AR". */
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
+  return letters.join('') || '?';
+}
+
 /**
  * The booking flow, for both audiences.
  *
@@ -46,6 +53,10 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
  * because everything after the gate is identical, and keeping two copies in
  * step is exactly the sort of drift that produced the "one flag instead of two"
  * bug in the reference implementation.
+ *
+ * Built mobile-first: a prospect arrives from a link in Instagram or
+ * WhatsApp, on a phone, usually one-handed. The wider viewport is the
+ * exception this layout has to survive, not the one it is designed for.
  */
 export default function BookingFlow({ slug, audience }: Props) {
   useAutoResize();
@@ -67,14 +78,17 @@ export default function BookingFlow({ slug, audience }: Props) {
   const [eventTypes, setEventTypes] = useState<PublicEventType[]>([]);
   const [eventType, setEventType] = useState<PublicEventType | null>(null);
   const [days, setDays] = useState<DaySlots[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
-  const [confirmed, setConfirmed] = useState<{ startsAt: string; manageToken: string } | null>(
-    null,
-  );
+  const [confirmed, setConfirmed] = useState<{
+    startsAt: string;
+    manageToken: string;
+    meetingUrl: string | null;
+  } | null>(null);
 
   const base = `/api/t/${encodeURIComponent(slug)}`;
 
@@ -136,6 +150,9 @@ export default function BookingFlow({ slug, audience }: Props) {
           `${base}/availability?${params.toString()}`,
         );
         setDays(result.days);
+        // Land on the first day that actually has something to book, rather
+        // than the calendar's literal first day, which is usually empty.
+        setSelectedDate(result.days.find((d) => d.slots.length > 0)?.date ?? null);
       } catch (cause) {
         setError((cause as Error).message);
       } finally {
@@ -189,7 +206,7 @@ export default function BookingFlow({ slug, audience }: Props) {
     setError(null);
     try {
       const result = await postJson<{
-        booking: { startsAt: string; manageToken: string };
+        booking: { startsAt: string; manageToken: string; meetingUrl: string | null };
       }>(`${base}/bookings`, {
         eventTypeId: eventType.id,
         startsAt: slot,
@@ -219,6 +236,8 @@ export default function BookingFlow({ slug, audience }: Props) {
     day: 'numeric',
     month: 'long',
   });
+  const dowFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
   /** Render a tenant-local 'yyyy-MM-dd' as a day heading. */
   const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00:00`));
@@ -231,10 +250,23 @@ export default function BookingFlow({ slug, audience }: Props) {
    */
   const formatInstantDay = (iso: string) => dayFormat.format(new Date(iso));
 
-  const formatTime = (iso: string) =>
-    new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(
-      new Date(iso),
-    );
+  const formatTime = (iso: string) => timeFormat.format(new Date(iso));
+
+  /** "10:00 – 10:30", using the event type's own duration — never a fixed grid. */
+  const formatTimeRange = (iso: string, durationMinutes: number) => {
+    const start = new Date(iso);
+    const end = new Date(start.getTime() + durationMinutes * 60_000);
+    return `${timeFormat.format(start)} – ${timeFormat.format(end)}`;
+  };
+
+  const answeredCount = questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length;
+
+  // A tenant's own accent overrides the neutral default. Status colour
+  // (booked, confirmed, connected — the CSS --status-* tokens) is never part
+  // of this override; only --accent moves.
+  const accentStyle = config?.branding.accentColor
+    ? ({ '--accent': config.branding.accentColor } as React.CSSProperties)
+    : undefined;
 
   if (step === 'loading' && !error) {
     return (
@@ -244,9 +276,23 @@ export default function BookingFlow({ slug, audience }: Props) {
     );
   }
 
+  const activeDay = days.find((d) => d.date === selectedDate) ?? null;
+
   return (
-    <main className="widget">
-      {config && <h1>{config.name}</h1>}
+    <main className="widget" style={accentStyle}>
+      {config && (
+        <div className="brand-row">
+          <div className="brand-mark">
+            {config.branding.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
+              <img src={config.branding.logoUrl} alt="" />
+            ) : (
+              initials(config.name)
+            )}
+          </div>
+          <span className="brand-name">{config.name}</span>
+        </div>
+      )}
 
       {error && (
         <div className="notice notice-error" role="alert">
@@ -298,11 +344,12 @@ export default function BookingFlow({ slug, audience }: Props) {
             </div>
           ))}
 
-          <div className="actions">
-            <button type="submit" className="btn-primary" disabled={busy}>
-              {busy ? 'Checking…' : 'Continue'}
-            </button>
-          </div>
+          <button type="submit" className="btn-primary btn-full" disabled={busy}>
+            {busy ? 'Checking…' : 'Continue'}
+          </button>
+          <p className="progress-label">
+            {answeredCount} of {questions.length} answered
+          </p>
         </form>
       )}
 
@@ -311,7 +358,11 @@ export default function BookingFlow({ slug, audience }: Props) {
           <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{redirect.message}</p>
           {redirect.url && (
             <div className="actions">
-              <a className="btn-primary" href={redirect.url} style={{ textDecoration: 'none' }}>
+              <a
+                className="btn-primary btn-full"
+                href={redirect.url}
+                style={{ textDecoration: 'none', textAlign: 'center' }}
+              >
                 {redirect.label ?? 'Find out more'}
               </a>
             </div>
@@ -361,28 +412,50 @@ export default function BookingFlow({ slug, audience }: Props) {
             </p>
           )}
 
-          <div className="grid-days">
-            {days.map((day) => (
-              <div className="day" key={day.date}>
-                <h3>{formatDay(day.date)}</h3>
-                <div className="slots">
-                  {day.slots.map((iso) => (
+          {days.length > 0 && (
+            <>
+              <div className="date-strip">
+                {days.map((day) => {
+                  const date = new Date(`${day.date}T12:00:00`);
+                  const has = day.slots.length > 0;
+                  const active = day.date === selectedDate;
+                  return (
                     <button
-                      key={iso}
+                      key={day.date}
                       type="button"
-                      className={`slot${slot === iso ? ' selected' : ''}`}
-                      onClick={() => {
-                        setSlot(iso);
-                        setStep('details');
-                      }}
+                      className={`date-chip${active ? ' active' : ''}${has ? '' : ' empty'}`}
+                      disabled={!has}
+                      onClick={() => setSelectedDate(day.date)}
                     >
-                      {formatTime(iso)}
+                      <span className="dow">{dowFormat.format(date)}</span>
+                      <span className="num">{date.getDate()}</span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+
+              {activeDay && (
+                <>
+                  <p className="day-label">{formatDay(activeDay.date)}</p>
+                  <div className="slots">
+                    {activeDay.slots.map((iso) => (
+                      <button
+                        key={iso}
+                        type="button"
+                        className="slot"
+                        onClick={() => {
+                          setSlot(iso);
+                          setStep('details');
+                        }}
+                      >
+                        {formatTimeRange(iso, eventType.durationMinutes)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
           <p className="tz">Times shown in your timezone ({viewerZone}).</p>
 
@@ -394,6 +467,7 @@ export default function BookingFlow({ slug, audience }: Props) {
                 onClick={() => {
                   setEventType(null);
                   setDays([]);
+                  setSelectedDate(null);
                   setStep('pick-type');
                 }}
               >
@@ -442,10 +516,10 @@ export default function BookingFlow({ slug, audience }: Props) {
             <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
-          <div className="actions">
-            <button type="submit" className="btn-primary" disabled={busy}>
-              {busy ? 'Booking…' : 'Confirm booking'}
-            </button>
+          <button type="submit" className="btn-primary btn-full" disabled={busy}>
+            {busy ? 'Booking…' : 'Confirm booking'}
+          </button>
+          <div className="actions" style={{ justifyContent: 'center' }}>
             <button
               type="button"
               className="btn-link"
@@ -461,17 +535,28 @@ export default function BookingFlow({ slug, audience }: Props) {
       )}
 
       {step === 'done' && confirmed && (
-        <div className="card">
+        <>
           <h2>You&apos;re booked</h2>
-          <p style={{ margin: '0 0 12px' }}>
-            {formatInstantDay(confirmed.startsAt)} at {formatTime(confirmed.startsAt)}.
-          </p>
-          <p style={{ margin: 0 }}>
+          <div className="hero">
+            <div className="eyebrow">{formatInstantDay(confirmed.startsAt)}</div>
+            <div className="when">{formatTime(confirmed.startsAt)}</div>
+            {eventType && <div className="what">{eventType.name}</div>}
+          </div>
+
+          {confirmed.meetingUrl && (
+            <a className="hero-link" href={confirmed.meetingUrl}>
+              Join the video call
+            </a>
+          )}
+
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
             Keep this link to reschedule or cancel:{' '}
             <a href={`/manage/${confirmed.manageToken}`}>manage your booking</a>.
           </p>
-        </div>
+        </>
       )}
+
+      <p className="footer-credit">Powered by Cerca</p>
     </main>
   );
 }
