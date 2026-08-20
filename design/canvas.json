@@ -1,25 +1,185 @@
 {
   "pages": [
-    { "id": "page-1", "name": "System" },
-    { "id": "page-2", "name": "Dashboard" },
-    { "id": "page-3", "name": "Customer · phone" }
+    {
+      "id": "page-1",
+      "name": "System"
+    },
+    {
+      "id": "page-2",
+      "name": "Dashboard"
+    },
+    {
+      "id": "page-2b",
+      "name": "Dashboard \u00b7 phone"
+    },
+    {
+      "id": "page-3",
+      "name": "Customer \u00b7 phone"
+    }
   ],
   "artboards": [
-    { "file": "Brand.dc.html",        "title": "Cerca — the system", "page": "page-1", "x": 0,    "y": 0,    "w": 1280, "h": 1180 },
-
-    { "file": "Main.dc.html",         "title": "Overview",     "page": "page-2", "x": 0,    "y": 0,    "w": 1280, "h": 900 },
-    { "file": "Screening.dc.html",    "title": "Screening",    "page": "page-2", "x": 1380, "y": 0,    "w": 1280, "h": 920 },
-    { "file": "Bookings.dc.html",     "title": "Bookings",     "page": "page-2", "x": 2760, "y": 0,    "w": 1280, "h": 900 },
-    { "file": "Clients.dc.html",      "title": "Clients",      "page": "page-2", "x": 4140, "y": 0,    "w": 1280, "h": 880 },
-    { "file": "Availability.dc.html", "title": "Availability", "page": "page-2", "x": 0,    "y": 1120, "w": 1280, "h": 960 },
-    { "file": "Settings.dc.html",     "title": "Settings",     "page": "page-2", "x": 1380, "y": 1120, "w": 1280, "h": 980 },
-    { "file": "Appearance.dc.html",   "title": "Appearance",   "page": "page-2", "x": 2760, "y": 1120, "w": 1280, "h": 1000 },
-
-    { "file": "PhoneGate.dc.html",      "title": "1 · The questions",  "page": "page-3", "x": 0,    "y": 0, "w": 390, "h": 1000 },
-    { "file": "PhoneOtherPath.dc.html", "title": "2a · Another path",  "page": "page-3", "x": 490,  "y": 0, "w": 390, "h": 844 },
-    { "file": "PhoneTime.dc.html",      "title": "2b · Pick a time",   "page": "page-3", "x": 980,  "y": 0, "w": 390, "h": 900 },
-    { "file": "PhoneMulti.dc.html",     "title": "2c · Book a block",  "page": "page-3", "x": 1470, "y": 0, "w": 390, "h": 1040 },
-    { "file": "PhoneBooked.dc.html",    "title": "3 · Booked",         "page": "page-3", "x": 1960, "y": 0, "w": 390, "h": 844 }
+    {
+      "file": "Brand.dc.html",
+      "title": "Cerca \u2014 the system",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 1180
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Overview",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 900
+    },
+    {
+      "file": "Screening.dc.html",
+      "title": "Screening",
+      "page": "page-2",
+      "x": 1380,
+      "y": 0,
+      "w": 1280,
+      "h": 920
+    },
+    {
+      "file": "Bookings.dc.html",
+      "title": "Bookings",
+      "page": "page-2",
+      "x": 2760,
+      "y": 0,
+      "w": 1280,
+      "h": 900
+    },
+    {
+      "file": "Clients.dc.html",
+      "title": "Clients",
+      "page": "page-2",
+      "x": 4140,
+      "y": 0,
+      "w": 1280,
+      "h": 880
+    },
+    {
+      "file": "Availability.dc.html",
+      "title": "Availability",
+      "page": "page-2",
+      "x": 0,
+      "y": 1120,
+      "w": 1280,
+      "h": 960
+    },
+    {
+      "file": "Settings.dc.html",
+      "title": "Settings",
+      "page": "page-2",
+      "x": 1380,
+      "y": 1120,
+      "w": 1280,
+      "h": 980
+    },
+    {
+      "file": "Appearance.dc.html",
+      "title": "Appearance",
+      "page": "page-2",
+      "x": 2760,
+      "y": 1120,
+      "w": 1280,
+      "h": 1000
+    },
+    {
+      "file": "PhoneGate.dc.html",
+      "title": "1 \u00b7 The questions",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 1000
+    },
+    {
+      "file": "PhoneOtherPath.dc.html",
+      "title": "2a \u00b7 Another path",
+      "page": "page-3",
+      "x": 490,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneTime.dc.html",
+      "title": "2b \u00b7 Pick a time",
+      "page": "page-3",
+      "x": 980,
+      "y": 0,
+      "w": 390,
+      "h": 900
+    },
+    {
+      "file": "PhoneMulti.dc.html",
+      "title": "2c \u00b7 Book a block",
+      "page": "page-3",
+      "x": 1470,
+      "y": 0,
+      "w": 390,
+      "h": 1040
+    },
+    {
+      "file": "PhoneBooked.dc.html",
+      "title": "3 \u00b7 Booked",
+      "page": "page-3",
+      "x": 1960,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MobileOverview.dc.html",
+      "title": "Overview",
+      "page": "page-2b",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MobileBookings.dc.html",
+      "title": "Bookings",
+      "page": "page-2b",
+      "x": 490,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MobileClients.dc.html",
+      "title": "Clients",
+      "page": "page-2b",
+      "x": 980,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "MobileAvailability.dc.html",
+      "title": "Availability",
+      "page": "page-2b",
+      "x": 1470,
+      "y": 0,
+      "w": 390,
+      "h": 980
+    },
+    {
+      "file": "MobileMore.dc.html",
+      "title": "More",
+      "page": "page-2b",
+      "x": 1960,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    }
   ],
   "annotations": [
     {
@@ -28,7 +188,7 @@
       "y": -300,
       "w": 700,
       "page": "page-1",
-      "text": "What came from where.\n\nFrom the Cerca kit: the name, \"Start with fit, not availability\", the language rules, the white-label ratio, and Clients in the navigation.\n\nChanged: the accent moved off green. An olive brand beside a green \"positive\" means a user cannot tell whether green means Cerca or good — the same fault, one layer down. Terracotta is complementary to teal, so the two can never be confused.\n\nDropped: the blue, the five-token semantic set (those hexes were stock design-system tokens, not designed for this), Inter, and the good-fit-rate metric."
+      "text": "What came from where.\n\nFrom the Cerca kit: the name, \"Start with fit, not availability\", the language rules, the white-label ratio, and Clients in the navigation.\n\nChanged: the accent moved off green. An olive brand beside a green \"positive\" means a user cannot tell whether green means Cerca or good \u2014 the same fault, one layer down. Terracotta is complementary to teal, so the two can never be confused.\n\nDropped: the blue, the five-token semantic set (those hexes were stock design-system tokens, not designed for this), Inter, and the good-fit-rate metric."
     },
     {
       "id": "one-page",
@@ -36,7 +196,7 @@
       "y": -300,
       "w": 700,
       "page": "page-3",
-      "text": "Every question on one page. Not step 2 of 5.\n\nThe Cerca kit proposed one question at a time. Your own brief records the opposite as a tested decision — stepwise felt like an interrogation, which is precisely what this product exists not to be.\n\nSo: one page, with a fixed Continue bar carrying progress, because at 390px \"all on one page\" is a long scroll and people need to know how much is left."
+      "text": "Every question on one page. Not step 2 of 5.\n\nThe Cerca kit proposed one question at a time. Your own brief records the opposite as a tested decision \u2014 stepwise felt like an interrogation, which is precisely what this product exists not to be.\n\nSo: one page, with a fixed Continue bar carrying progress, because at 390px \"all on one page\" is a long scroll and people need to know how much is left."
     },
     {
       "id": "packages",
@@ -44,8 +204,19 @@
       "y": -190,
       "w": 390,
       "page": "page-3",
-      "text": "Multi-booking, driven by a balance.\n\nSix left, three chosen — the cap is what they paid for, not a form limit. \"Same time every week\" comes first because most ten-session programmes are exactly that, and picking ten slots by hand on a phone is a chore."
+      "text": "Multi-booking, driven by a balance.\n\nSix left, three chosen \u2014 the cap is what they paid for, not a form limit. \"Same time every week\" comes first because most ten-session programmes are exactly that, and picking ten slots by hand on a phone is a chore."
+    },
+    {
+      "id": "mobile-admin",
+      "x": 0,
+      "y": -220,
+      "w": 720,
+      "page": "page-2b",
+      "text": "Same tool, a phone. This is new since yesterday \u2014 the earlier pass only made the customer side mobile-first.\n\nA six-item sidebar does not fit a thumb, so the five daily-use sections sit on a bottom bar and the rest live under More. The week grid on Availability could not survive 390px either, so it becomes a single-day scrolling agenda with a day switcher above it \u2014 same busy/booked/free vocabulary, different shape.\n\nScreening, Settings and Appearance are not rebuilt here: they are lists and forms, which is the one pattern that needed no reinvention. The two problems worth solving were the grid and the nav, and both are solved."
     }
   ],
-  "launch": { "view": "canvas", "page": "page-1" }
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
 }
