@@ -1,4 +1,9 @@
-import type { EventTypeRow, QualificationQuestionRow } from './db/types';
+import type {
+  AvailabilityRuleRow,
+  DateOverrideRow,
+  EventTypeRow,
+  QualificationQuestionRow,
+} from './db/types';
 
 /**
  * Database rows use snake_case column names; the public booking API already
@@ -38,3 +43,37 @@ export function serializeQuestion(row: QualificationQuestionRow) {
 }
 
 export type SerializedQuestion = ReturnType<typeof serializeQuestion>;
+
+/**
+ * Postgres hands back a `time` column as "09:00:00" (seconds included). The
+ * admin form uses a native `<input type="time">`, which speaks "09:00" — this
+ * is the one place that difference needs trimming; the slot engine reads the
+ * column straight off the database and never sees this serialized form.
+ */
+function toHHMM(value: string): string {
+  return value.slice(0, 5);
+}
+
+export function serializeAvailabilityRule(row: AvailabilityRuleRow) {
+  return {
+    id: row.id,
+    weekday: row.weekday,
+    startTime: toHHMM(row.start_time),
+    endTime: toHHMM(row.end_time),
+  };
+}
+
+export type SerializedAvailabilityRule = ReturnType<typeof serializeAvailabilityRule>;
+
+export function serializeDateOverride(row: DateOverrideRow) {
+  return {
+    id: row.id,
+    date: row.date,
+    isClosed: row.is_closed,
+    startTime: row.start_time ? toHHMM(row.start_time) : null,
+    endTime: row.end_time ? toHHMM(row.end_time) : null,
+    note: row.note,
+  };
+}
+
+export type SerializedDateOverride = ReturnType<typeof serializeDateOverride>;

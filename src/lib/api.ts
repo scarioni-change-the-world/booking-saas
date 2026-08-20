@@ -112,6 +112,15 @@ export function requireInt(
   return num;
 }
 
+/** A wall-clock time as "HH:MM" or "HH:MM:SS" — what a Postgres `time` column accepts. */
+export function requireTime(body: Record<string, unknown>, key: string): string {
+  const value = requireString(body, key, { maxLength: 8 });
+  if (!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(value)) {
+    throw new BookingError(`"${key}" must be a time like "09:00"`, 400);
+  }
+  return value;
+}
+
 /** A boolean toggle. Missing means "leave unchanged" — see the callers. */
 export function optionalBoolean(
   body: Record<string, unknown>,
