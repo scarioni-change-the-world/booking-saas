@@ -1,7 +1,10 @@
+import type { AnsweredQuestion } from './qualification';
 import type {
   AvailabilityRuleRow,
+  BookingRow,
   DateOverrideRow,
   EventTypeRow,
+  QualificationOutcome,
   QualificationQuestionRow,
   TenantSettingsRow,
 } from './db/types';
@@ -93,3 +96,47 @@ export function serializeSettings(row: TenantSettingsRow) {
 }
 
 export type SerializedSettings = ReturnType<typeof serializeSettings>;
+
+/**
+ * A booking row as this list actually needs it: the event type's name and the
+ * prospect's screening answers alongside it, rather than two more round trips
+ * per row. Both arrive via PostgREST's foreign-key embedding — see
+ * resolveBookingByToken for the same pattern used elsewhere in this codebase.
+ *
+ * qualification_responses stores its own full snapshot of the questions as
+ * they read at submission time (prompt, kind, answer, qualifies) rather than
+ * a reference back to qualification_questions, which is exactly why this can
+ * show a prospect's real answers even after a question has since been edited
+ * or removed.
+ */
+export interface BookingWithJoins extends BookingRow {
+  event_types: { name: string } | null;
+  qualification_responses: { answers: AnsweredQuestion[]; outcome: QualificationOutcome } | null;
+}
+
+export function serializeBooking(row: BookingWithJoins) {
+  return {
+    id: row.id,
+    eventTypeName: row.event_types?.name ?? 'Unknown session type',
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    name: row.name,
+    email: row.email,
+    notes: row.notes,
+    status: row.status,
+    cancelledAt: row.cancelled_at,
+    cancellationReason: row.cancellation_reason,
+    meetingUrl: row.meeting_url,
+    syncStatus: row.sync_status,
+    syncError: row.sync_error,
+    qualification: row.qualification_responses
+      ? {
+          outcome: row.qualification_responses.outcome,
+          answers: row.qualification_responses.answers,
+        }
+      : null,
+    createdAt: row.created_at,
+  };
+}
+
+export type SerializedBooking = ReturnType<typeof serializeBooking>;
