@@ -15,6 +15,7 @@ export type QuestionKind = 'text' | 'yes_no' | 'single_choice';
 export type QualificationOutcome = 'qualified' | 'redirected';
 export type CalendarProviderId = 'google' | 'microsoft';
 export type CalendarConnectionStatus = 'active' | 'needs_reconnect' | 'revoked';
+export type PlatformRole = 'owner' | 'admin' | 'support';
 
 export interface TenantBranding {
   logoUrl?: string;
@@ -145,6 +146,18 @@ export interface CalendarConnectionRow {
   last_error: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * The company's own team, not any one tenant's — see migration 0009. Not a
+ * TenantScopedTable: there is no tenant_id to scope by, which is the whole
+ * point of it.
+ */
+export interface PlatformStaffRow {
+  user_id: string;
+  role: PlatformRole;
+  added_by: string | null;
+  created_at: string;
 }
 
 /** Every table whose rows belong to exactly one tenant. */

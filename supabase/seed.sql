@@ -14,19 +14,17 @@ values (
   array['https://example.com']
 );
 
-insert into tenant_settings (
-  tenant_id, booking_notice_hours, booking_window_days,
-  disqualification_message, disqualification_redirect_url, disqualification_redirect_label,
-  notification_email
-) values (
-  '00000000-0000-4000-8000-000000000001',
-  24,
-  60,
-  E'Thank you for taking the time to answer.\n\nFrom what you have shared, one-to-one coaching is not the right fit right now — and that is completely fine. The free guide below covers the same ground and costs nothing.',
-  'https://example.com/guide',
-  'Get the free guide',
-  'owner@example.com'
-);
+-- migration 0009's tenants_create_settings trigger already created the
+-- default row the moment the insert above ran; this fills in the demo's own
+-- values rather than inserting a second row.
+update tenant_settings set
+  booking_notice_hours = 24,
+  booking_window_days = 60,
+  disqualification_message = E'Thank you for taking the time to answer.\n\nFrom what you have shared, one-to-one coaching is not the right fit right now — and that is completely fine. The free guide below covers the same ground and costs nothing.',
+  disqualification_redirect_url = 'https://example.com/guide',
+  disqualification_redirect_label = 'Get the free guide',
+  notification_email = 'owner@example.com'
+where tenant_id = '00000000-0000-4000-8000-000000000001';
 
 -- Two event types, one per audience, to keep the independent-booleans
 -- behaviour visible in development (brief 2.1).

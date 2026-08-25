@@ -169,3 +169,34 @@ export function requireEmail(body: Record<string, unknown>, key: string): string
   }
   return value.toLowerCase();
 }
+
+/**
+ * A business's web address, e.g. "acme-coaching". Checked here too, not just
+ * left to the database's own tenants_slug_format constraint (migration
+ * 0001) — that constraint exists either way as the last line of defence, but
+ * catching it here means a bad slug reads as "letters, numbers and dashes
+ * only" instead of a raw Postgres constraint-violation message.
+ */
+export function requireSlug(body: Record<string, unknown>, key: string): string {
+  const value = requireString(body, key, { maxLength: 50 });
+  if (!/^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])$/.test(value)) {
+    throw new BookingError(
+      `"${key}" must be lowercase letters, numbers and dashes, at least 3 characters, and can't start or end with a dash`,
+      400,
+    );
+  }
+  return value;
+}
+
+/**
+ * An IANA time zone name, e.g. "America/New_York" — checked against the
+ * runtime's own list rather than a hand-maintained one, so it can never drift
+ * out of date with reality.
+ */
+export function requireTimezone(body: Record<string, unknown>, key: string): string {
+  const value = requireString(body, key, { maxLength: 100 });
+  if (!Intl.supportedValuesOf('timeZone').includes(value)) {
+    throw new BookingError(`"${key}" isn't a recognised time zone`, 400);
+  }
+  return value;
+}

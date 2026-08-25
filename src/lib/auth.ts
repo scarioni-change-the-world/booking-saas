@@ -1,6 +1,6 @@
 import { __unsafeServiceClient } from './db/client';
 import { resolveTenantBySlug, type ResolvedTenant } from './db';
-import type { MemberRole } from './db/types';
+import type { MemberRole, PlatformRole } from './db/types';
 
 export interface TenantMembership {
   slug: string;
@@ -77,6 +77,52 @@ export async function requireTenantAdmin(
   }
 
   return { ...resolved, userId: data.user.id, role };
+}
+
+export interface AuthenticatedStaff {
+  userId: string;
+  role: PlatformRole;
+}
+
+const PLATFORM_ROLE_RANK: Record<PlatformRole, number> = { support: 0, admin: 1, owner: 2 };
+
+/**
+ * Require that the caller is on the company's own staff (platform_staff),
+ * not any one tenant's team — this is what /console checks instead of
+ * requireTenantAdmin.
+ *
+ * minRole defaults to 'support': the lowest rung, so by default this just
+ * proves "this person works here." Pass 'admin' or 'owner' for actions that
+ * need more than that — see migration 0009 for what each rung can do.
+ *
+ * A single 403 covers both "not staff at all" and "staff, but not senior
+ * enough" — there is nothing sensitive to hide by telling them apart, unlike
+ * requireTenantAdmin's tenant lookups, which stay silent about which tenants
+ * exist.
+ */
+export async function requirePlatformStaff(
+  request: Request,
+  minRole: PlatformRole = 'support',
+): Promise<AuthenticatedStaff> {
+  const token = bearerToken(request);
+
+  const { data, error } = await __unsafeServiceClient().auth.getUser(token);
+  if (error || !data.user) throw new AuthError('Sign in required', 401);
+
+  const { data: staffRow, error: staffError } = await __unsafeServiceClient()
+    .from('platform_staff')
+    .select('role')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
+
+  if (staffError) throw staffError;
+
+  const role = (staffRow as { role: PlatformRole } | null)?.role;
+  if (!role || PLATFORM_ROLE_RANK[role] < PLATFORM_ROLE_RANK[minRole]) {
+    throw new AuthError('You do not have permission to do this', 403);
+  }
+
+  return { userId: data.user.id, role };
 }
 
 /**

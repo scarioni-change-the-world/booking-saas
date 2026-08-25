@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0008 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0009 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -11,7 +11,8 @@
 -- CREATE TABLE, which is the intended behaviour — it stops you silently
 -- double-seeding.
 --
--- After this, see 02_bootstrap_owner.sql to link your login to the demo tenant.
+-- After this: 02_bootstrap_owner.sql links your login to the demo tenant;
+-- 03_bootstrap_platform_owner.sql makes you the platform owner, for /console.
 -- =============================================================================
 
 begin;
@@ -632,6 +633,113 @@ alter default privileges in schema public revoke all on sequences from anon;
 -- missing grant that looks like a policy bug.
 
 -- ==========================================================================
+-- supabase/migrations/0009_platform_staff.sql
+-- ==========================================================================
+
+-- The company's own team — not any one tenant's.
+--
+-- Every business already has tenant_members: a list of who may run that one
+-- business, with what role. This is the same pattern one level up: a list of
+-- who works for the company running this whole app, with what role. It sits
+-- outside every tenant rather than being a bigger role inside tenant_members,
+-- because it is not a bigger version of the same thing — a platform admin has
+-- no membership row in any business at all; they reach the console through
+-- this table instead.
+--
+-- Three roles, so the one person running this today can bring on help later
+-- without a rebuild:
+--
+--   owner    full control — businesses AND who else is on staff.
+--   admin    day-to-day running of businesses (create, suspend, look things
+--             up). Cannot add or remove other staff.
+--   support  can look things up to help a stuck business. Cannot suspend,
+--             delete, or create.
+--
+-- Only 'owner' is actually used today (there is exactly one row). admin and
+-- support exist so the day a second or third person joins, that is a single
+-- insert, not new tables and no rethinking of anything already built.
+
+create type platform_role as enum ('owner', 'admin', 'support');
+
+create table platform_staff (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  role       platform_role not null,
+  -- Who added this person, for the same reason a paper trail is worth having
+  -- anywhere access is granted. Null rather than blocked if that person's own
+  -- account is later removed — the history should outlive the account.
+  added_by   uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- Every tenant gets its settings row automatically, the moment it exists.
+--
+-- tenant_settings has always been "one row per tenant, created alongside the
+-- tenant" (see the comment in migration 0001) — but until now that was only
+-- ever true because every tenant so far was created by hand in seed.sql,
+-- where the person writing the SQL remembered to insert both rows together.
+-- The console is the first real, non-seed way to create a tenant, so the
+-- invariant needs to be real rather than remembered: a trigger, not a second
+-- insert an API route has to get right every time.
+-- ---------------------------------------------------------------------------
+create function create_default_tenant_settings() returns trigger
+language plpgsql as $$
+begin
+  insert into tenant_settings (tenant_id) values (new.id);
+  return new;
+end;
+$$;
+
+create trigger tenants_create_settings
+  after insert on tenants
+  for each row execute function create_default_tenant_settings();
+
+-- ---------------------------------------------------------------------------
+-- RLS. Defense in depth, exactly as for every other table — the console's own
+-- API routes are what actually gate access (they run as service_role, which
+-- bypasses this), but the day a browser ever queries this table directly,
+-- these policies are what stand between it and every business's data.
+-- ---------------------------------------------------------------------------
+create or replace function auth_is_platform_staff()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (select 1 from platform_staff where user_id = auth.uid());
+$$;
+
+create or replace function auth_is_platform_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from platform_staff where user_id = auth.uid() and role = 'owner'
+  );
+$$;
+
+revoke all on function auth_is_platform_staff() from public, anon;
+revoke all on function auth_is_platform_owner() from public, anon;
+grant execute on function auth_is_platform_staff() to authenticated;
+grant execute on function auth_is_platform_owner() to authenticated;
+
+alter table platform_staff enable row level security;
+alter table platform_staff force row level security;
+
+-- Any staff member can see who else is on staff...
+create policy platform_staff_read on platform_staff
+  for select to authenticated using (auth_is_platform_staff());
+
+-- ...but only an owner can change it — add, remove, or promote someone.
+create policy platform_staff_write on platform_staff
+  for all to authenticated
+  using (auth_is_platform_owner()) with check (auth_is_platform_owner());
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -651,19 +759,17 @@ values (
   array['https://example.com']
 );
 
-insert into tenant_settings (
-  tenant_id, booking_notice_hours, booking_window_days,
-  disqualification_message, disqualification_redirect_url, disqualification_redirect_label,
-  notification_email
-) values (
-  '00000000-0000-4000-8000-000000000001',
-  24,
-  60,
-  E'Thank you for taking the time to answer.\n\nFrom what you have shared, one-to-one coaching is not the right fit right now — and that is completely fine. The free guide below covers the same ground and costs nothing.',
-  'https://example.com/guide',
-  'Get the free guide',
-  'owner@example.com'
-);
+-- migration 0009's tenants_create_settings trigger already created the
+-- default row the moment the insert above ran; this fills in the demo's own
+-- values rather than inserting a second row.
+update tenant_settings set
+  booking_notice_hours = 24,
+  booking_window_days = 60,
+  disqualification_message = E'Thank you for taking the time to answer.\n\nFrom what you have shared, one-to-one coaching is not the right fit right now — and that is completely fine. The free guide below covers the same ground and costs nothing.',
+  disqualification_redirect_url = 'https://example.com/guide',
+  disqualification_redirect_label = 'Get the free guide',
+  notification_email = 'owner@example.com'
+where tenant_id = '00000000-0000-4000-8000-000000000001';
 
 -- Two event types, one per audience, to keep the independent-booleans
 -- behaviour visible in development (brief 2.1).
@@ -706,8 +812,8 @@ values
 commit;
 
 -- =============================================================================
--- Verification — expect: 12 tables, 12 rls enabled, 19 policies, 0 anon
--- policies, 12 tables granted to service_role, 1 tenant, 2 event types,
+-- Verification — expect: 13 tables, 13 rls enabled, 21 policies, 0 anon
+-- policies, 13 tables granted to service_role, 1 tenant, 2 event types,
 -- 3 questions, 5 availability rules.
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
