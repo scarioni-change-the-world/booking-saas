@@ -129,6 +129,35 @@ export interface BookingRow {
   sync_error: string | null;
   reminder_sent_at: string | null;
   created_at: string;
+  /** Set when this booking drew down a package — see client_entitlements. */
+  client_id: string | null;
+  entitlement_id: string | null;
+}
+
+export interface ClientRow {
+  id: string;
+  tenant_id: string;
+  name: string;
+  email: string;
+  access_token: string;
+  notes: string | null;
+  created_at: string;
+}
+
+/**
+ * A grant of N sessions for one session type. One row per (client, event
+ * type) — see migration 0010 for why a top-up raises total_sessions rather
+ * than adding a second row.
+ */
+export interface ClientEntitlementRow {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  event_type_id: string;
+  total_sessions: number;
+  used_sessions: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CalendarConnectionRow {
@@ -171,6 +200,8 @@ export interface TenantScopedTables {
   qualification_responses: QualificationResponseRow;
   bookings: BookingRow;
   calendar_connections: CalendarConnectionRow;
+  clients: ClientRow;
+  client_entitlements: ClientEntitlementRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

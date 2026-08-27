@@ -2,6 +2,7 @@ import type { AnsweredQuestion } from './qualification';
 import type {
   AvailabilityRuleRow,
   BookingRow,
+  ClientRow,
   DateOverrideRow,
   EventTypeRow,
   QualificationOutcome,
@@ -140,3 +141,16 @@ export function serializeBooking(row: BookingWithJoins) {
 }
 
 export type SerializedBooking = ReturnType<typeof serializeBooking>;
+
+export function serializeClient(row: ClientRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    accessToken: row.access_token,
+    notes: row.notes,
+    createdAt: row.created_at,
+  };
+}
+
+export type SerializedClient = ReturnType<typeof serializeClient>;

@@ -14,6 +14,8 @@ import type {
   AvailabilityRuleRow,
   BlockedSlotRow,
   BookingRow,
+  ClientEntitlementRow,
+  ClientRow,
   DateOverrideRow,
   EventTypeRow,
   TenantRow,
@@ -333,6 +335,32 @@ export async function cancelBooking(
 
   if (error) throw error;
 
+  // Hand the session back if this booking drew down a package — a cancelled
+  // visit shouldn't cost the client one of their paid-for sessions. Best
+  // effort and never blocking: same posture as the calendar cleanup below,
+  // for the same reason — the cancellation itself must always succeed.
+  if (booking.entitlement_id) {
+    try {
+      const { data, error: entError } = await scope
+        .select('client_entitlements')
+        .eq('id', booking.entitlement_id)
+        .maybeSingle();
+      if (entError) throw entError;
+
+      const entitlement = data as unknown as ClientEntitlementRow | null;
+      if (entitlement) {
+        await scope
+          .update('client_entitlements', {
+            used_sessions: Math.max(0, entitlement.used_sessions - 1),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', entitlement.id);
+      }
+    } catch (cause) {
+      console.error('[clients] could not restore an entitlement session on cancel:', cause);
+    }
+  }
+
   if (booking.calendar_event_id) {
     try {
       // Inside the try: resolving the provider throws when the connection is
@@ -423,4 +451,220 @@ export async function rescheduleBooking(
   }
 
   return moved;
+}
+
+/**
+ * Package entitlements — a client who has bought N sessions of one session
+ * type may book several of them in one visit instead of coming back N
+ * separate times.
+ */
+
+/** Resolve the client behind a private booking link — same token-is-the-
+ * credential shape as a booking's own manage token. */
+export async function resolveClientByToken(
+  scope: TenantScope,
+  token: string,
+): Promise<ClientRow | null> {
+  if (!token || token.length < 20) return null;
+
+  const { data, error } = await scope.select('clients').eq('access_token', token).maybeSingle();
+  if (error) throw error;
+  return data as unknown as ClientRow | null;
+}
+
+export interface ClientEntitlementSummary {
+  id: string;
+  eventTypeId: string;
+  eventTypeName: string;
+  durationMinutes: number;
+  totalSessions: number;
+  usedSessions: number;
+  remaining: number;
+}
+
+/** A client's own balances, one row per session type they've been granted. */
+export async function listClientEntitlements(
+  scope: TenantScope,
+  clientId: string,
+): Promise<ClientEntitlementSummary[]> {
+  const { data, error } = await scope
+    .select('client_entitlements', '*, event_types(name, duration_minutes)')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as Array<
+    ClientEntitlementRow & { event_types: { name: string; duration_minutes: number } | null }
+  >;
+
+  return rows.map((r) => ({
+    id: r.id,
+    eventTypeId: r.event_type_id,
+    eventTypeName: r.event_types?.name ?? 'Unknown session type',
+    durationMinutes: r.event_types?.duration_minutes ?? 0,
+    totalSessions: r.total_sessions,
+    usedSessions: r.used_sessions,
+    remaining: r.total_sessions - r.used_sessions,
+  }));
+}
+
+/**
+ * Grant or top up a package. One entitlement per (client, event type) — see
+ * migration 0010 — so adding sessions to an existing grant raises its total
+ * rather than creating a second, parallel one that the balance would have to
+ * be added up across.
+ */
+export async function grantEntitlement(
+  scope: TenantScope,
+  clientId: string,
+  eventTypeId: string,
+  sessions: number,
+): Promise<ClientEntitlementRow> {
+  const { data: existing, error: findError } = await scope
+    .select('client_entitlements')
+    .eq('client_id', clientId)
+    .eq('event_type_id', eventTypeId)
+    .maybeSingle();
+  if (findError) throw findError;
+
+  if (existing) {
+    const row = existing as unknown as ClientEntitlementRow;
+    const { data, error } = await scope
+      .update('client_entitlements', {
+        total_sessions: row.total_sessions + sessions,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id)
+      .select();
+    if (error) throw error;
+    return (data as unknown as ClientEntitlementRow[])[0]!;
+  }
+
+  const { data, error } = await scope.insert('client_entitlements', {
+    client_id: clientId,
+    event_type_id: eventTypeId,
+    total_sessions: sessions,
+  });
+  if (error) throw error;
+  return (data as unknown as ClientEntitlementRow[])[0]!;
+}
+
+async function loadEntitlement(
+  scope: TenantScope,
+  entitlementId: string,
+): Promise<ClientEntitlementRow> {
+  const { data, error } = await scope
+    .select('client_entitlements')
+    .eq('id', entitlementId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new BookingError('Unknown package', 404);
+  return data as unknown as ClientEntitlementRow;
+}
+
+export interface EntitlementBookingResult {
+  startsAt: string;
+  status: 'booked' | 'unavailable' | 'no_sessions_left';
+  booking?: BookingRow;
+}
+
+/**
+ * Book several sessions against one package in a single visit.
+ *
+ * Deliberately not all-or-nothing: a slot going stale between the client
+ * picking it and this running is a normal, expected race (the whole batch
+ * was likely built from a calendar view that is a few seconds old by
+ * submit), not a reason to discard the rest of a selection that is still
+ * good. Each start time is independently re-validated and either booked or
+ * reported as unavailable, and the caller decides what to do with a partial
+ * result — this never pretends a booking happened when it didn't.
+ *
+ * Sessions are debited one at a time, immediately after each booking is
+ * written, rather than once at the end — so the very next iteration (and any
+ * other request racing against the same package) sees an accurate remaining
+ * count. If the debit itself is ever refused — the check constraint in
+ * migration 0010 catching a genuine race with another request — the booking
+ * that triggered it is removed rather than left standing on a session that
+ * was never actually paid down.
+ */
+export async function createEntitlementBookings(
+  tenant: TenantRow,
+  scope: TenantScope,
+  entitlementId: string,
+  client: ClientRow,
+  startTimes: string[],
+): Promise<{ results: EntitlementBookingResult[]; remaining: number }> {
+  const entitlement = await loadEntitlement(scope, entitlementId);
+  if (entitlement.client_id !== client.id) {
+    throw new BookingError('That package does not belong to this client', 403);
+  }
+
+  const eventType = await loadEventType(scope, entitlement.event_type_id);
+
+  const results: EntitlementBookingResult[] = [];
+  let used = entitlement.used_sessions;
+
+  for (const startsAt of startTimes) {
+    if (used >= entitlement.total_sessions) {
+      results.push({ startsAt, status: 'no_sessions_left' });
+      continue;
+    }
+
+    const localDate = DateTime.fromISO(startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd');
+    const query = await buildSlotQuery(tenant, scope, eventType.id, localDate, localDate);
+
+    if (!isSlotBookable(query, startsAt)) {
+      results.push({ startsAt, status: 'unavailable' });
+      continue;
+    }
+
+    const start = DateTime.fromISO(startsAt, { zone: 'utc' });
+    const end = start.plus({ minutes: eventType.duration_minutes });
+
+    const { data, error } = await scope.insert('bookings', {
+      event_type_id: eventType.id,
+      manage_token: generateManageToken(),
+      starts_at: start.toISO()!,
+      ends_at: end.toISO()!,
+      name: client.name,
+      email: client.email,
+      notes: null,
+      client_id: client.id,
+      entitlement_id: entitlement.id,
+      sync_status: 'pending',
+    });
+
+    if (error) {
+      // 23P01 = the exclusion constraint (migration 0004) — someone else
+      // took this exact time between our check above and this insert.
+      if (error.code === '23P01') {
+        results.push({ startsAt, status: 'unavailable' });
+        continue;
+      }
+      throw error;
+    }
+
+    const booking = (data as unknown as BookingRow[])[0]!;
+
+    const { error: debitError } = await scope
+      .update('client_entitlements', {
+        used_sessions: used + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', entitlement.id);
+
+    if (debitError) {
+      await scope.delete('bookings').eq('id', booking.id);
+      results.push({ startsAt, status: 'no_sessions_left' });
+      continue;
+    }
+
+    used += 1;
+    const synced = await syncBookingToCalendar(tenant, scope, booking, eventType);
+    results.push({ startsAt, status: 'booked', booking: synced });
+  }
+
+  return { results, remaining: entitlement.total_sessions - used };
 }
