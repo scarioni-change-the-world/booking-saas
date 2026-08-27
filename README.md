@@ -1,4 +1,12 @@
-# booking-saas
+# booking-saas / Intro
+
+**Read `PRODUCT_VISION.md` first.** It is the standing instruction for the
+whole project: what Intro actually is (a pre-meeting alignment platform, not
+a scheduling tool with a questionnaire bolted on), what it deliberately does
+not do, and the feature hierarchy that governs what gets built next. Every
+feature decision from here on should be checked against it. Its own closing
+section names the biggest gap between that vision and the schema below —
+read that before starting any work on the qualification/outcome model.
 
 A multi-tenant booking platform with a **qualification gate** in front of the
 calendar. Prospects answer screening questions before any times are shown, and
