@@ -69,6 +69,7 @@
   --emphasis: #b9822b;
   --emphasis-tint: color-mix(in srgb, var(--emphasis) 16%, var(--surface));
   --emphasis-ink: color-mix(in srgb, var(--emphasis) 72%, black);
+  --emphasis-contrast: #fcfbf8;
 
   /* Status — fixed. Never overridden per tenant. --status-live is this
      product's own earlier decision (see file header); attention/broken/info
@@ -379,13 +380,38 @@ button {
 /* Date strip + slots                                                      */
 /* ---------------------------------------------------------------------- */
 
+/* The horizontal scroll needs two things a plain overflow:auto doesn't give
+   it for free: the browser's own scrollbar hidden (left unstyled, it renders
+   as a flat, undifferentiated bar that reads as a stray progress indicator
+   — caught by actually looking at this in a real browser, not just in
+   markup), and a soft fade at each edge so "there's more, keep scrolling"
+   is visible rather than an abrupt hard cut where the strip just stops. */
 .date-strip {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 2px 0 10px;
-  margin-bottom: 4px;
+  padding: 2px 4px 10px;
+  margin: 0 -4px 4px;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 16px,
+    black calc(100% - 16px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 16px,
+    black calc(100% - 16px),
+    transparent 100%
+  );
+}
+.date-strip::-webkit-scrollbar {
+  display: none;
 }
 .date-chip {
   flex: 0 0 auto;
@@ -448,6 +474,7 @@ button {
   gap: 9px;
 }
 .slot {
+  position: relative;
   min-height: 52px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -455,6 +482,7 @@ button {
   padding: 9px 10px;
   font-variant-numeric: tabular-nums;
   font-size: 0.85rem;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
 .slot:hover {
   border-color: var(--accent);
@@ -463,6 +491,68 @@ button {
   background: var(--accent);
   color: var(--accent-contrast);
   border-color: var(--accent);
+}
+
+/* The multi-select package flow (ClientPackageBooking): choosing several
+   times at once is the brand's own "moment of alignment" — see globals.css's
+   opening note on --emphasis — so it gets the ochre treatment the guide
+   reserves for exactly that, rather than reusing the plain single-pick blue
+   every other slot grid in the app already carries. A small checkmark and a
+   slight lift on select give the choice some weight instead of just a flat
+   colour swap. */
+.slots.multi .slot.selected {
+  background: var(--emphasis);
+  color: var(--emphasis-contrast);
+  border-color: var(--emphasis);
+  transform: translateY(-1px);
+}
+.slots.multi .slot.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot {
+    transition: none;
+  }
+}
+
+/* A package's balance, as circles rather than a bare "8 of 10" sentence —
+   echoing the resolving-circle device from the marketing site (a circle
+   settling into place) instead of introducing a fourth way to show a
+   number in this app. Ink for a session already used, ochre for one about
+   to be booked in this batch, an open ring for one still free afterward. */
+.session-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 2px 0 20px;
+}
+.session-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.session-dot.used {
+  background: var(--ghost);
+  border-color: var(--ghost);
+}
+.session-dot.picking {
+  background: var(--emphasis);
+  border-color: var(--emphasis);
+  transform: scale(1.15);
+}
+@media (prefers-reduced-motion: reduce) {
+  .session-dot {
+    transition: none;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -598,6 +688,7 @@ button {
     --emphasis: #d6a54b; /* Muted Ochre, lightened */
     --emphasis-tint: color-mix(in srgb, var(--emphasis) 20%, var(--surface));
     --emphasis-ink: color-mix(in srgb, var(--emphasis) 75%, white);
+    --emphasis-contrast: #12181b;
 
     --status-live: #4f9187;
     --status-live-tint: #1c322e;

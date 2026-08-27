@@ -235,10 +235,29 @@ export default function ClientPackageBooking({ slug, token }: Props) {
       {step === 'pick-times' && entitlement && (
         <>
           <h2>{entitlement.eventTypeName}</h2>
+
+          <div className="session-dots" aria-hidden="true">
+            {Array.from({ length: entitlement.totalSessions }).map((_, i) => {
+              const isUsed = i < entitlement.usedSessions;
+              const isPicking = !isUsed && i < entitlement.usedSessions + selected.length;
+              return (
+                <span key={i} className={`session-dot${isUsed ? ' used' : ''}${isPicking ? ' picking' : ''}`} />
+              );
+            })}
+          </div>
+
           <p className="lede">
-            You have <strong>{entitlement.remaining - selected.length}</strong> of{' '}
-            {entitlement.remaining} sessions left to pick. Select as many times as you like, across
-            as many days as you like.
+            {selected.length > 0 ? (
+              <>
+                <strong>{selected.length}</strong> selected — {entitlement.remaining - selected.length}{' '}
+                left after this.
+              </>
+            ) : (
+              <>
+                You have <strong>{entitlement.remaining}</strong> of {entitlement.totalSessions} sessions
+                left. Select as many times as you like, across as many days as you like.
+              </>
+            )}
           </p>
 
           {busy && days.length === 0 && <p className="status">Loading times…</p>}
@@ -272,7 +291,7 @@ export default function ClientPackageBooking({ slug, token }: Props) {
               {activeDay && (
                 <>
                   <p className="day-label">{formatDay(activeDay.date)}</p>
-                  <div className="slots">
+                  <div className="slots multi">
                     {activeDay.slots.map((iso) => {
                       const isSelected = selected.includes(iso);
                       const atCap = !isSelected && selected.length >= entitlement.remaining;
