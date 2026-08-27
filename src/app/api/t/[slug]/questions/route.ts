@@ -9,8 +9,8 @@ import type { QualificationQuestionRow } from '@/lib/db/types';
  * That was an explicit product decision after testing; stepwise felt like an
  * interrogation (brief 2.2).
  *
- * The response is stripped of the per-option `qualifies` flags. Shipping them
- * would tell the browser exactly which answers open the calendar.
+ * The response is stripped of the per-option `outcomePathType` flags. Shipping
+ * them would tell the browser exactly which answers open the calendar.
  */
 export async function GET(_request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {

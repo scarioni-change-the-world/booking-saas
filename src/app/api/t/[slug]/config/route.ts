@@ -1,5 +1,5 @@
 import { handleError, isResponse, ok, requireTenant } from '@/lib/api';
-import type { TenantSettingsRow } from '@/lib/db/types';
+import type { OutcomePathRow } from '@/lib/db/types';
 
 /**
  * Public tenant configuration for the widget.
@@ -14,19 +14,20 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     if (isResponse(resolved)) return resolved;
 
     const { tenant, scope } = resolved;
-    const { data, error } = await scope.select('tenant_settings').maybeSingle();
+    const { data, error } = await scope.select('outcome_paths');
     if (error) throw error;
 
-    const settings = data as unknown as TenantSettingsRow | null;
+    const paths = (data ?? []) as unknown as OutcomePathRow[];
+    const otherPath = paths.find((p) => p.type === 'other');
 
     return ok({
       name: tenant.name,
       timezone: tenant.timezone,
       branding: tenant.branding,
-      disqualification: {
-        message: settings?.disqualification_message ?? '',
-        redirectUrl: settings?.disqualification_redirect_url ?? null,
-        redirectLabel: settings?.disqualification_redirect_label ?? null,
+      otherPath: {
+        message: otherPath?.message ?? '',
+        redirectUrl: otherPath?.redirect_url ?? null,
+        redirectLabel: otherPath?.redirect_label ?? null,
       },
     });
   } catch (error) {

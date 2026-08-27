@@ -15,7 +15,7 @@ interface Overview {
   upcomingCount: number;
   thisWeekCount: number;
   needsAttentionCount: number;
-  last30Days: { qualified: number; redirected: number };
+  last30Days: { meeting: number; other: number };
   nextUp: NextUpBooking[];
   calendarStatus: 'not_connected' | 'active' | 'needs_reconnect' | 'revoked';
 }
@@ -103,8 +103,8 @@ export default function OverviewPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
             <Tile label="Upcoming" value={data.upcomingCount} />
             <Tile label="This week" value={data.thisWeekCount} />
-            <Tile label="Aligned · 30 days" value={data.last30Days.qualified} tone="live" />
-            <Tile label="Other path · 30 days" value={data.last30Days.redirected} tone="attention" />
+            <Tile label="Aligned · 30 days" value={data.last30Days.meeting} tone="live" />
+            <Tile label="Other path · 30 days" value={data.last30Days.other} tone="attention" />
           </div>
 
           <div className="card" style={{ marginBottom: 14 }}>

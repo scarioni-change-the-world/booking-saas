@@ -5,7 +5,8 @@ import type {
   ClientRow,
   DateOverrideRow,
   EventTypeRow,
-  QualificationOutcome,
+  OutcomePathRow,
+  OutcomePathType,
   QualificationQuestionRow,
   TenantSettingsRow,
 } from './db/types';
@@ -87,9 +88,6 @@ export function serializeSettings(row: TenantSettingsRow) {
   return {
     bookingNoticeHours: row.booking_notice_hours,
     bookingWindowDays: row.booking_window_days,
-    disqualificationMessage: row.disqualification_message,
-    disqualificationRedirectUrl: row.disqualification_redirect_url,
-    disqualificationRedirectLabel: row.disqualification_redirect_label,
     notificationEmail: row.notification_email,
     replyToEmail: row.reply_to_email,
     updatedAt: row.updated_at,
@@ -99,20 +97,39 @@ export function serializeSettings(row: TenantSettingsRow) {
 export type SerializedSettings = ReturnType<typeof serializeSettings>;
 
 /**
+ * A path an answer can send a prospect down (migration 0011). `type` is the
+ * one field that never changes once seeded — everything else the tenant can
+ * edit.
+ */
+export function serializeOutcomePath(row: OutcomePathRow) {
+  return {
+    id: row.id,
+    type: row.type,
+    name: row.name,
+    message: row.message,
+    redirectUrl: row.redirect_url,
+    redirectLabel: row.redirect_label,
+    updatedAt: row.updated_at,
+  };
+}
+
+export type SerializedOutcomePath = ReturnType<typeof serializeOutcomePath>;
+
+/**
  * A booking row as this list actually needs it: the event type's name and the
  * prospect's screening answers alongside it, rather than two more round trips
  * per row. Both arrive via PostgREST's foreign-key embedding — see
  * resolveBookingByToken for the same pattern used elsewhere in this codebase.
  *
  * qualification_responses stores its own full snapshot of the questions as
- * they read at submission time (prompt, kind, answer, qualifies) rather than
- * a reference back to qualification_questions, which is exactly why this can
- * show a prospect's real answers even after a question has since been edited
- * or removed.
+ * they read at submission time (prompt, kind, answer, outcomePathType)
+ * rather than a reference back to qualification_questions, which is exactly
+ * why this can show a prospect's real answers even after a question has
+ * since been edited or removed.
  */
 export interface BookingWithJoins extends BookingRow {
   event_types: { name: string } | null;
-  qualification_responses: { answers: AnsweredQuestion[]; outcome: QualificationOutcome } | null;
+  qualification_responses: { answers: AnsweredQuestion[]; outcome_path_type: OutcomePathType } | null;
 }
 
 export function serializeBooking(row: BookingWithJoins) {
@@ -132,7 +149,7 @@ export function serializeBooking(row: BookingWithJoins) {
     syncError: row.sync_error,
     qualification: row.qualification_responses
       ? {
-          outcome: row.qualification_responses.outcome,
+          outcomePathType: row.qualification_responses.outcome_path_type,
           answers: row.qualification_responses.answers,
         }
       : null,

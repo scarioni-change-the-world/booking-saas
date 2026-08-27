@@ -8,18 +8,18 @@ import {
 } from '@/lib/api';
 import { BookingError } from '@/lib/booking-service';
 import { evaluateQualification, type Question } from '@/lib/qualification';
-import type { QualificationQuestionRow, TenantSettingsRow } from '@/lib/db/types';
+import type { OutcomePathRow, QualificationQuestionRow } from '@/lib/db/types';
 
 /**
  * Score a submitted questionnaire and record the response.
  *
  * Scoring happens here, never in the browser — the client is handed questions
- * with the qualifying flags stripped, so it has no way to compute the outcome
- * and no way to claim one.
+ * with the outcome-path flags stripped, so it has no way to compute the
+ * outcome and no way to claim one.
  *
- * A disqualified prospect gets the tenant's configured message and optional
- * redirect, and never sees the calendar (brief 2.2). The copy is the tenant's
- * to write and is meant to be warm rather than a rejection.
+ * A prospect sent down the 'other' path gets that path's configured message
+ * and optional redirect, and never sees the calendar (brief 2.2). The copy is
+ * the tenant's to write and is meant to be warm rather than a rejection.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -37,12 +37,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
 
     const email = optionalString(body, 'email', { maxLength: 320 });
 
-    const [questionsResult, settingsResult] = await Promise.all([
+    const [questionsResult, pathsResult] = await Promise.all([
       scope.select('qualification_questions').order('sort_order', { ascending: true }),
-      scope.select('tenant_settings').maybeSingle(),
+      scope.select('outcome_paths'),
     ]);
     if (questionsResult.error) throw questionsResult.error;
-    if (settingsResult.error) throw settingsResult.error;
+    if (pathsResult.error) throw pathsResult.error;
 
     const rows = (questionsResult.data ?? []) as unknown as QualificationQuestionRow[];
     const questions: Question[] = rows.map((r) => ({
@@ -58,25 +58,26 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
 
     const { data, error } = await scope.insert('qualification_responses', {
       answers: result.answers,
-      outcome: result.outcome,
+      outcome_path_type: result.outcomePathType,
       email: email ?? null,
     });
     if (error) throw error;
 
     const responseId = (data as unknown as Array<{ id: string }>)[0]!.id;
 
-    if (result.outcome === 'redirected') {
-      const settings = settingsResult.data as unknown as TenantSettingsRow | null;
+    if (result.outcomePathType === 'other') {
+      const paths = (pathsResult.data ?? []) as unknown as OutcomePathRow[];
+      const otherPath = paths.find((p) => p.type === 'other');
       return ok({
-        outcome: 'redirected' as const,
+        outcomePathType: 'other' as const,
         responseId,
-        message: settings?.disqualification_message ?? '',
-        redirectUrl: settings?.disqualification_redirect_url ?? null,
-        redirectLabel: settings?.disqualification_redirect_label ?? null,
+        message: otherPath?.message ?? '',
+        redirectUrl: otherPath?.redirect_url ?? null,
+        redirectLabel: otherPath?.redirect_label ?? null,
       });
     }
 
-    return ok({ outcome: 'qualified' as const, responseId });
+    return ok({ outcomePathType: 'meeting' as const, responseId });
   } catch (error) {
     return handleError(error);
   }

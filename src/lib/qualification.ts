@@ -1,17 +1,28 @@
 /**
- * The qualification gate (brief 1, 2.2).
+ * The qualification gate (brief 1, 2.2), now scored against outcome paths
+ * rather than a bare pass/fail flag (PRODUCT_VISION.md §17, migration 0011).
  *
  * Prospects answer screening questions before they are allowed to see the
- * calendar, and an answer can disqualify them. This is the product's actual
- * differentiator, so the rule is kept small, pure and directly testable.
+ * calendar, and an answer sends them down a path — the calendar, or
+ * somewhere else. This is the product's actual differentiator, so the rule
+ * is kept small, pure and directly testable.
  */
 
 export type QuestionKind = 'text' | 'yes_no' | 'single_choice';
 
+/**
+ * Exactly two path types exist today. Defined locally rather than imported
+ * from db/types so this module stays pure and testable without a live
+ * database — see migration 0011 for why the roadmap's other path types
+ * (alternative service, resource, referral, downloads, ...) are additive
+ * from here rather than a rebuild.
+ */
+export type OutcomePathType = 'meeting' | 'other';
+
 export interface QuestionOption {
   label: string;
-  /** false on any chosen option disqualifies the whole response. */
-  qualifies: boolean;
+  /** 'other' on any chosen option sends the whole response down that path. */
+  outcomePathType: OutcomePathType;
 }
 
 export interface Question {
@@ -26,19 +37,17 @@ export interface Question {
 /** Raw answers as submitted: question id -> chosen label or free text. */
 export type AnswerMap = Record<string, string>;
 
-export type Outcome = 'qualified' | 'redirected';
-
 export interface AnsweredQuestion {
   questionId: string;
   prompt: string;
   kind: QuestionKind;
   answer: string;
-  /** null for free text, which never disqualifies on its own. */
-  qualifies: boolean | null;
+  /** null for free text, which never sends anyone off the meeting path on its own. */
+  outcomePathType: OutcomePathType | null;
 }
 
 export interface QualificationResult {
-  outcome: Outcome;
+  outcomePathType: OutcomePathType;
   answers: AnsweredQuestion[];
 }
 
@@ -56,21 +65,21 @@ export class QualificationError extends Error {
  * Score a submitted set of answers.
  *
  * Free text is recorded but never gates — there is no reliable way to judge it,
- * and the reference implementation never tried. Only a chosen option carrying
- * `qualifies: false` closes the gate.
+ * and the reference implementation never tried. Only a chosen option whose
+ * `outcomePathType` is 'other' sends the whole response down that path.
  *
  * @throws QualificationError when a required question is unanswered, or an
  * answer names an option the question does not offer. Both are rejected rather
- * than treated as a disqualification: a malformed submission is a bug or a
- * tampering attempt, not a prospect who cannot afford the service, and quietly
- * folding one into the other would make the funnel numbers lie.
+ * than treated as a redirect: a malformed submission is a bug or a tampering
+ * attempt, not a prospect who isn't the right fit, and quietly folding one
+ * into the other would make the funnel numbers lie.
  */
 export function evaluateQualification(
   questions: readonly Question[],
   submitted: AnswerMap,
 ): QualificationResult {
   const answers: AnsweredQuestion[] = [];
-  let disqualified = false;
+  let sentElsewhere = false;
 
   const ordered = [...questions].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -91,7 +100,7 @@ export function evaluateQualification(
         prompt: question.prompt,
         kind: question.kind,
         answer,
-        qualifies: null,
+        outcomePathType: null,
       });
       continue;
     }
@@ -104,22 +113,22 @@ export function evaluateQualification(
       );
     }
 
-    if (!option.qualifies) disqualified = true;
+    if (option.outcomePathType === 'other') sentElsewhere = true;
 
     answers.push({
       questionId: question.id,
       prompt: question.prompt,
       kind: question.kind,
       answer,
-      qualifies: option.qualifies,
+      outcomePathType: option.outcomePathType,
     });
   }
 
-  return { outcome: disqualified ? 'redirected' : 'qualified', answers };
+  return { outcomePathType: sentElsewhere ? 'other' : 'meeting', answers };
 }
 
 /**
- * Strip the `qualifies` flags before sending questions to the browser.
+ * Strip the `outcomePathType` flags before sending questions to the browser.
  *
  * The widget renders every question on one page (brief 2.2), so the whole set
  * is in the client's hands. Shipping the flags with it would publish exactly

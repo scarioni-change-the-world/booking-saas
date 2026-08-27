@@ -41,7 +41,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       if (error) throw error;
 
       const response = data as unknown as QualificationResponseRow | null;
-      if (response?.outcome !== 'qualified') {
+      if (response?.outcome_path_type !== 'meeting') {
         return fail('Complete the questions first', 403);
       }
     }

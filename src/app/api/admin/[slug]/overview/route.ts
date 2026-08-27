@@ -1,6 +1,10 @@
 import { handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
-import type { BookingRow, CalendarConnectionRow, QualificationResponseRow } from '@/lib/db/types';
+import type {
+  BookingRow,
+  CalendarConnectionRow,
+  QualificationResponseRow,
+} from '@/lib/db/types';
 
 const NEXT_UP_LIMIT = 5;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -46,7 +50,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
           .gte('starts_at', nowIso)
           .lt('starts_at', weekAheadIso),
         scope.select('bookings', 'id').eq('sync_status', 'failed'),
-        scope.select('qualification_responses', 'outcome').gte('created_at', thirtyDaysAgoIso),
+        scope
+          .select('qualification_responses', 'outcome_path_type')
+          .gte('created_at', thirtyDaysAgoIso),
         scope
           .select('bookings', 'id, name, starts_at, event_types(name)')
           .eq('status', 'confirmed')
@@ -61,9 +67,12 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     }
     if (calendarResult.error) throw calendarResult.error;
 
-    const qualRows = (qualResult.data ?? []) as unknown as Pick<QualificationResponseRow, 'outcome'>[];
-    const qualified = qualRows.filter((r) => r.outcome === 'qualified').length;
-    const redirected = qualRows.filter((r) => r.outcome === 'redirected').length;
+    const qualRows = (qualResult.data ?? []) as unknown as Pick<
+      QualificationResponseRow,
+      'outcome_path_type'
+    >[];
+    const meeting = qualRows.filter((r) => r.outcome_path_type === 'meeting').length;
+    const other = qualRows.filter((r) => r.outcome_path_type === 'other').length;
 
     const nextUpRows = (nextUpResult.data ?? []) as unknown as NextUpRow[];
     const connection = calendarResult.data as unknown as Pick<CalendarConnectionRow, 'status'> | null;
@@ -72,7 +81,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       upcomingCount: (upcomingResult.data ?? []).length,
       thisWeekCount: (weekResult.data ?? []).length,
       needsAttentionCount: (failedResult.data ?? []).length,
-      last30Days: { qualified, redirected },
+      last30Days: { meeting, other },
       nextUp: nextUpRows.map((b) => ({
         id: b.id,
         name: b.name,

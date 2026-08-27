@@ -12,7 +12,7 @@ interface AnsweredQuestion {
   prompt: string;
   kind: 'text' | 'yes_no' | 'single_choice';
   answer: string;
-  qualifies: boolean | null;
+  outcomePathType: 'meeting' | 'other' | null;
 }
 
 interface Booking {
@@ -29,7 +29,7 @@ interface Booking {
   meetingUrl: string | null;
   syncStatus: SyncStatus;
   syncError: string | null;
-  qualification: { outcome: 'qualified' | 'redirected'; answers: AnsweredQuestion[] } | null;
+  qualification: { outcomePathType: 'meeting' | 'other'; answers: AnsweredQuestion[] } | null;
   createdAt: string;
 }
 
@@ -172,7 +172,7 @@ export default function BookingsPage() {
                 <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'var(--faint)' }}>{b.email}</p>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                  {b.qualification?.outcome === 'redirected' && (
+                  {b.qualification?.outcomePathType === 'other' && (
                     <span
                       className="notice"
                       style={{ padding: '4px 11px', margin: 0, ...toneStyle('attention') }}
@@ -226,7 +226,8 @@ export default function BookingsPage() {
                         <div
                           style={{
                             fontSize: '0.92rem',
-                            color: a.qualifies === false ? 'var(--status-attention-ink)' : 'var(--ink)',
+                            color:
+                              a.outcomePathType === 'other' ? 'var(--status-attention-ink)' : 'var(--ink)',
                           }}
                         >
                           {a.answer}

@@ -43,9 +43,9 @@ export interface CreateTenantInput {
 /**
  * Create a business and invite its first person in one step.
  *
- * tenant_settings needs no insert here — migration 0009's trigger creates it
- * the moment the tenants row exists, so there is no window where a tenant
- * exists without it.
+ * tenant_settings and outcome_paths need no insert here — migration 0009's
+ * and migration 0011's triggers create them the moment the tenants row
+ * exists, so there is no window where a tenant exists without either.
  *
  * The owner invite goes through Supabase's own "invite by email", which both
  * creates their login and sends them the email to set a password — nothing

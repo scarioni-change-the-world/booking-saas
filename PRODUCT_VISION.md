@@ -442,32 +442,40 @@ And the product principle to evaluate every future feature against:
 Written by Claude, for whoever (human or otherwise) next works on this
 codebase — not part of the product owner's original document above.
 
-The three-stage framework, the refusal to expose scoring language, and "not
-every enquiry needs a meeting" are already real in the running app (see
-`src/lib/qualification.ts` and the brand rebrand commits). But today's
-schema models **one binary decision with one alternative path**, not the
-multi-path "Outcome Paths" architecture section 17 describes:
+**Update (migration 0011):** the foundational change this note originally
+called for — evolving the qualification engine from a binary qualify/
+disqualify gate into a real Outcome Paths model — is now built, scoped
+deliberately to exactly two path types for v1:
 
-- `qualification_questions.options[].qualifies` is a single boolean per
-  option. There is no way to express *which* alternative path a
-  disqualifying answer should lead to — only that it disqualifies.
-- `qualification_responses.outcome` is `'qualified' | 'redirected'` — a
-  strict binary. There is no "needs review", "alternative service",
-  "resource", "referral", or "reconnect later" outcome type.
-- The "other path" itself is a single message + single optional redirect
-  URL/label stored once per tenant, in `tenant_settings` — every
-  disqualifying answer, regardless of which question or which option,
-  leads to the exact same place. Section 17's Path A/B/C/D/E, each with its
-  own destination, isn't representable yet.
-- There is no manual review queue (section 21), no resource library
-  (section 20), no referral list (section 19), and no "reconnect later"
-  scheduling (section 18) — the schema has nowhere to put any of them.
+- A new `outcome_paths` table, tenant-scoped, `type` enum of `'meeting'` |
+  `'other'`, one row per type per tenant, auto-seeded on tenant creation.
+- `qualification_questions.options[]` elements now carry `outcomePathType`
+  (`'meeting' | 'other'`) instead of a bare `qualifies` boolean — an answer
+  references a real path object, not a flag.
+- `qualification_responses.outcome_path_type` replaces the old strict
+  `'qualified' | 'redirected'` enum — a response's outcome IS which path it
+  landed on.
+- The "other path"'s message and redirect moved off `tenant_settings` (which
+  could only hold one, tenant-wide) onto the `other` path row itself.
 
-Practically: most of Layer 1 is built (intake questions, pre-calendar
-intake, calendar reveal, respectful single-message outcome, branded mobile
-flow), but "multiple outcomes" and "alternative paths" — both explicitly
-Layer 1, "must be excellent" — are not, and nearly everything in Layer 2
-(Alignment Builder, manual review, referral/resource paths) depends on that
-same underlying change: evolving the qualification engine from a binary
-qualify/disqualify gate into a real Outcome Paths model. That's the
-foundational piece the rest of this document's roadmap sits on top of.
+This is genuinely two path types, not a relabelled boolean: the type is an
+enum a future migration widens, and multiplicity (say, two different
+resources) is a contained, later change to what a question option
+references — not a rebuild. What section 17's fuller Path A/B/C/D/E
+picture still needs, and this migration deliberately did not build yet:
+
+- More path types — `'alternative_service'`, `'resource'`, `'referral'`,
+  `'reconnect_later'`, etc. — and whatever type-specific fields each turns
+  out to need (a referral's contact info, a resource's link or file).
+- Multiple paths of the same type per tenant (the day someone wants two
+  different resources on offer, `unique(tenant_id, type)` has to go).
+- A manual review queue (section 21), a resource library (section 20), a
+  referral list (section 19), and "reconnect later" scheduling (section 18)
+  — the schema still has nowhere to put any of these; each needs its own
+  path type plus its own supporting table.
+
+Practically: Layer 1's "multiple outcomes" and "alternative paths" now have
+a real, if intentionally narrow, foundation under them. Layer 2 (Alignment
+Builder, manual review, referral/resource paths) can build on top of that
+foundation incrementally — each new path type is additive — rather than
+waiting on a second foundational rewrite.

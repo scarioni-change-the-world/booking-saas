@@ -6,10 +6,11 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
 
 type Kind = 'text' | 'yes_no' | 'single_choice';
+type PathType = 'meeting' | 'other';
 
 interface Option {
   label: string;
-  qualifies: boolean;
+  outcomePathType: PathType;
 }
 
 interface Question {
@@ -34,10 +35,10 @@ const EMPTY_FORM: FormState = {
   kind: 'text',
   required: true,
   yesNo: [
-    { label: 'Yes', qualifies: true },
-    { label: 'No', qualifies: true },
+    { label: 'Yes', outcomePathType: 'meeting' },
+    { label: 'No', outcomePathType: 'meeting' },
   ],
-  choices: [{ label: '', qualifies: true }],
+  choices: [{ label: '', outcomePathType: 'meeting' }],
 };
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -46,16 +47,25 @@ const KIND_LABEL: Record<Kind, string> = {
   single_choice: 'Choose one',
 };
 
+interface OutcomePath {
+  id: string;
+  type: PathType;
+  name: string;
+  message: string;
+  redirectUrl: string | null;
+  redirectLabel: string | null;
+}
+
 interface OtherPathForm {
-  disqualificationMessage: string;
-  disqualificationRedirectUrl: string;
-  disqualificationRedirectLabel: string;
+  message: string;
+  redirectUrl: string;
+  redirectLabel: string;
 }
 
 const EMPTY_OTHER_PATH: OtherPathForm = {
-  disqualificationMessage: '',
-  disqualificationRedirectUrl: '',
-  disqualificationRedirectLabel: '',
+  message: '',
+  redirectUrl: '',
+  redirectLabel: '',
 };
 
 function formToPayload(form: FormState) {
@@ -124,14 +134,14 @@ function QuestionForm({
 
       {form.kind === 'text' && (
         <p className="notice notice-muted">
-          Free text is recorded but never screens anyone out — there is no reliable way to judge
-          it automatically.
+          Free text is recorded but never routes anyone — there is no reliable way to judge it
+          automatically.
         </p>
       )}
 
       {form.kind === 'yes_no' && (
         <div className="field">
-          <label>Does each answer let someone through, or offer another path?</label>
+          <label>Does each answer continue on, or send someone down the other path?</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {form.yesNo.map((opt, i) => (
               <div
@@ -148,11 +158,14 @@ function QuestionForm({
               >
                 <span>{opt.label}</span>
                 <Toggle
-                  on={opt.qualifies}
-                  label={opt.qualifies ? 'Continues' : 'Other path'}
+                  on={opt.outcomePathType === 'meeting'}
+                  label={opt.outcomePathType === 'meeting' ? 'Continues' : 'Other path'}
                   onClick={() => {
                     const yesNo = [...form.yesNo] as [Option, Option];
-                    yesNo[i] = { ...yesNo[i]!, qualifies: !yesNo[i]!.qualifies };
+                    yesNo[i] = {
+                      ...yesNo[i]!,
+                      outcomePathType: yesNo[i]!.outcomePathType === 'meeting' ? 'other' : 'meeting',
+                    };
                     setForm({ ...form, yesNo });
                   }}
                 />
@@ -180,11 +193,14 @@ function QuestionForm({
                   }}
                 />
                 <Toggle
-                  on={opt.qualifies}
-                  label={opt.qualifies ? 'Continues' : 'Other path'}
+                  on={opt.outcomePathType === 'meeting'}
+                  label={opt.outcomePathType === 'meeting' ? 'Continues' : 'Other path'}
                   onClick={() => {
                     const choices = [...form.choices];
-                    choices[i] = { ...choices[i]!, qualifies: !choices[i]!.qualifies };
+                    choices[i] = {
+                      ...choices[i]!,
+                      outcomePathType: choices[i]!.outcomePathType === 'meeting' ? 'other' : 'meeting',
+                    };
                     setForm({ ...form, choices });
                   }}
                 />
@@ -205,7 +221,7 @@ function QuestionForm({
             className="btn-secondary"
             style={{ marginTop: 10 }}
             onClick={() =>
-              setForm({ ...form, choices: [...form.choices, { label: '', qualifies: true }] })
+              setForm({ ...form, choices: [...form.choices, { label: '', outcomePathType: 'meeting' }] })
             }
           >
             Add an answer
@@ -227,13 +243,14 @@ function QuestionForm({
 export default function ScreeningPage() {
   const { slug } = useParams<{ slug: string }>();
   const base = `/api/admin/${slug}/questions`;
-  const settingsUrl = `/api/admin/${slug}/settings`;
+  const pathsUrl = `/api/admin/${slug}/outcome-paths`;
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [otherPathId, setOtherPathId] = useState<string | null>(null);
   const [otherPath, setOtherPath] = useState<OtherPathForm>(EMPTY_OTHER_PATH);
   const [otherPathLoading, setOtherPathLoading] = useState(true);
   const [savingOtherPath, setSavingOtherPath] = useState(false);
@@ -261,18 +278,14 @@ export default function ScreeningPage() {
   async function loadOtherPath() {
     setOtherPathLoading(true);
     try {
-      const result = await adminFetchJson<{
-        settings: {
-          disqualificationMessage: string;
-          disqualificationRedirectUrl: string | null;
-          disqualificationRedirectLabel: string | null;
-        } | null;
-      }>(settingsUrl);
-      if (result.settings) {
+      const result = await adminFetchJson<{ paths: OutcomePath[] }>(pathsUrl);
+      const path = result.paths.find((p) => p.type === 'other');
+      if (path) {
+        setOtherPathId(path.id);
         setOtherPath({
-          disqualificationMessage: result.settings.disqualificationMessage,
-          disqualificationRedirectUrl: result.settings.disqualificationRedirectUrl ?? '',
-          disqualificationRedirectLabel: result.settings.disqualificationRedirectLabel ?? '',
+          message: path.message,
+          redirectUrl: path.redirectUrl ?? '',
+          redirectLabel: path.redirectLabel ?? '',
         });
       }
     } catch (cause) {
@@ -290,17 +303,18 @@ export default function ScreeningPage() {
 
   async function submitOtherPath(event: React.FormEvent) {
     event.preventDefault();
+    if (!otherPathId) return;
     setSavingOtherPath(true);
     setError(null);
     setOtherPathSaved(false);
     try {
-      await adminFetchJson(settingsUrl, {
+      await adminFetchJson(`${pathsUrl}/${otherPathId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          disqualificationMessage: otherPath.disqualificationMessage,
-          disqualificationRedirectUrl: otherPath.disqualificationRedirectUrl || null,
-          disqualificationRedirectLabel: otherPath.disqualificationRedirectLabel || null,
+          message: otherPath.message,
+          redirectUrl: otherPath.redirectUrl || null,
+          redirectLabel: otherPath.redirectLabel || null,
         }),
       });
       setOtherPathSaved(true);
@@ -405,8 +419,8 @@ export default function ScreeningPage() {
       </div>
 
       <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-6px 0 18px', maxWidth: 560 }}>
-        Everyone answers these on one page before any times are shown. Mark the answers that mean
-        this is not the right moment for someone.
+        Everyone answers these on one page before any times are shown. Mark the answers that send
+        someone down a different path than the calendar.
       </p>
 
       {error && (
@@ -502,8 +516,10 @@ export default function ScreeningPage() {
                         style={{
                           padding: '4px 11px',
                           margin: 0,
-                          background: opt.qualifies ? 'var(--status-live-tint)' : 'var(--accent-tint)',
-                          color: opt.qualifies ? 'var(--status-live-ink)' : 'var(--accent-ink)',
+                          background:
+                            opt.outcomePathType === 'meeting' ? 'var(--status-live-tint)' : 'var(--accent-tint)',
+                          color:
+                            opt.outcomePathType === 'meeting' ? 'var(--status-live-ink)' : 'var(--accent-ink)',
                         }}
                       >
                         {opt.label}
@@ -536,20 +552,20 @@ export default function ScreeningPage() {
         )}
       </div>
 
-      {!otherPathLoading && (
+      {!otherPathLoading && otherPathId && (
         <form className="card" onSubmit={submitOtherPath} style={{ marginTop: 14 }}>
           <div className="admin-card-title">Where the other path leads</div>
           <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-4px 0 16px', maxWidth: 560 }}>
-            What someone sees when an answer means this isn't the right moment for them — instead
-            of the calendar.
+            What someone sees when an answer sends them down a different path — instead of the
+            calendar.
           </p>
 
           <div className="field">
             <label htmlFor="other-path-message">Message</label>
             <textarea
               id="other-path-message"
-              value={otherPath.disqualificationMessage}
-              onChange={(e) => setOtherPath({ ...otherPath, disqualificationMessage: e.target.value })}
+              value={otherPath.message}
+              onChange={(e) => setOtherPath({ ...otherPath, message: e.target.value })}
             />
           </div>
 
@@ -560,10 +576,8 @@ export default function ScreeningPage() {
                 id="other-path-url"
                 type="url"
                 placeholder="https://…"
-                value={otherPath.disqualificationRedirectUrl}
-                onChange={(e) =>
-                  setOtherPath({ ...otherPath, disqualificationRedirectUrl: e.target.value })
-                }
+                value={otherPath.redirectUrl}
+                onChange={(e) => setOtherPath({ ...otherPath, redirectUrl: e.target.value })}
               />
             </div>
             <div className="field">
@@ -572,10 +586,8 @@ export default function ScreeningPage() {
                 id="other-path-label"
                 type="text"
                 placeholder="Learn more"
-                value={otherPath.disqualificationRedirectLabel}
-                onChange={(e) =>
-                  setOtherPath({ ...otherPath, disqualificationRedirectLabel: e.target.value })
-                }
+                value={otherPath.redirectLabel}
+                onChange={(e) => setOtherPath({ ...otherPath, redirectLabel: e.target.value })}
               />
             </div>
           </div>

@@ -12,7 +12,13 @@ export type MemberRole = 'owner' | 'admin' | 'member';
 export type BookingStatus = 'confirmed' | 'cancelled';
 export type SyncStatus = 'pending' | 'synced' | 'failed' | 'not_configured';
 export type QuestionKind = 'text' | 'yes_no' | 'single_choice';
-export type QualificationOutcome = 'qualified' | 'redirected';
+/**
+ * What answering a screening question leads to. Exactly two exist today —
+ * see migration 0011 for why the roadmap's other path types (alternative
+ * service, resource, referral, downloads, ...) are additive from here rather
+ * than a rebuild.
+ */
+export type OutcomePathType = 'meeting' | 'other';
 export type CalendarProviderId = 'google' | 'microsoft';
 export type CalendarConnectionStatus = 'active' | 'needs_reconnect' | 'revoked';
 export type PlatformRole = 'owner' | 'admin' | 'support';
@@ -39,11 +45,24 @@ export interface TenantSettingsRow {
   tenant_id: string;
   booking_notice_hours: number;
   booking_window_days: number;
-  disqualification_message: string;
-  disqualification_redirect_url: string | null;
-  disqualification_redirect_label: string | null;
   notification_email: string | null;
   reply_to_email: string | null;
+  updated_at: string;
+}
+
+/**
+ * A path an answer can send a prospect down — see migration 0011. Exactly
+ * one row per (tenant_id, type) exists in v1, auto-seeded on tenant creation.
+ */
+export interface OutcomePathRow {
+  id: string;
+  tenant_id: string;
+  type: OutcomePathType;
+  name: string;
+  message: string;
+  redirect_url: string | null;
+  redirect_label: string | null;
+  created_at: string;
   updated_at: string;
 }
 
@@ -95,7 +114,7 @@ export interface QualificationQuestionRow {
   tenant_id: string;
   prompt: string;
   kind: QuestionKind;
-  options: Array<{ label: string; qualifies: boolean }>;
+  options: Array<{ label: string; outcomePathType: OutcomePathType }>;
   required: boolean;
   sort_order: number;
 }
@@ -104,7 +123,7 @@ export interface QualificationResponseRow {
   id: string;
   tenant_id: string;
   answers: unknown;
-  outcome: QualificationOutcome;
+  outcome_path_type: OutcomePathType;
   email: string | null;
   created_at: string;
 }
@@ -198,6 +217,7 @@ export interface TenantScopedTables {
   blocked_slots: BlockedSlotRow;
   qualification_questions: QualificationQuestionRow;
   qualification_responses: QualificationResponseRow;
+  outcome_paths: OutcomePathRow;
   bookings: BookingRow;
   calendar_connections: CalendarConnectionRow;
   clients: ClientRow;

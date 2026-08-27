@@ -215,10 +215,10 @@ in both directions against Europe/Madrid — including that a window opening at
 03:00, which is what Luxon does if you let it.
 
 **The gate is enforced server-side, at every door.** The widget receives
-questions with the per-option `qualifies` flags stripped, so it cannot compute
-an outcome, and both `/availability` and `/bookings` require a stored response
-whose outcome is `qualified`. Enforcing it only in the widget would make the
-differentiator decorative.
+questions with the per-option `outcomePathType` flags stripped, so it cannot
+compute an outcome, and both `/availability` and `/bookings` require a stored
+response whose outcome path is `meeting`. Enforcing it only in the widget
+would make the differentiator decorative.
 
 **The two visibility flags are independent booleans, not opposites** (§2.1).
 Queries filter on the matching flag, never on the negation of the other.

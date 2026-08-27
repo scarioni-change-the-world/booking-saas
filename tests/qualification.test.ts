@@ -11,9 +11,9 @@ const budget: Question = {
   prompt: 'What can you invest right now?',
   kind: 'single_choice',
   options: [
-    { label: 'Over 2.000 €', qualifies: true },
-    { label: '500 - 2.000 €', qualifies: true },
-    { label: "I can't afford this right now", qualifies: false },
+    { label: 'Over 2.000 €', outcomePathType: 'meeting' },
+    { label: '500 - 2.000 €', outcomePathType: 'meeting' },
+    { label: "I can't afford this right now", outcomePathType: 'other' },
   ],
   required: true,
   sortOrder: 1,
@@ -24,8 +24,8 @@ const ready: Question = {
   prompt: 'Are you ready to start this month?',
   kind: 'yes_no',
   options: [
-    { label: 'Yes', qualifies: true },
-    { label: 'No', qualifies: true },
+    { label: 'Yes', outcomePathType: 'meeting' },
+    { label: 'No', outcomePathType: 'meeting' },
   ],
   required: true,
   sortOrder: 2,
@@ -41,25 +41,25 @@ const goal: Question = {
 };
 
 describe('evaluateQualification', () => {
-  it('qualifies when every chosen option qualifies', () => {
+  it('lands on the meeting path when every chosen option does', () => {
     const result = evaluateQualification([budget, ready], {
       'q-budget': 'Over 2.000 €',
       'q-ready': 'Yes',
     });
-    expect(result.outcome).toBe('qualified');
+    expect(result.outcomePathType).toBe('meeting');
     expect(result.answers).toHaveLength(2);
   });
 
-  it('redirects on any single disqualifying option', () => {
+  it('sends the response down the other path on any single such option', () => {
     const result = evaluateQualification([budget, ready], {
       'q-budget': "I can't afford this right now",
       'q-ready': 'Yes',
     });
-    expect(result.outcome).toBe('redirected');
+    expect(result.outcomePathType).toBe('other');
   });
 
-  it('records the full answer set even when redirected', () => {
-    // The tenant still wants to see who was screened out and why.
+  it('records the full answer set even when sent down the other path', () => {
+    // The tenant still wants to see who was sent elsewhere and why.
     const result = evaluateQualification([budget, ready], {
       'q-budget': "I can't afford this right now",
       'q-ready': 'No',
@@ -68,28 +68,28 @@ describe('evaluateQualification', () => {
       "I can't afford this right now",
       'No',
     ]);
-    expect(result.answers[0]!.qualifies).toBe(false);
-    expect(result.answers[1]!.qualifies).toBe(true);
+    expect(result.answers[0]!.outcomePathType).toBe('other');
+    expect(result.answers[1]!.outcomePathType).toBe('meeting');
   });
 
   it('treats yes/no as an ordinary option pair, not an implicit gate', () => {
-    // "No" only disqualifies if the tenant flagged that option as such.
-    expect(evaluateQualification([ready], { 'q-ready': 'No' }).outcome).toBe('qualified');
+    // "No" only sends someone down the other path if the tenant set it up that way.
+    expect(evaluateQualification([ready], { 'q-ready': 'No' }).outcomePathType).toBe('meeting');
 
     const gating: Question = {
       ...ready,
       options: [
-        { label: 'Yes', qualifies: true },
-        { label: 'No', qualifies: false },
+        { label: 'Yes', outcomePathType: 'meeting' },
+        { label: 'No', outcomePathType: 'other' },
       ],
     };
-    expect(evaluateQualification([gating], { 'q-ready': 'No' }).outcome).toBe('redirected');
+    expect(evaluateQualification([gating], { 'q-ready': 'No' }).outcomePathType).toBe('other');
   });
 
-  it('never disqualifies on free text', () => {
+  it('never sends anyone off the meeting path on free text alone', () => {
     const result = evaluateQualification([goal], { 'q-goal': 'no budget at all' });
-    expect(result.outcome).toBe('qualified');
-    expect(result.answers[0]!.qualifies).toBeNull();
+    expect(result.outcomePathType).toBe('meeting');
+    expect(result.answers[0]!.outcomePathType).toBeNull();
   });
 
   it('scores answers in the tenant-defined order regardless of input order', () => {
@@ -103,7 +103,7 @@ describe('evaluateQualification', () => {
 
   it('skips an unanswered optional question', () => {
     const result = evaluateQualification([budget, goal], { 'q-budget': 'Over 2.000 €' });
-    expect(result.outcome).toBe('qualified');
+    expect(result.outcomePathType).toBe('meeting');
     expect(result.answers).toHaveLength(1);
   });
 
@@ -115,7 +115,7 @@ describe('evaluateQualification', () => {
   });
 
   it('rejects an option the question does not offer', () => {
-    // A tampered submission must not be silently scored as qualified.
+    // A tampered submission must not be silently scored onto the meeting path.
     expect(() =>
       evaluateQualification([budget], { 'q-budget': 'Over 9.000 €' }),
     ).toThrow(QualificationError);
@@ -123,9 +123,9 @@ describe('evaluateQualification', () => {
 });
 
 describe('toPublicQuestions', () => {
-  it('does not leak which options qualify', () => {
+  it('does not leak which options lead to which path', () => {
     const serialised = JSON.stringify(toPublicQuestions([budget, ready]));
-    expect(serialised).not.toContain('qualifies');
+    expect(serialised).not.toContain('outcomePathType');
     expect(serialised).toContain("I can't afford this right now");
   });
 

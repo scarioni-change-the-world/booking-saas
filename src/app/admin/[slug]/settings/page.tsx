@@ -7,9 +7,6 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 interface Settings {
   bookingNoticeHours: number;
   bookingWindowDays: number;
-  disqualificationMessage: string;
-  disqualificationRedirectUrl: string | null;
-  disqualificationRedirectLabel: string | null;
   notificationEmail: string | null;
   replyToEmail: string | null;
   updatedAt: string;

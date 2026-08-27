@@ -19,7 +19,7 @@ export interface PublicConfig {
   name: string;
   timezone: string;
   branding: { logoUrl?: string; accentColor?: string; buttonColor?: string };
-  disqualification: {
+  otherPath: {
     message: string;
     redirectUrl: string | null;
     redirectLabel: string | null;

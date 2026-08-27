@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * The qualification gate, end to end.
+ * The qualification gate and its outcome paths, end to end.
  *
  * Requires the demo tenant from supabase/seed.sql.
  */
@@ -22,7 +22,7 @@ test.describe('prospect flow', () => {
     await expect(page.getByRole('heading', { name: 'Pick a time' })).toBeHidden();
   });
 
-  test('a disqualifying answer never reaches the calendar', async ({ page }) => {
+  test('an answer sent down the other path never reaches the calendar', async ({ page }) => {
     await page.goto(`/t/${TENANT}`);
 
     await page.getByRole('textbox').first().fill('More clients');
@@ -41,7 +41,7 @@ test.describe('prospect flow', () => {
     await expect(page.getByRole('heading', { name: 'Pick a time' })).toBeHidden();
   });
 
-  test('a qualifying answer books a discovery call', async ({ page }) => {
+  test('an answer on the meeting path books a discovery call', async ({ page }) => {
     await page.goto(`/t/${TENANT}`);
 
     await page.getByRole('textbox').first().fill('More clients');
@@ -61,7 +61,7 @@ test.describe('prospect flow', () => {
     await expect(page.getByRole('link', { name: 'manage your booking' })).toBeVisible();
   });
 
-  test('the API refuses a booking without a qualified response', async ({ request }) => {
+  test('the API refuses a booking without a response on the meeting path', async ({ request }) => {
     // The gate must hold at the endpoint, not only in the widget.
     const response = await request.post(`/api/t/${TENANT}/bookings`, {
       data: {
@@ -74,16 +74,16 @@ test.describe('prospect flow', () => {
     expect(response.status()).toBe(403);
   });
 
-  test('the availability endpoint refuses an unqualified caller', async ({ request }) => {
+  test('the availability endpoint refuses a caller not on the meeting path', async ({ request }) => {
     const response = await request.get(
       `/api/t/${TENANT}/availability?eventTypeId=00000000-0000-4000-8000-000000000002`,
     );
     expect(response.status()).toBe(403);
   });
 
-  test('the public questions never carry the qualifying flags', async ({ request }) => {
+  test('the public questions never carry the outcome-path flags', async ({ request }) => {
     const response = await request.get(`/api/t/${TENANT}/questions`);
-    expect(await response.text()).not.toContain('qualifies');
+    expect(await response.text()).not.toContain('outcomePathType');
   });
 });
 

@@ -1,11 +1,4 @@
-import {
-  handleError,
-  ok,
-  optionalNullableString,
-  readJson,
-  requireEmail,
-  requireInt,
-} from '@/lib/api';
+import { handleError, ok, readJson, requireEmail, requireInt } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeSettings } from '@/lib/admin-serializers';
 import type { TenantSettingsRow } from '@/lib/db/types';
@@ -53,31 +46,6 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ slug: str
     }
     if ('bookingWindowDays' in body) {
       patch.booking_window_days = requireInt(body, 'bookingWindowDays', { min: 0, max: 3650 });
-    }
-
-    const disqualificationMessage = optionalNullableString(body, 'disqualificationMessage', {
-      maxLength: 2000,
-    });
-    if (disqualificationMessage !== undefined) {
-      patch.disqualification_message = disqualificationMessage ?? '';
-    }
-
-    const disqualificationRedirectUrl = optionalNullableString(
-      body,
-      'disqualificationRedirectUrl',
-      { maxLength: 2000 },
-    );
-    if (disqualificationRedirectUrl !== undefined) {
-      patch.disqualification_redirect_url = disqualificationRedirectUrl;
-    }
-
-    const disqualificationRedirectLabel = optionalNullableString(
-      body,
-      'disqualificationRedirectLabel',
-      { maxLength: 200 },
-    );
-    if (disqualificationRedirectLabel !== undefined) {
-      patch.disqualification_redirect_label = disqualificationRedirectLabel;
     }
 
     // Emails go through requireEmail (not the nullable helper) when present and

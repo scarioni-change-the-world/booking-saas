@@ -20,11 +20,17 @@ values (
 update tenant_settings set
   booking_notice_hours = 24,
   booking_window_days = 60,
-  disqualification_message = E'Thank you for taking the time to answer.\n\nFrom what you have shared, one-to-one coaching is not the right fit right now — and that is completely fine. The free guide below covers the same ground and costs nothing.',
-  disqualification_redirect_url = 'https://example.com/guide',
-  disqualification_redirect_label = 'Get the free guide',
   notification_email = 'owner@example.com'
 where tenant_id = '00000000-0000-4000-8000-000000000001';
+
+-- migration 0011's tenants_create_outcome_paths trigger already created both
+-- path rows the moment the tenant insert ran; this fills in the demo's
+-- "other" path the same way the update above fills in its settings.
+update outcome_paths set
+  message = E'Thank you for taking the time to answer.\n\nFrom what you have shared, one-to-one coaching is not the right fit right now — and that is completely fine. The free guide below covers the same ground and costs nothing.',
+  redirect_url = 'https://example.com/guide',
+  redirect_label = 'Get the free guide'
+where tenant_id = '00000000-0000-4000-8000-000000000001' and type = 'other';
 
 -- Two event types, one per audience, to keep the independent-booleans
 -- behaviour visible in development (brief 2.1).
@@ -52,14 +58,15 @@ values
   ('00000000-0000-4000-8000-000000000001',
    'Have you worked with a coach before?',
    'yes_no',
-   '[{"label": "Yes", "qualifies": true}, {"label": "No", "qualifies": true}]'::jsonb,
+   '[{"label": "Yes", "outcomePathType": "meeting"}, {"label": "No", "outcomePathType": "meeting"}]'::jsonb,
    true, 2),
 
-  -- The one disqualifying option in the reference implementation (brief 2.2).
+  -- The one option sent down the other path in the reference implementation
+  -- (brief 2.2).
   ('00000000-0000-4000-8000-000000000001',
    'What are you able to invest in this right now?',
    'single_choice',
-   '[{"label": "Over 2.000 €", "qualifies": true},
-     {"label": "500 - 2.000 €", "qualifies": true},
-     {"label": "I can''t afford this right now", "qualifies": false}]'::jsonb,
+   '[{"label": "Over 2.000 €", "outcomePathType": "meeting"},
+     {"label": "500 - 2.000 €", "outcomePathType": "meeting"},
+     {"label": "I can''t afford this right now", "outcomePathType": "other"}]'::jsonb,
    true, 3);

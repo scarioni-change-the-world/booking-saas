@@ -12,14 +12,14 @@ const MAX_RANGE_DAYS = 62;
  *
  * This is where the gate is actually enforced, not in the widget. A prospect
  * reaches the calendar only by presenting the id of a stored response whose
- * outcome is 'qualified'; without this check anyone could skip the
+ * outcome path is 'meeting'; without this check anyone could skip the
  * questionnaire by calling this endpoint directly, and the product's
  * differentiator would be decorative.
  *
  * The response id is looked up through the tenant scope, so a response issued
  * by one tenant cannot unlock another tenant's calendar.
  */
-async function prospectHasQualified(
+async function prospectIsOnMeetingPath(
   scope: TenantScope,
   responseId: string | null,
 ): Promise<boolean> {
@@ -32,7 +32,7 @@ async function prospectHasQualified(
 
   if (error) throw error;
   const response = data as unknown as QualificationResponseRow | null;
-  return response?.outcome === 'qualified';
+  return response?.outcome_path_type === 'meeting';
 }
 
 export async function GET(request: Request, ctx: { params: Promise<{ slug: string }> }) {
@@ -49,8 +49,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
 
     const audience = params.get('audience') === 'client' ? 'client' : 'prospect';
     if (audience === 'prospect') {
-      const qualified = await prospectHasQualified(scope, params.get('responseId'));
-      if (!qualified) return fail('Complete the questions first', 403);
+      const onMeetingPath = await prospectIsOnMeetingPath(scope, params.get('responseId'));
+      if (!onMeetingPath) return fail('Complete the questions first', 403);
     }
 
     const today = DateTime.now().setZone(tenant.timezone);

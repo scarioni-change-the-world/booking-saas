@@ -10,7 +10,7 @@ type Audience = 'prospect' | 'client';
 type Step =
   | 'loading'
   | 'questions'
-  | 'redirected'
+  | 'other-path'
   | 'pick-type'
   | 'pick-time'
   | 'details'
@@ -166,20 +166,20 @@ export default function BookingFlow({ slug, audience }: Props) {
     setError(null);
     try {
       const result = await postJson<{
-        outcome: 'qualified' | 'redirected';
+        outcomePathType: 'meeting' | 'other';
         responseId: string;
         message?: string;
         redirectUrl?: string | null;
         redirectLabel?: string | null;
       }>(`${base}/qualify`, { answers });
 
-      if (result.outcome === 'redirected') {
+      if (result.outcomePathType === 'other') {
         setRedirect({
-          message: result.message ?? config?.disqualification.message ?? '',
+          message: result.message ?? config?.otherPath.message ?? '',
           url: result.redirectUrl ?? null,
           label: result.redirectLabel ?? null,
         });
-        setStep('redirected');
+        setStep('other-path');
         return;
       }
 
@@ -340,7 +340,7 @@ export default function BookingFlow({ slug, audience }: Props) {
         </form>
       )}
 
-      {step === 'redirected' && redirect && (
+      {step === 'other-path' && redirect && (
         <div className="card">
           <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{redirect.message}</p>
           {redirect.url && (
