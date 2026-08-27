@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>intro — The right meeting starts with alignment</title>
+<meta name="description" content="Intro is a pre-meeting alignment layer for businesses and professionals whose work begins with a meaningful conversation. Understanding, then alignment, then a meeting worth having." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+  /* ==========================================================================
+     Design tokens — the exact values in supabase-booking-saas/src/app/globals.css,
+     built from Intro's brand strategy & web guidelines document. This file is
+     a standalone static page, so tokens are duplicated here rather than
+     imported — there is nothing else this page depends on.
+     ========================================================================== */
+  :root {
+    --canvas: #f4f1eb;      /* Warm Chalk — primary page background */
+    --surface: #fcfbf8;     /* Soft White — cards and elevated surfaces */
+    --side: #eeeae1;
+    --border: #d9d7d1;      /* Mist */
+    --rule: #e6e3db;
+
+    --ink: #202221;         /* Ink — primary text, wordmark */
+    --muted: #4b4e4c;
+    --faint: #666a67;       /* Graphite */
+    --ghost: #9a988f;
+
+    --accent: #435a66;      /* Mineral Blue — primary functional brand accent */
+    --accent-tint: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    --accent-ink: color-mix(in srgb, var(--accent) 72%, black);
+    --accent-contrast: #fcfbf8;
+
+    --emphasis: #b9822b;    /* Muted Ochre — the alignment moment, used sparingly */
+    --emphasis-tint: color-mix(in srgb, var(--emphasis) 14%, var(--surface));
+    --emphasis-ink: color-mix(in srgb, var(--emphasis) 72%, black);
+
+    --radius: 11px;
+    --radius-lg: 18px;
+
+    --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    /* Plus Jakarta Sans stands in for Mangal Pro Bold — see README-marketing.md
+       in this folder for why, and what to swap when a licensed webfont exists. */
+    --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+    --wrap: 1120px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #1b1c1b;
+      --surface: #242524;
+      --side: #202120;
+      --border: #3a3b39;
+      --rule: #2e2f2d;
+
+      --ink: #f4f1eb;
+      --muted: #b7b9b4;
+      --faint: #8c8e89;
+      --ghost: #6b6d68;
+
+      --accent: #6f97ac;
+      --accent-tint: color-mix(in srgb, var(--accent) 18%, var(--surface));
+      --accent-ink: color-mix(in srgb, var(--accent) 70%, white);
+      --accent-contrast: #12181b;
+
+      --emphasis: #d6a54b;
+      --emphasis-tint: color-mix(in srgb, var(--emphasis) 18%, var(--surface));
+      --emphasis-ink: color-mix(in srgb, var(--emphasis) 75%, white);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .eyebrow {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 22px;
+    height: 1px;
+    background: var(--border);
+    display: inline-block;
+  }
+
+  a { color: inherit; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 14px 24px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    text-decoration: none;
+    cursor: pointer;
+    min-height: 50px;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-contrast); }
+  .btn-primary:hover { filter: brightness(0.94); }
+  .btn-ghost { background: transparent; border-color: var(--border); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--ghost); }
+
+  /* ---------------------------------------------------------------------- */
+  /* Nav                                                                     */
+  /* ---------------------------------------------------------------------- */
+  header.site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--canvas) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0;
+  }
+  /* The wordmark: no icon by default, per the brand guide — its strength is
+     tight tracking and weight, not a mark bolted beside it. */
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.04em;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-size: 14.5px;
+    font-weight: 500;
+  }
+  .nav-links a { text-decoration: none; color: var(--muted); }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-links .btn { padding: 10px 18px; min-height: 40px; font-size: 14px; }
+  @media (max-width: 720px) {
+    .nav-links a:not(.btn) { display: none; }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Resolving-i graphic — the secondary device: a circle and a vertical bar,
+     inspired by the lowercase "i", that begin offset and resolve onto a
+     common axis. This is the one recurring visual motif on the whole page,
+     used instead of any photography this file has no honest way to source.
+     ---------------------------------------------------------------------- */
+  .align-graphic {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(28px, 6vw, 64px);
+    padding: 8px 0;
+  }
+  .align-frame { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .align-stage {
+    position: relative;
+    width: 64px;
+    height: 92px;
+    display: flex;
+    justify-content: center;
+  }
+  .align-dot {
+    position: absolute;
+    top: 0;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: left 1.1s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s;
+  }
+  .align-bar {
+    position: absolute;
+    bottom: 0;
+    width: 15px;
+    height: 46px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+  .align-frame[data-stage="1"] .align-dot { left: 4px; }
+  .align-frame[data-stage="2"] .align-dot { left: 4px; background: var(--emphasis); }
+  .align-frame[data-stage="3"] .align-dot { left: calc(50% - 7.5px); background: var(--emphasis); }
+  .align-frame.resolved[data-stage="1"] .align-dot { left: calc(50% - 7.5px); }
+  .align-frame.resolved[data-stage="2"] .align-dot { left: calc(50% - 7.5px); }
+  .align-label { font-size: 12.5px; color: var(--faint); text-align: center; max-width: 100px; }
+  .align-arrow { color: var(--ghost); font-size: 18px; padding-bottom: 28px; }
+  @media (max-width: 640px) {
+    .align-graphic { gap: 18px; }
+    .align-arrow { display: none; }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Hero                                                                    */
+  /* ---------------------------------------------------------------------- */
+  .hero {
+    padding: clamp(56px, 10vw, 108px) 0 clamp(48px, 8vw, 84px);
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 6vw, 4.1rem);
+    line-height: 1.05;
+    max-width: 880px;
+    margin: 22px auto 0;
+  }
+  .hero .lede {
+    max-width: 620px;
+    margin: 22px auto 0;
+    font-size: 18px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .hero .cta-row {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 34px;
+    flex-wrap: wrap;
+  }
+  .hero .align-graphic { margin-top: 56px; }
+
+  /* ---------------------------------------------------------------------- */
+  /* Generic section rhythm — reveal-on-scroll settles content onto its
+     baseline, echoing the "resolve into alignment" motion principle without
+     any bounce, elastic easing, or parallax. */
+  /* ---------------------------------------------------------------------- */
+  section { padding: clamp(56px, 9vw, 96px) 0; }
+  section.on-rule { border-top: 1px solid var(--rule); }
+
+  /* [data-reveal] elements are fully visible by default — the reveal effect
+     only applies once the .js-reveal class below confirms JavaScript ran AND
+     an IntersectionObserver is actually watching. Without this guard, any
+     situation where the observer doesn't fire for an element (JS disabled,
+     JS failing, a full-page capture that never scrolls the real viewport —
+     caught exactly that way, first try) leaves the entire page below the
+     fold invisible. Content must never depend on JS to be seen at all. */
+  .js-reveal [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  [data-reveal].in { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .js-reveal [data-reveal] { opacity: 1; transform: none; transition: none; }
+    .align-dot { transition: none; }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Problem                                                                 */
+  /* ---------------------------------------------------------------------- */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 56px;
+    align-items: start;
+  }
+  .problem-grid h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); line-height: 1.15; margin-top: 14px; }
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 26px 28px;
+  }
+  .callout .callout-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--emphasis-ink);
+    margin-bottom: 10px;
+  }
+  .callout p { margin: 0; color: var(--muted); font-size: 15.5px; line-height: 1.6; }
+  @media (max-width: 860px) {
+    .problem-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Sequence — Question → Context → Alignment → Meeting                    */
+  /* ---------------------------------------------------------------------- */
+  .sequence {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-top: 48px;
+    position: relative;
+  }
+  .sequence::before {
+    content: '';
+    position: absolute;
+    top: 27px;
+    left: 12%;
+    right: 12%;
+    height: 1px;
+    background: var(--border);
+  }
+  .seq-step { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .seq-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+  .seq-step.is-last .seq-icon { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+  .seq-step:not(.is-last) .seq-icon { color: var(--faint); }
+  .seq-title { font-weight: 600; font-size: 15px; }
+  .seq-copy { font-size: 13.5px; color: var(--faint); max-width: 180px; }
+  @media (max-width: 760px) {
+    .sequence { grid-template-columns: 1fr; gap: 30px; }
+    .sequence::before { top: 0; bottom: 0; left: 27px; right: auto; width: 1px; height: auto; }
+    .seq-step { flex-direction: row; text-align: left; }
+    .seq-copy { max-width: none; }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Framework — editorial, alternating, not a three-card SaaS row          */
+  /* ---------------------------------------------------------------------- */
+  .stage {
+    display: grid;
+    grid-template-columns: 0.62fr 1fr;
+    gap: 48px;
+    align-items: center;
+    padding: 44px 0;
+  }
+  .stage:not(:last-child) { border-bottom: 1px solid var(--rule); }
+  .stage:nth-child(even) { grid-template-columns: 1fr 0.62fr; }
+  .stage:nth-child(even) .stage-copy { order: 2; }
+  .stage:nth-child(even) .stage-mark { order: 1; }
+  .stage-mark {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(3.4rem, 7vw, 6rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .stage:nth-child(1) .stage-mark,
+  .stage:nth-child(3) .stage-mark { color: var(--accent); }
+  .stage:nth-child(2) .stage-mark { color: var(--emphasis); }
+  .stage-eyebrow { font-size: 13px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .stage h3 { font-size: clamp(1.5rem, 2.6vw, 1.9rem); margin: 10px 0 12px; }
+  .stage p { color: var(--muted); font-size: 16px; max-width: 46ch; margin: 0; }
+  @media (max-width: 760px) {
+    .stage, .stage:nth-child(even) { grid-template-columns: 1fr; gap: 16px; }
+    .stage:nth-child(even) .stage-copy,
+    .stage:nth-child(even) .stage-mark { order: initial; }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Human principle — the editorial quote moment                          */
+  /* ---------------------------------------------------------------------- */
+  .principle {
+    background: var(--ink);
+    color: var(--canvas);
+    border-radius: var(--radius-lg);
+    padding: clamp(40px, 7vw, 72px) clamp(24px, 6vw, 64px);
+    text-align: center;
+  }
+  .principle blockquote {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .principle blockquote::before { content: '“'; color: var(--emphasis); }
+  .principle blockquote::after { content: '”'; color: var(--emphasis); }
+  .principle p {
+    margin: 22px auto 0;
+    max-width: 620px;
+    color: color-mix(in srgb, var(--canvas) 72%, transparent);
+    font-size: 15.5px;
+    line-height: 1.65;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Product experience — flat UI fragments, no perspective, no browser     */
+  /* chrome, no floating 3D. These mirror the real product's own cards.     */
+  /* ---------------------------------------------------------------------- */
+  .fragments {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-top: 44px;
+  }
+  .fragment {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+  }
+  .fragment .fr-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 16px;
+  }
+  .fr-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.5px;
+  }
+  .fr-row:last-child { border-bottom: none; }
+  .fr-check {
+    width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border);
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  }
+  .fr-row.done .fr-check { background: var(--accent); border-color: var(--accent); }
+  .fr-row.done .fr-check::after { content: '✓'; color: var(--accent-contrast); font-size: 11px; }
+  .fr-row.muted { color: var(--faint); }
+  .fr-pill {
+    display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px;
+    font-size: 11.5px; font-weight: 600; background: var(--emphasis-tint); color: var(--emphasis-ink);
+    margin-left: auto;
+  }
+  .fr-confirm {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-top: 4px;
+  }
+  .fr-confirm .fr-when { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--accent-ink); }
+  .fr-confirm .fr-what { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 760px) { .fragments { grid-template-columns: 1fr; } }
+
+  /* ---------------------------------------------------------------------- */
+  /* Who it's for                                                           */
+  /* ---------------------------------------------------------------------- */
+  .sector-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 40px;
+  }
+  .sector {
+    background: var(--surface);
+    padding: 20px 22px;
+    font-size: 14.5px;
+    color: var(--muted);
+  }
+  @media (max-width: 860px) { .sector-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .sector-grid { grid-template-columns: 1fr; } }
+
+  /* ---------------------------------------------------------------------- */
+  /* Business value                                                         */
+  /* ---------------------------------------------------------------------- */
+  .value-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+    margin-top: 44px;
+  }
+  .value-item .value-mark { color: var(--accent); font-size: 26px; font-weight: 700; font-family: var(--font-display); }
+  .value-item p { margin: 12px 0 0; font-size: 14.5px; color: var(--muted); line-height: 1.6; }
+  @media (max-width: 860px) { .value-row { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .value-row { grid-template-columns: 1fr; } }
+
+  /* ---------------------------------------------------------------------- */
+  /* Closing CTA + footer                                                   */
+  /* ---------------------------------------------------------------------- */
+  .closing { text-align: center; }
+  .closing h2 { font-size: clamp(1.9rem, 4.4vw, 3rem); max-width: 760px; margin: 0 auto; line-height: 1.15; }
+  .closing .cta-row { display: flex; justify-content: center; gap: 14px; margin-top: 30px; flex-wrap: wrap; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 40px 0;
+  }
+  .foot-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .foot-framework {
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .foot-framework b { color: var(--emphasis-ink); font-weight: 600; }
+  .foot-copy { font-size: 13px; color: var(--ghost); }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap nav-row">
+    <a class="wordmark" href="#top">intro</a>
+    <nav class="nav-links">
+      <a href="#framework">Framework</a>
+      <a href="#product">Product</a>
+      <a href="#who">Who it's for</a>
+      <a class="btn btn-primary" href="#cta">Start with understanding</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================== HERO ============================== -->
+  <section class="hero wrap">
+    <div class="eyebrow" style="justify-content:center;">
+      <span style="border:none;">Understanding</span>
+      <span style="color:var(--emphasis-ink);">·</span>
+      <span>Alignment</span>
+      <span style="color:var(--emphasis-ink);">·</span>
+      <span>Meeting</span>
+    </div>
+    <h1>The right meeting starts with alignment.</h1>
+    <p class="lede">
+      Intro helps businesses and customers understand whether a conversation makes sense
+      before it reaches the calendar. Most booking tools start with availability — Intro
+      starts earlier.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#cta">Start with understanding</a>
+      <a class="btn btn-ghost" href="#framework">See the framework</a>
+    </div>
+
+    <div class="align-graphic" data-reveal id="hero-graphic">
+      <div class="align-frame" data-stage="1">
+        <div class="align-stage"><span class="align-dot"></span><span class="align-bar"></span></div>
+        <div class="align-label">1. Understanding<br />Gather context</div>
+      </div>
+      <span class="align-arrow">→</span>
+      <div class="align-frame" data-stage="2">
+        <div class="align-stage"><span class="align-dot"></span><span class="align-bar"></span></div>
+        <div class="align-label">2. Alignment<br />Find what matters</div>
+      </div>
+      <span class="align-arrow">→</span>
+      <div class="align-frame" data-stage="3">
+        <div class="align-stage"><span class="align-dot"></span><span class="align-bar"></span></div>
+        <div class="align-label">3. Meeting<br />Move forward</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= PROBLEM ============================= -->
+  <section class="on-rule">
+    <div class="wrap problem-grid">
+      <div data-reveal>
+        <div class="eyebrow">The problem</div>
+        <h2>A calendar can tell someone when a professional is free.<br />It cannot tell either side whether a meeting is worth having.</h2>
+      </div>
+      <div data-reveal>
+        <div class="callout">
+          <div class="callout-label">Core problem</div>
+          <p>
+            In high-touch and expertise-led work, a 30–60 minute conversation is expensive
+            in time and attention. A poor-fit call wastes capacity, creates awkward
+            expectations, and often leaves both sides frustrated. Most booking tools begin
+            with availability. Intro begins earlier — with the context needed to decide
+            whether a conversation will be useful for both sides.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= INTRO STARTS EARLIER ===================== -->
+  <section class="on-rule">
+    <div class="wrap">
+      <div class="eyebrow" data-reveal>Intro starts earlier</div>
+      <h2 data-reveal style="margin-top:14px; font-size:clamp(1.7rem,3.4vw,2.4rem); max-width:640px;">
+        The meeting begins before it's booked.
+      </h2>
+
+      <div class="sequence" data-reveal>
+        <div class="seq-step">
+          <div class="seq-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17.5" r=".9" fill="currentColor" stroke="none"/></svg>
+          </div>
+          <div class="seq-title">Question</div>
+          <div class="seq-copy">A short, respectful set of questions — never an interrogation.</div>
+        </div>
+        <div class="seq-step">
+          <div class="seq-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+          </div>
+          <div class="seq-title">Context</div>
+          <div class="seq-copy">Need, timing, expectations and readiness, gathered before any time is shown.</div>
+        </div>
+        <div class="seq-step">
+          <div class="seq-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          </div>
+          <div class="seq-title">Alignment</div>
+          <div class="seq-copy">The professional's own criteria decide the appropriate next step.</div>
+        </div>
+        <div class="seq-step is-last">
+          <div class="seq-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </div>
+          <div class="seq-title">Meeting</div>
+          <div class="seq-copy">The calendar appears only now — the outcome of context, not the start of it.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ FRAMEWORK ============================ -->
+  <section class="on-rule" id="framework">
+    <div class="wrap">
+      <div class="eyebrow" data-reveal>The framework</div>
+      <h2 data-reveal style="margin-top:14px; font-size:clamp(1.8rem,3.6vw,2.6rem); max-width:640px;">
+        Understanding, alignment, then a worthwhile meeting.
+      </h2>
+
+      <div style="margin-top:24px;">
+        <div class="stage" data-reveal>
+          <div class="stage-mark">01</div>
+          <div class="stage-copy">
+            <div class="stage-eyebrow">Understanding</div>
+            <h3>Gather context before availability.</h3>
+            <p>Questions clarify what the person needs, what they expect, their readiness, and any criteria relevant to the professional — before a single time slot is shown.</p>
+          </div>
+        </div>
+        <div class="stage" data-reveal>
+          <div class="stage-mark">02</div>
+          <div class="stage-copy">
+            <div class="stage-eyebrow">Alignment</div>
+            <h3>A decision about fit, not worthiness.</h3>
+            <p>The professional's own criteria determine the appropriate next step. Alignment is mutual — it asks whether needs, timing and expectations are sufficiently matched for a conversation to be useful right now.</p>
+          </div>
+        </div>
+        <div class="stage" data-reveal>
+          <div class="stage-mark">03</div>
+          <div class="stage-copy">
+            <div class="stage-eyebrow">Meeting</div>
+            <h3>The calendar is the outcome, not the start.</h3>
+            <p>When alignment exists, availability opens. The meeting is what happens after understanding — not what a prospect has to get past to reach it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= HUMAN PRINCIPLE ========================== -->
+  <section class="on-rule">
+    <div class="wrap">
+      <div class="principle" data-reveal>
+        <blockquote>Not every enquiry needs a meeting. Every enquiry deserves a useful next step.</blockquote>
+        <p>
+          The app protects the professional's time without making the prospective customer
+          feel dismissed. It is discerning, but never superior. When a meeting isn't the
+          right next step yet, the person receives a respectful alternative — not a rejection.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== PRODUCT EXPERIENCE ======================== -->
+  <section class="on-rule" id="product">
+    <div class="wrap">
+      <div class="eyebrow" data-reveal>Product experience</div>
+      <h2 data-reveal style="margin-top:14px; font-size:clamp(1.7rem,3.4vw,2.4rem); max-width:600px;">
+        Quiet for the professional. Almost invisible for the prospect.
+      </h2>
+      <p data-reveal style="max-width:56ch; color:var(--muted); font-size:16px; margin-top:14px;">
+        The client-facing flow belongs visually to the professional — their logo, their
+        accent colour, their name. Intro should barely announce itself there. The dashboard
+        stays flat and quiet too: brand expression lives in onboarding and empty states,
+        not in routine screens someone opens every day.
+      </p>
+
+      <div class="fragments" data-reveal>
+        <div class="fragment">
+          <div class="fr-label">What's most important to achieve in this meeting?</div>
+          <div class="fr-row done"><span class="fr-check"></span> Clarify scope</div>
+          <div class="fr-row done"><span class="fr-check"></span> Understand priorities</div>
+          <div class="fr-row muted"><span class="fr-check"></span> Timeline <span class="fr-pill">alignment</span></div>
+          <div class="fr-row muted"><span class="fr-check"></span> Approach / process</div>
+        </div>
+        <div class="fragment">
+          <div class="fr-label">Meeting summary</div>
+          <div class="fr-row"><span>Goal</span><span style="margin-left:auto; color:var(--faint);">Clarify scope and timeline</span></div>
+          <div class="fr-row"><span>Attendees</span><span style="margin-left:auto; color:var(--faint);">Alex Kim, Jordan Lee</span></div>
+          <div class="fr-confirm">
+            <div class="fr-when">Tue, May 20</div>
+            <div class="fr-what">10:00 – 11:00 · Added to calendar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= WHO IT'S FOR ========================= -->
+  <section class="on-rule" id="who">
+    <div class="wrap">
+      <div class="eyebrow" data-reveal>Who Intro is for</div>
+      <h2 data-reveal style="margin-top:14px; font-size:clamp(1.7rem,3.4vw,2.4rem); max-width:680px;">
+        Any professional or service business where time starts with a conversation.
+      </h2>
+      <p data-reveal style="max-width:60ch; color:var(--muted); font-size:16px; margin-top:14px;">
+        Not a narrow industry — the economics and human reality of expertise-led services,
+        wherever the conversation has meaningful cost and context should shape whether
+        availability is shown at all.
+      </p>
+
+      <div class="sector-grid" data-reveal>
+        <div class="sector">Consultants and fractional executives</div>
+        <div class="sector">Creative, branding, web and digital agencies</div>
+        <div class="sector">Recruiters and executive search</div>
+        <div class="sector">Architects, interior designers and specialist project services</div>
+        <div class="sector">Lawyers, tax advisors and financial planners</div>
+        <div class="sector">B2B teams running discovery or demo calls</div>
+        <div class="sector">Coaches, therapists and independent professionals</div>
+        <div class="sector">Education, admissions and specialist tutoring</div>
+        <div class="sector">Real estate, relocation and property advisory</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== BUSINESS VALUE ========================= -->
+  <section class="on-rule">
+    <div class="wrap">
+      <div class="eyebrow" data-reveal>What it changes</div>
+      <div class="value-row" data-reveal>
+        <div class="value-item">
+          <div class="value-mark">01</div>
+          <p>Better conversations — the people who reach your calendar are the people worth talking to.</p>
+        </div>
+        <div class="value-item">
+          <div class="value-mark">02</div>
+          <p>Fewer unnecessary meetings, so high-value time is spent where it actually matters.</p>
+        </div>
+        <div class="value-item">
+          <div class="value-mark">03</div>
+          <p>Clearer expectations on both sides, before either commits to time on a calendar.</p>
+        </div>
+        <div class="value-item">
+          <div class="value-mark">04</div>
+          <p>A better next step for everyone — even when that step isn't a meeting yet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ CLOSING CTA =========================== -->
+  <section class="on-rule closing" id="cta">
+    <div class="wrap" data-reveal>
+      <div class="eyebrow" style="justify-content:center;">Understanding · Alignment · Meeting</div>
+      <h2 style="margin-top:18px;">The right meeting starts with alignment.</h2>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#top">Start with understanding</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-row">
+    <a class="wordmark" href="#top" style="font-size:18px;">intro</a>
+    <div class="foot-framework"><b>Understanding</b> · <b>Alignment</b> · <b>Meeting</b></div>
+    <div class="foot-copy">Local preview build — not connected to the live app.</div>
+  </div>
+</footer>
+
+<script>
+  // Signature motion: content settles onto its baseline as it enters view —
+  // "resolve into alignment" rather than a generic fade-up. Subtle,
+  // scroll-triggered, no bounce or elastic easing. Respects reduced motion
+  // via the CSS media query above, which removes the transition entirely.
+  //
+  // Content is visible by default (see the .js-reveal rule in <style>) and
+  // this script is the ONLY thing that ever hides it — by adding .js-reveal
+  // to <html> — and only once it has confirmed IntersectionObserver exists
+  // and is actually watching every target. That ordering matters: a page
+  // that hides content first and hopes JS reveals it later fails open to
+  // "invisible" the moment anything goes wrong (no JS, JS throws, a
+  // rendering path that never dispatches real scroll/intersection events —
+  // exactly what a full-page screenshot capture turned out to do here, since
+  // it composites the document without genuinely scrolling the viewport).
+  // A stray safety timeout below forces everything visible regardless, so
+  // there is no path — known or not — where content stays hidden for good.
+  (function () {
+    var targets = document.querySelectorAll('[data-reveal]');
+    if (!('IntersectionObserver' in window) || targets.length === 0) {
+      return; // content is already visible; nothing to enhance
+    }
+
+    document.documentElement.classList.add('js-reveal');
+
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+    );
+    targets.forEach(function (el) { io.observe(el); });
+
+    // Safety net: whatever the reason, nothing stays hidden past this.
+    setTimeout(function () {
+      targets.forEach(function (el) { el.classList.add('in'); });
+    }, 4000);
+
+    // The hero's alignment graphic resolves once, shortly after load —
+    // circle and bar settling onto a shared axis, the brand's own graphic
+    // principle acted out rather than just illustrated.
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduceMotion) {
+      setTimeout(function () {
+        document.querySelectorAll('#hero-graphic .align-frame').forEach(function (frame) {
+          frame.classList.add('resolved');
+        });
+      }, 700);
+    } else {
+      document.querySelectorAll('#hero-graphic .align-frame').forEach(function (frame) {
+        frame.classList.add('resolved');
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>
