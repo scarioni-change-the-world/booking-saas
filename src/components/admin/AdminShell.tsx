@@ -95,6 +95,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
           <br />
           <a
             href="#"
+            className="btn-link"
             onClick={(e) => {
               e.preventDefault();
               void signOut();

@@ -538,7 +538,10 @@ export default function BookingFlow({ slug, audience }: Props) {
 
           <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
             Keep this link to reschedule or cancel:{' '}
-            <a href={`/manage/${confirmed.manageToken}`}>manage your booking</a>.
+            <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
+              manage your booking
+            </a>
+            .
           </p>
         </>
       )}
