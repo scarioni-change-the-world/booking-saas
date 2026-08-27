@@ -50,7 +50,7 @@ export default function ConsoleLoginPage() {
     <main className="widget" style={{ paddingTop: 60 }}>
       <div className="brand-row" style={{ justifyContent: 'center' }}>
         <span className="admin-brand" style={{ fontSize: 28 }}>
-          Cerca <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
+          intro <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
         </span>
       </div>
 

@@ -120,7 +120,7 @@ export default function BookingsPage() {
     <>
       <div className="admin-page-head">
         <div>
-          <div className="admin-eyebrow">Bookings</div>
+          <div className="admin-eyebrow">Meetings</div>
           <h1>Everyone who came through</h1>
         </div>
       </div>

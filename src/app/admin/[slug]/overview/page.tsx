@@ -94,17 +94,17 @@ export default function OverviewPage() {
           {data.needsAttentionCount > 0 && (
             <div className="notice notice-error" style={{ marginBottom: 14 }}>
               {data.needsAttentionCount === 1
-                ? 'One booking needs a look'
-                : `${data.needsAttentionCount} bookings need a look`}{' '}
-              — their calendar sync failed. Check the Bookings page for details.
+                ? 'One meeting needs a look'
+                : `${data.needsAttentionCount} meetings need a look`}{' '}
+              — their calendar sync failed. Check the Meetings page for details.
             </div>
           )}
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
             <Tile label="Upcoming" value={data.upcomingCount} />
             <Tile label="This week" value={data.thisWeekCount} />
-            <Tile label="Qualified · 30 days" value={data.last30Days.qualified} tone="live" />
-            <Tile label="Redirected · 30 days" value={data.last30Days.redirected} tone="attention" />
+            <Tile label="Aligned · 30 days" value={data.last30Days.qualified} tone="live" />
+            <Tile label="Other path · 30 days" value={data.last30Days.redirected} tone="attention" />
           </div>
 
           <div className="card" style={{ marginBottom: 14 }}>

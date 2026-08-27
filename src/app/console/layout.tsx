@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import type { PlatformRole } from '@/lib/db/types';
@@ -14,12 +14,22 @@ type Check = { state: 'checking' } | { state: 'denied' } | { state: 'ok'; role: 
  * platform_staff instead of one tenant's membership. Same trade-off noted
  * there applies here too: no server-side session, so this is a client-side
  * check after the page has already started rendering.
+ *
+ * /console/login is itself a route under this layout (Next.js nests by
+ * directory), so it has to be excluded from the gate explicitly — otherwise
+ * a signed-out visitor lands on the login page, the gate finds no session,
+ * and redirects to... the login page it's already on. Caught by actually
+ * loading the page rather than assuming the routing worked.
  */
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const router = useRouter();
   const [check, setCheck] = useState<Check>({ state: 'checking' });
 
+  const isLoginPage = pathname === '/console/login';
+
   useEffect(() => {
+    if (isLoginPage) return;
     let cancelled = false;
 
     (async () => {
@@ -43,11 +53,15 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [isLoginPage, router]);
 
   async function signOut() {
     await supabaseBrowser().auth.signOut();
     router.push('/console/login');
+  }
+
+  if (isLoginPage) {
+    return <>{children}</>;
   }
 
   if (check.state === 'checking' || check.state === 'denied') {
@@ -69,7 +83,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         }}
       >
         <span className="admin-brand" style={{ fontSize: 22 }}>
-          Cerca <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
+          intro <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span style={{ fontSize: '0.82rem', color: 'var(--faint)', textTransform: 'capitalize' }}>

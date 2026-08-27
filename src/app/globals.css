@@ -1,18 +1,33 @@
 /*
- * Cerca design tokens.
+ * intro design tokens — built from Intro's brand strategy and web
+ * guidelines (the "design bible"). Exact hex values below are taken
+ * directly from that document's colour system table.
  *
  * One rule governs every colour decision here, carried over verbatim from
- * the brand sheet: a colour either identifies the brand or carries meaning,
+ * the guide: a colour either identifies the brand or carries meaning,
  * never both.
  *
  *   --accent      is BRAND. It is the one token a tenant may override — see
  *                 the inline style set from `branding.accentColor` in
  *                 BookingFlow. Buttons, links, the selected-answer highlight.
+ *                 Mineral Blue is the default for a tenant who has not set
+ *                 their own; it is not "intro's colour" applied to their
+ *                 page, it is simply what an unbranded page looks like
+ *                 until they pick one.
  *
- *   --status-*    is MEANING, and is never swapped by tenant branding.
- *                 --status-live (teal) means one thing everywhere this
- *                 product appears: booked, confirmed, connected. A tenant
- *                 who recolours their booking page cannot change what a
+ *   --emphasis    is ALSO brand, but the guide is explicit that Muted Ochre
+ *                 works because it stays scarce (2-5% of a page). It marks a
+ *                 genuine moment of alignment or editorial emphasis, never a
+ *                 default button or link colour.
+ *
+ *   --status-*    is MEANING, and is never swapped by tenant branding or
+ *                 mixed with --accent/--emphasis. --status-live (teal) means
+ *                 one thing everywhere this product appears: booked,
+ *                 confirmed, connected — a deliberate, separate decision
+ *                 made earlier in this project that the brand guide's own
+ *                 semantic palette (success/warning/error/info/neutral)
+ *                 doesn't speak to and doesn't override. A tenant who
+ *                 recolours their booking page cannot change what a
  *                 confirmed slot looks like — that is what lets a client
  *                 trust the colour at all.
  *
@@ -23,60 +38,84 @@
 
 :root {
   /* Ground */
-  --canvas: #f6f3ed;
-  --surface: #fdfbf7;
-  --side: #f0eae0;
-  --border: #e2dcd0;
-  --rule: #ede5d9;
+  --canvas: #f4f1eb; /* Warm Chalk — primary page background */
+  --surface: #fcfbf8; /* Soft White — cards and elevated surfaces */
+  --side: #eeeae1; /* a shade deeper than canvas, for the sidebar */
+  --border: #d9d7d1; /* Mist — borders, dividers, low-emphasis structure */
+  --rule: #e6e3db;
 
   /* Ink */
-  --ink: #23211d;
-  --muted: #6b6459;
-  --faint: #8f887c;
-  --ghost: #aba396;
+  --ink: #202221; /* Ink — primary text, dark surfaces, wordmark */
+  --muted: #4b4e4c; /* between Ink and Graphite, for body copy that should recede slightly */
+  --faint: #666a67; /* Graphite — secondary text, metadata, eyebrows */
+  --ghost: #9a988f;
 
-  /* Brand — tenant-owned. Terracotta is the default for a tenant who has not
-     set their own; it is not "Cerca's colour" applied to their page, it is
-     simply what an unbranded page looks like until they pick one.
-     --accent-tint and --accent-ink are DERIVED from --accent with color-mix,
-     not separate hex values — so overriding --accent alone (which is all
-     BookingFlow does per tenant) still produces a coherent selected-state
-     tint and readable ink, rather than a brand-coloured button next to a
-     terracotta-tinted highlight. --accent-contrast stays a fixed light
-     value: real contrast-checking against an arbitrary tenant colour is a
-     further step, not done here. */
-  --accent: #a65a3c;
+  /* Brand — tenant-owned. See the file header for why Mineral Blue rather
+     than "intro's colour". --accent-tint and --accent-ink are DERIVED from
+     --accent with color-mix, not separate hex values — so overriding
+     --accent alone (which is all BookingFlow does per tenant) still
+     produces a coherent selected-state tint and readable ink, rather than a
+     brand-coloured button next to a Mineral-Blue-tinted highlight.
+     --accent-contrast stays a fixed light value: real contrast-checking
+     against an arbitrary tenant colour is a further step, not done here. */
+  --accent: #435a66; /* Mineral Blue */
   --accent-tint: color-mix(in srgb, var(--accent) 16%, var(--surface));
   --accent-ink: color-mix(in srgb, var(--accent) 72%, black);
-  --accent-contrast: #fff8f4;
+  --accent-contrast: #fcfbf8;
 
-  /* Status — fixed. Never overridden per tenant. */
+  /* Expressive accent — Muted Ochre. Used sparingly: the "alignment" stage
+     marker, editorial quote blocks, selected states worth calling out. Never
+     the default CTA colour — --accent (Mineral Blue) is that. */
+  --emphasis: #b9822b;
+  --emphasis-tint: color-mix(in srgb, var(--emphasis) 16%, var(--surface));
+  --emphasis-ink: color-mix(in srgb, var(--emphasis) 72%, black);
+
+  /* Status — fixed. Never overridden per tenant. --status-live is this
+     product's own earlier decision (see file header); attention/broken/info
+     take their base hex from the brand guide's warning/error/info swatches,
+     each with a darker -ink variant derived for readable text, since the
+     guide's own swatch hex is tuned for a badge fill, not body-sized type. */
   --status-live: #2c6a63; /* booked · confirmed · connected */
   --status-live-tint: #ddeae7;
   --status-live-ink: #1e4c46;
 
-  --status-attention: #8a6a22; /* needs a look */
-  --status-attention-tint: #f3ebd6;
-  --status-attention-ink: #6b5116;
+  --status-attention: #f0b429; /* Warning, per the brand guide */
+  --status-attention-tint: color-mix(in srgb, var(--status-attention) 30%, var(--surface));
+  --status-attention-ink: color-mix(in srgb, var(--status-attention) 75%, black);
 
-  --status-broken: #7e3028; /* failed. always paired with words, never colour alone */
-  --status-broken-tint: #f4e2df;
+  --status-broken: #d64545; /* Error, per the brand guide */
+  --status-broken-tint: color-mix(in srgb, var(--status-broken) 20%, var(--surface));
+  --status-broken-ink: color-mix(in srgb, var(--status-broken) 80%, black);
+
+  --status-info: #2f6fae; /* Info, per the brand guide */
+  --status-info-tint: color-mix(in srgb, var(--status-info) 20%, var(--surface));
+  --status-info-ink: color-mix(in srgb, var(--status-info) 78%, black);
 
   /* Legacy aliases so nothing outside this file needs to change name. */
   --bg: var(--canvas);
   --text: var(--ink);
-  --danger: var(--status-broken);
+  --danger: var(--status-broken-ink);
 
   --radius-sm: 8px;
   --radius: 11px;
   --radius-lg: 14px;
 
-  --font-heading: var(--font-serif), Georgia, serif;
+  /* Mangal Pro Bold is the brand guide's specified display face for the
+     wordmark, hero headlines, major statements and selected section
+     headings. It is a licensed, non-Google-Fonts typeface this project does
+     not have — Plus Jakarta Sans stands in for it, exactly as the guide's
+     own "Implementation note" allows: a temporary fallback, not a permanent
+     substitute. Swap the font-display variable in layout.tsx for a
+     self-hosted Mangal Pro Bold webfont when one is licensed, and nothing
+     else here needs to change. */
+  --font-heading: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     sans-serif;
   --font: var(--font-body);
-  /* "Cerca" itself, nowhere else — see the note in layout.tsx. */
-  --font-wordmark: var(--font-cormorant), Georgia, serif;
+  /* "intro" itself, nowhere else — see the note in layout.tsx. Same face as
+     --font-heading (the guide treats wordmark and display headings as one
+     face), tracked tighter — see .admin-brand. */
+  --font-wordmark: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -111,8 +150,8 @@ body {
 .widget h2,
 .widget h3 {
   font-family: var(--font-heading);
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 .widget h1 {
   font-size: 1.7rem;
@@ -131,7 +170,7 @@ body {
   line-height: 1.55;
 }
 
-/* Tenant identity — never Cerca's. Reads from branding.logoUrl /
+/* Tenant identity — never intro's own. Reads from branding.logoUrl /
    the tenant's own initials, and its ring colour is --accent, which a
    tenant may have overridden. */
 .brand-row {
@@ -189,12 +228,22 @@ body {
   font-size: 0.95rem;
 }
 .required {
-  color: var(--status-broken);
+  color: var(--status-broken-ink);
   margin-left: 2px;
 }
 
+/* Every text-like input type actually used in this app — found the hard way
+   when the password field on the console login page rendered as a plain
+   white browser-default box in dark mode, because it was missing from this
+   list. */
 input[type='text'],
 input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='time'],
+input[type='date'],
+input[type='url'],
+select,
 textarea {
   width: 100%;
   min-height: 48px;
@@ -206,6 +255,7 @@ textarea {
   background: var(--surface);
 }
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--accent);
@@ -503,7 +553,11 @@ button {
 }
 .notice-error {
   background: var(--status-broken-tint);
-  color: var(--status-broken);
+  color: var(--status-broken-ink);
+}
+.notice-info {
+  background: var(--status-info-tint);
+  color: var(--status-info-ink);
 }
 .notice-muted {
   background: var(--side);
@@ -522,32 +576,44 @@ button {
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas: #201d17;
-    --surface: #2a261e;
-    --side: #262218;
-    --border: #3c362a;
-    --rule: #332e23;
+    --canvas: #1b1c1b;
+    --surface: #242524;
+    --side: #202120;
+    --border: #3a3b39;
+    --rule: #2e2f2d;
 
-    --ink: #f2ede3;
-    --muted: #b3a897;
-    --faint: #8f8574;
-    --ghost: #6d6455;
+    /* Ink's own family inverted: Warm Chalk becomes the dark-mode text
+       colour, the same symmetry the light mode's Ink/wordmark relationship
+       has the other way round. */
+    --ink: #f4f1eb;
+    --muted: #b7b9b4;
+    --faint: #8c8e89;
+    --ghost: #6b6d68;
 
-    --accent: #d97e56;
+    --accent: #6f97ac; /* Mineral Blue, lightened for a dark ground */
     --accent-tint: color-mix(in srgb, var(--accent) 20%, var(--surface));
     --accent-ink: color-mix(in srgb, var(--accent) 70%, white);
-    --accent-contrast: #241206;
+    --accent-contrast: #12181b;
+
+    --emphasis: #d6a54b; /* Muted Ochre, lightened */
+    --emphasis-tint: color-mix(in srgb, var(--emphasis) 20%, var(--surface));
+    --emphasis-ink: color-mix(in srgb, var(--emphasis) 75%, white);
 
     --status-live: #4f9187;
     --status-live-tint: #1c322e;
     --status-live-ink: #a9d6ce;
 
-    --status-attention: #c9a24a;
+    --status-attention: #e0a93d;
     --status-attention-tint: #362c15;
-    --status-attention-ink: #e6c988;
+    --status-attention-ink: #f3d28a;
 
-    --status-broken: #e0897c;
-    --status-broken-tint: #3a201c;
+    --status-broken: #e58077;
+    --status-broken-tint: #3a1f1c;
+    --status-broken-ink: #f2b3ac;
+
+    --status-info: #6fa0d8;
+    --status-info-tint: #1c2a3a;
+    --status-info-ink: #b7d3ef;
   }
 }
 
@@ -579,8 +645,8 @@ button {
 .admin-brand {
   font-family: var(--font-wordmark);
   font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.005em;
+  font-weight: 800;
+  letter-spacing: -0.04em;
   padding-left: 3px;
 }
 .admin-nav {

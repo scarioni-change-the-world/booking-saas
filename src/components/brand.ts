@@ -1,6 +1,6 @@
 /**
  * Tenant identity helpers, shared by every surface a client sees
- * (BookingFlow, ManageBooking) — never Cerca's own identity.
+ * (BookingFlow, ManageBooking) — never intro's own identity.
  */
 
 /** Two-letter initials for a tenant with no logo: "Amelia Rivera" → "AR". */

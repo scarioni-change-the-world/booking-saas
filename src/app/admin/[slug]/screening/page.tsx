@@ -394,7 +394,7 @@ export default function ScreeningPage() {
     <>
       <div className="admin-page-head">
         <div>
-          <div className="admin-eyebrow">Screening</div>
+          <div className="admin-eyebrow">Intake</div>
           <h1>What you ask first</h1>
         </div>
         {!creating && (

@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
     <main className="widget" style={{ paddingTop: 60 }}>
       <div className="brand-row" style={{ justifyContent: 'center' }}>
         <span className="admin-brand" style={{ fontSize: 28 }}>
-          Cerca
+          intro
         </span>
       </div>
 

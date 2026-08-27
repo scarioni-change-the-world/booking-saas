@@ -1,25 +1,19 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, IBM_Plex_Sans, Newsreader } from 'next/font/google';
+import { IBM_Plex_Sans, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 
 /**
- * Newsreader for headings, IBM Plex Sans for everything else — the Cerca
- * type pairing. Self-hosted via next/font rather than a runtime stylesheet
- * link: no request to Google at page load, no flash of fallback type.
+ * IBM Plex Sans for UI and body copy, per the brand guide's §7 exactly.
  *
- * Cormorant Garamond is the wordmark face — "Cerca" itself, nowhere else.
- * It stayed unloaded until now because it had nowhere to appear: the
- * customer widget carries almost none of Cerca's own identity, just
- * "Powered by Cerca" in the ordinary body font. The admin dashboard's own
- * sidebar is the first real page that shows the wordmark.
+ * Plus Jakarta Sans stands in for Mangal Pro Bold — the guide's specified
+ * display face for the wordmark, hero headlines and major statements — which
+ * is a licensed webfont this project doesn't have and isn't on a public font
+ * service. The guide's own implementation note allows exactly this: "a
+ * temporary development fallback is acceptable only until the actual brand
+ * font is implemented." When a licensed Mangal Pro Bold webfont exists,
+ * swap it in here — nothing else in the app needs to change, since every
+ * consumer reads the --font-display variable, not this file directly.
  */
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  weight: ['300', '400', '500'],
-  variable: '--font-serif',
-  display: 'swap',
-});
-
 const plexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
@@ -27,26 +21,22 @@ const plexSans = IBM_Plex_Sans({
   display: 'swap',
 });
 
-const cormorant = Cormorant_Garamond({
+const display = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-cormorant',
+  weight: ['700', '800'],
+  variable: '--font-display',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Cerca',
-  // Plain and factual on purpose — the positioning line is not settled yet
-  // (see the brand sheet), and this is not the place to pick one unasked.
-  description: 'A booking questionnaire that screens prospects before they reach your calendar.',
+  title: 'intro',
+  description:
+    'The right meeting starts with alignment — a pre-meeting alignment layer for professionals whose work begins with a real conversation.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${newsreader.variable} ${plexSans.variable} ${cormorant.variable}`}
-    >
+    <html lang="en" className={`${plexSans.variable} ${display.variable}`}>
       <body>{children}</body>
     </html>
   );

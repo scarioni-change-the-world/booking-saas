@@ -6,7 +6,7 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 
-/** Cerca currently offers up to this many active session types per tenant —
+/** intro currently offers up to this many active session types per tenant —
  * a soft, UI-only guide while pricing tiers are still undecided, not a
  * database limit. See the note on the POST route. */
 const SOFT_CAP = 3;

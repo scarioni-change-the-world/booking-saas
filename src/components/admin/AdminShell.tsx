@@ -20,18 +20,23 @@ const ICONS: Record<string, string> = {
 
 /**
  * The nav list — grouped by how often it gets used, not by topic. Overview,
- * Bookings, Clients and Availability are the things a tenant checks day to
- * day; Sessions, Screening and Settings are set up once and revisited
- * rarely. Same order and same items on desktop and mobile — see the note in
+ * Meetings, Clients and Availability are the things a tenant checks day to
+ * day; Sessions, Intake and Settings are set up once and revisited rarely.
+ * Same order and same items on desktop and mobile — see the note in
  * globals.css on why mobile doesn't fold anything under a "More" tab.
+ *
+ * Labels only, not the URLs: "screening" and "bookings" stay as route
+ * segments (nothing bookmarked or linked should break over a rename), but
+ * the brand guide's own preferred language — "meeting" over "booking",
+ * "intake" over "screening" — is what a tenant actually reads.
  */
 const NAV = [
   { href: 'overview', label: 'Overview' },
-  { href: 'bookings', label: 'Bookings' },
+  { href: 'bookings', label: 'Meetings' },
   { href: 'clients', label: 'Clients' },
   { href: 'availability', label: 'Availability' },
   { href: 'sessions', label: 'Sessions' },
-  { href: 'screening', label: 'Screening' },
+  { href: 'screening', label: 'Intake' },
   { href: 'settings', label: 'Settings' },
 ];
 
@@ -83,7 +88,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
   return (
     <div className="admin-app">
       <aside className="admin-side">
-        <div className="admin-brand">Cerca</div>
+        <div className="admin-brand">intro</div>
         <nav className="admin-nav">{navItems()}</nav>
         <div className="admin-side-foot">
           {tenantName}
@@ -102,7 +107,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="admin-topbar">
-          <div className="admin-brand">Cerca</div>
+          <div className="admin-brand">intro</div>
           <button
             type="button"
             className="admin-menu-btn"

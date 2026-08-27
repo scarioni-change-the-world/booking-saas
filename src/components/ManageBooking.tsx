@@ -294,7 +294,7 @@ export default function ManageBooking({ token }: { token: string }) {
         </form>
       )}
 
-      <p className="footer-credit">Powered by Cerca</p>
+      <p className="footer-credit">Powered by intro</p>
     </main>
   );
 }

@@ -543,7 +543,7 @@ export default function BookingFlow({ slug, audience }: Props) {
         </>
       )}
 
-      <p className="footer-credit">Powered by Cerca</p>
+      <p className="footer-credit">Powered by intro</p>
     </main>
   );
 }

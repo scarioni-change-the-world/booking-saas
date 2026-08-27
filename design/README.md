@@ -1,7 +1,11 @@
 # Design
 
-The Cerca design canvas: brand system, tenant dashboard, and the customer's
-phone flow.
+The design canvas from the product's earlier "Cerca" working name: brand
+system, tenant dashboard, and the customer's phone flow. Historical —
+superseded by the "intro" brand strategy and web guidelines, which the live
+app (globals.css, layout.tsx, and every admin/customer surface) now follows.
+These artboards were not regenerated to match; they document how the
+Cerca-era screens looked, not how the app looks today.
 
 `*.dc.html` are the artboards and `canvas.json` lays them out. `cerca-design.html`
 is the published bundle — **generated, not edited**. Change an artboard, then
@@ -13,9 +17,11 @@ re-seed with the `/design` skill's helper and republish to the same URL.
 | Dashboard | Overview, Screening, Bookings, Clients, Availability, Settings, Appearance |
 | Customer · phone | The questions, Another path, Pick a time, Book a block, Booked |
 
-## The rule the palette rests on
+## The rule the palette rests on (Cerca-era values — see the note above)
 
-A colour either identifies Cerca or carries meaning, never both.
+A colour either identifies the brand or carries meaning, never both. This
+rule survived the rebrand unchanged; only the hex values did not — see
+`src/app/globals.css` for what the app actually uses now.
 
 - **Terracotta `#A65A3C`** — brand. Buttons, links, the mark. A tenant may
   replace it with anything.
@@ -44,5 +50,6 @@ already occupies. An earlier draft used a green brand beside a green
 
 ## Open
 
-The name has not had a trademark search. *Cerca* is a common Spanish word —
-lovely double meaning (near / a fence), harder on registrability and SEO.
+Resolved: the product is now named **intro**, adopted from the brand
+strategy and web guidelines document — see `src/app/globals.css` and
+`src/app/layout.tsx`. *Cerca* is retired.
