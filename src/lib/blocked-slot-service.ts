@@ -4,6 +4,7 @@ import {
   carveRange,
   dayBoundsUtc,
   minutesIntoDay,
+  minutesToTimeLabel,
   parseTimeToMinutes,
   type BlockedInterval,
 } from './blocked-slots';
@@ -151,6 +152,75 @@ export async function unblockRange(
   }
 
   const bounds = requireDayBounds(input.date, timezone);
+  const fresh = await fetchOverlapping(scope, bounds.start, bounds.end);
+  return toDayBlocks(fresh, bounds);
+}
+
+/** Change only the reason on an existing block — the "add a reason later"
+ * affordance the day list offers instead of gating creation on it. Returns
+ * false rather than throwing when the id doesn't exist (or belongs to
+ * another tenant, indistinguishable under this scope), so the route can
+ * answer with a plain 404. */
+export async function updateBlockReason(
+  scope: TenantScope,
+  id: string,
+  reason: string | null,
+): Promise<boolean> {
+  const { data, error } = await scope.update('blocked_slots', { reason }).eq('id', id).select();
+  if (error) throw error;
+  return (data as unknown as BlockedSlotRow[]).length > 0;
+}
+
+/**
+ * Replace one date's entire set of blocks with an exact snapshot — the undo
+ * mechanism. Blocking and unblocking both act instantly now (no confirm
+ * step), so "undo" isn't a reverse API call, it's "put the day back exactly
+ * how it looked a moment ago": delete whatever is there now, recreate the
+ * snapshot's rows verbatim. Correct even for undoing an unblock that split
+ * or shrank several differently-reasoned blocks at once, because it restores
+ * the whole day's prior shape rather than trying to invert one operation.
+ *
+ * Only safe because nothing else can have touched this day in the moment
+ * between the action and the undo — true for a single admin editing their
+ * own calendar, which is what this UI is for.
+ */
+export async function replaceDayBlocks(
+  scope: TenantScope,
+  timezone: string,
+  date: string,
+  snapshot: readonly DayBlock[],
+): Promise<DayBlock[]> {
+  const bounds = requireDayBounds(date, timezone);
+
+  const current = await fetchOverlapping(scope, bounds.start, bounds.end);
+  if (current.length > 0) {
+    const { error } = await scope.delete('blocked_slots').in('id', current.map((r) => r.id));
+    if (error) throw error;
+  }
+
+  if (snapshot.length > 0) {
+    const rows = snapshot.map((b) => {
+      // Inverting minutesIntoDay: reconstruct by wall-clock position, not by
+      // adding elapsed minutes to bounds.start — the same DST distinction
+      // minutesIntoDay itself exists to get right. minutesToTimeLabel clamps
+      // at 23:59 (it's meant for display), so 1440 — "the next local
+      // midnight" — is handled separately as bounds.end, which is exactly
+      // that instant. startMinutes can never legitimately be 1440: the
+      // overlap query that produced this snapshot only ever returns rows
+      // with starts_at strictly before bounds.end.
+      const start = atLocalTime(bounds.start, minutesToTimeLabel(b.startMinutes)) ?? bounds.start;
+      const end =
+        b.endMinutes >= 1440 ? bounds.end : (atLocalTime(bounds.start, minutesToTimeLabel(b.endMinutes)) ?? bounds.end);
+      return {
+        starts_at: start.toUTC().toISO()!,
+        ends_at: end.toUTC().toISO()!,
+        reason: b.reason,
+      };
+    });
+    const { error } = await scope.insert('blocked_slots', rows);
+    if (error) throw error;
+  }
+
   const fresh = await fetchOverlapping(scope, bounds.start, bounds.end);
   return toDayBlocks(fresh, bounds);
 }

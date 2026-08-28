@@ -669,6 +669,14 @@ button {
   background: var(--side);
   color: var(--muted);
 }
+.notice-success {
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
 .status {
   color: var(--muted);
@@ -922,11 +930,13 @@ button {
   left: 17.5px;
 }
 
-/* Ad hoc hour blocking — the Availability page's "Block time" grid
-   (BlockTimeGrid.tsx). One window of open hours per .block-window, half-hour
-   .block-cell rows inside it; a fixed row height is load-bearing, not just
-   tidy — the component locates which cell a pointer is over purely by
-   arithmetic on this height, no per-cell hit-testing. */
+/* Ad hoc hour blocking — the Availability page's day editor (DaySchedule.tsx).
+   One window of open hours per .block-window, half-hour .block-cell rows
+   inside it. A fixed row height is load-bearing, not just tidy — the
+   component locates which cell a pointer is over purely by arithmetic on
+   this height, no per-cell hit-testing. 44px meets WCAG 2.5.5's touch-target
+   minimum — the cells are real <button>s (keyboard-operable: Tab, arrows,
+   Space/Enter), so this reset undoes the browser's own button chrome first. */
 .block-window {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -942,13 +952,19 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 34px;
+  width: 100%;
+  height: 44px;
   padding: 0 12px;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  font: inherit;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
-  border-bottom: 1px solid var(--rule);
+  text-align: left;
   background: var(--surface);
   color: var(--muted);
+  cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 .block-window .block-cell:last-child {
@@ -956,6 +972,12 @@ button {
 }
 .block-cell:hover {
   background: var(--side);
+}
+.block-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
 }
 .block-cell.selecting {
   background: var(--accent);
@@ -978,6 +1000,89 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   opacity: 0.85;
+}
+
+/* The week strip — seven days centred on the one selected, so a tenant can
+   see (and jump to) what's around today without leaving the day editor for
+   a separate calendar screen. A dot means "this day isn't the usual hours,"
+   the same signal regardless of whether that's a closure, special hours, or
+   an ad hoc block — the point is just "look here," not which kind. */
+.day-strip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.day-strip-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.day-strip-day:hover {
+  border-color: var(--accent);
+}
+.day-strip-day:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.day-strip-day .weekday {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--faint);
+}
+.day-strip-day .daynum {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.day-strip-day.today .daynum {
+  color: var(--accent);
+  font-weight: 600;
+}
+.day-strip-day.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.day-strip-day.selected .weekday,
+.day-strip-day.selected .daynum {
+  color: var(--accent-contrast);
+}
+.day-strip-day .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--status-attention);
+  visibility: hidden;
+}
+.day-strip-day.has-exception .dot {
+  visibility: visible;
+}
+.day-strip-day.selected .dot {
+  background: var(--accent-contrast);
+}
+
+/* The exception control — "this day differs from the usual hours" — folded
+   into the day editor rather than living in a separate card, so closing a
+   day and blocking part of one are the same surface, not two. */
+.exception-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  font-size: 0.88rem;
 }
 
 .admin-field-row {

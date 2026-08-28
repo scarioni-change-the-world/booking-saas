@@ -3,22 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
-import BlockTimeGrid from '@/components/admin/BlockTimeGrid';
+import DaySchedule from '@/components/admin/DaySchedule';
 
 interface Rule {
   id: string;
   weekday: number;
   startTime: string;
   endTime: string;
-}
-
-interface Override {
-  id: string;
-  date: string;
-  isClosed: boolean;
-  startTime: string | null;
-  endTime: string | null;
-  note: string | null;
 }
 
 /** Luxon's convention, and the one the slot engine itself uses: 1 = Monday .. 7 = Sunday. */
@@ -38,22 +29,11 @@ function formatTime(hhmm: string): string {
   return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(`${iso}T12:00:00`));
-}
-
 export default function AvailabilityPage() {
   const { slug } = useParams<{ slug: string }>();
   const rulesBase = `/api/admin/${slug}/availability-rules`;
-  const overridesBase = `/api/admin/${slug}/date-overrides`;
 
   const [rules, setRules] = useState<Rule[]>([]);
-  const [overrides, setOverrides] = useState<Override[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,24 +42,12 @@ export default function AvailabilityPage() {
   const [newEnd, setNewEnd] = useState('17:00');
   const [savingRule, setSavingRule] = useState(false);
 
-  const [addingOverride, setAddingOverride] = useState(false);
-  const [overrideDate, setOverrideDate] = useState('');
-  const [overrideClosed, setOverrideClosed] = useState(true);
-  const [overrideStart, setOverrideStart] = useState('09:00');
-  const [overrideEnd, setOverrideEnd] = useState('17:00');
-  const [overrideNote, setOverrideNote] = useState('');
-  const [savingOverride, setSavingOverride] = useState(false);
-
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const [r, o] = await Promise.all([
-        adminFetchJson<{ rules: Rule[] }>(rulesBase),
-        adminFetchJson<{ overrides: Override[] }>(overridesBase),
-      ]);
+      const r = await adminFetchJson<{ rules: Rule[] }>(rulesBase);
       setRules(r.rules);
-      setOverrides(o.overrides);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -121,53 +89,6 @@ export default function AvailabilityPage() {
     setRules((prev) => prev.filter((r) => r.id !== id));
     try {
       await adminFetchJson(`${rulesBase}/${id}`, { method: 'DELETE' });
-    } catch (cause) {
-      setError((cause as Error).message);
-      await load();
-    }
-  }
-
-  async function addOverride(event: React.FormEvent) {
-    event.preventDefault();
-    if (!overrideDate) {
-      setError('Pick a date');
-      return;
-    }
-    if (!overrideClosed && overrideStart >= overrideEnd) {
-      setError('End time must be after the start time');
-      return;
-    }
-    setSavingOverride(true);
-    setError(null);
-    try {
-      await adminFetchJson(overridesBase, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          date: overrideDate,
-          isClosed: overrideClosed,
-          startTime: overrideClosed ? undefined : overrideStart,
-          endTime: overrideClosed ? undefined : overrideEnd,
-          note: overrideNote || undefined,
-        }),
-      });
-      setAddingOverride(false);
-      setOverrideDate('');
-      setOverrideClosed(true);
-      setOverrideNote('');
-      await load();
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSavingOverride(false);
-    }
-  }
-
-  async function removeOverride(id: string) {
-    setError(null);
-    setOverrides((prev) => prev.filter((o) => o.id !== id));
-    try {
-      await adminFetchJson(`${overridesBase}/${id}`, { method: 'DELETE' });
     } catch (cause) {
       setError((cause as Error).message);
       await load();
@@ -294,163 +215,9 @@ export default function AvailabilityPage() {
             </p>
           </div>
 
-          <div className="card">
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                marginBottom: 14,
-              }}
-            >
-              <div className="admin-card-title" style={{ margin: 0 }}>
-                Exceptions
-              </div>
-              {!addingOverride && (
-                <button type="button" className="btn-secondary" onClick={() => setAddingOverride(true)}>
-                  Add an exception
-                </button>
-              )}
-            </div>
-
-            {addingOverride && (
-              <form
-                onSubmit={addOverride}
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  padding: 16,
-                  marginBottom: 16,
-                }}
-              >
-                <div className="field">
-                  <label htmlFor="override-date">Date</label>
-                  <input
-                    id="override-date"
-                    type="date"
-                    required
-                    value={overrideDate}
-                    onChange={(e) => setOverrideDate(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, margin: '4px 0 16px' }}>
-                  <button
-                    type="button"
-                    className={overrideClosed ? 'btn-primary' : 'btn-secondary'}
-                    onClick={() => setOverrideClosed(true)}
-                  >
-                    Closed all day
-                  </button>
-                  <button
-                    type="button"
-                    className={!overrideClosed ? 'btn-primary' : 'btn-secondary'}
-                    onClick={() => setOverrideClosed(false)}
-                  >
-                    Special hours
-                  </button>
-                </div>
-
-                {!overrideClosed && (
-                  <div className="admin-field-row" style={{ maxWidth: 300 }}>
-                    <div className="field">
-                      <label htmlFor="override-start">From</label>
-                      <input
-                        id="override-start"
-                        type="time"
-                        value={overrideStart}
-                        onChange={(e) => setOverrideStart(e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="override-end">To</label>
-                      <input
-                        id="override-end"
-                        type="time"
-                        value={overrideEnd}
-                        onChange={(e) => setOverrideEnd(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="field">
-                  <label htmlFor="override-note">Note (optional)</label>
-                  <input
-                    id="override-note"
-                    type="text"
-                    placeholder="Public holiday"
-                    value={overrideNote}
-                    onChange={(e) => setOverrideNote(e.target.value)}
-                  />
-                </div>
-
-                <div className="actions">
-                  <button type="submit" className="btn-primary" disabled={savingOverride}>
-                    {savingOverride ? 'Saving…' : 'Add exception'}
-                  </button>
-                  <button type="button" className="btn-link" onClick={() => setAddingOverride(false)}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {overrides.length === 0 && !addingOverride && (
-              <p className="notice notice-muted" style={{ margin: 0 }}>
-                No exceptions yet — every week follows the hours above.
-              </p>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {overrides.map((o) => (
-                <div
-                  key={o.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 12,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '0.9rem' }}>{formatDate(o.date)}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>
-                      {o.isClosed
-                        ? 'Closed'
-                        : `${formatTime(o.startTime!)} – ${formatTime(o.endTime!)} only`}
-                      {o.note ? ` · ${o.note}` : ''}
-                    </div>
-                  </div>
-                  <button type="button" className="btn-link" onClick={() => removeOverride(o.id)}>
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <BlockTimeGrid slug={slug} rules={rules} overrides={overrides} />
+          <DaySchedule slug={slug} rules={rules} />
         </div>
       )}
-
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          alignItems: 'flex-start',
-          padding: '16px 20px',
-          background: 'var(--side)',
-          borderRadius: 'var(--radius)',
-          border: '1px solid var(--border)',
-          marginTop: 20,
-        }}
-      >
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6 }}>
-          An exception replaces the day&apos;s usual hours entirely rather than adding to them — a
-          holiday closes it outright, and special hours mean only those hours.
-        </p>
-      </div>
     </>
   );
 }
