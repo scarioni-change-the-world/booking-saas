@@ -40,7 +40,12 @@
   /* Ground */
   --canvas: #f4f1eb; /* Warm Chalk — primary page background */
   --surface: #fcfbf8; /* Soft White — cards and elevated surfaces */
-  --side: #eeeae1; /* a shade deeper than canvas, for the sidebar */
+  /* A UX audit of the admin sidebar measured the old value (#eeeae1) against
+     --canvas: 1.06:1 contrast, essentially imperceptible — the sidebar/content
+     boundary was carried entirely by a 1px border. This is deliberately still
+     quiet (the brand guide wants routine screens quieter than the marketing
+     site), just no longer invisible: ~1.26:1 against canvas. */
+  --side: #ddd7c8; /* a shade deeper than canvas, for the sidebar */
   --border: #d9d7d1; /* Mist — borders, dividers, low-emphasis structure */
   --rule: #e6e3db;
 
@@ -274,7 +279,8 @@ textarea {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-button:focus-visible {
+button:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -720,17 +726,30 @@ button {
   flex-direction: column;
   gap: 26px;
 }
+/* A real <a> back to Overview now, not an inert div — clicking the wordmark
+   to get home is close to universal in this category and cost nothing to add.
+   display/text-decoration reset it back to how the div used to lay out. */
 .admin-brand {
+  display: block;
   font-family: var(--font-wordmark);
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.04em;
   padding-left: 3px;
+  text-decoration: none;
 }
 .admin-nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+/* The gap between the "checked daily" and "set up once" groups (see the NAV
+   comment in AdminShell.tsx) — without this the grouping only existed in a
+   code comment nobody using the sidebar could see. */
+.admin-nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 10px 3px;
 }
 .admin-nav-item {
   position: relative;
@@ -765,7 +784,12 @@ button {
 .admin-nav-item.active::before {
   content: '';
   position: absolute;
-  left: -18px;
+  /* Was left: -18px — flush with the *sidebar's* outer edge (the item's own
+     padding), not the item it's meant to mark. A UX audit caught it: the
+     rail rendered as a stray mark 18px away from "active", not attached to
+     it. left: 0 puts it on the item's own edge, where a "this pill has a
+     coloured rail" reading actually holds together. */
+  left: 0;
   top: 3px;
   bottom: 3px;
   width: 3px;
@@ -833,8 +857,11 @@ button {
     border-bottom: 1px solid var(--border);
   }
   .admin-menu-btn {
-    width: 34px;
-    height: 34px;
+    /* 44px meets WCAG 2.5.5's touch-target minimum — this is the only way to
+       open navigation on mobile, so missing the tap here isn't a minor
+       inconvenience, it's "can't get to another page." */
+    width: 44px;
+    height: 44px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border);
     background: var(--surface);

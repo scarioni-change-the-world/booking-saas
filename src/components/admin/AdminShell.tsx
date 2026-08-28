@@ -22,6 +22,9 @@ const ICONS: Record<string, string> = {
  * The nav list — grouped by how often it gets used, not by topic. Overview,
  * Meetings, Clients and Availability are the things a tenant checks day to
  * day; Sessions, Intake and Settings are set up once and revisited rarely.
+ * `divider: true` on Sessions is what makes that grouping visible rather
+ * than just a comment here that nobody looking at the sidebar can see — a
+ * UX audit of this shell flagged the two being disconnected as a real gap.
  * Same order and same items on desktop and mobile — see the note in
  * globals.css on why mobile doesn't fold anything under a "More" tab.
  *
@@ -35,7 +38,7 @@ const NAV = [
   { href: 'bookings', label: 'Meetings' },
   { href: 'clients', label: 'Clients' },
   { href: 'availability', label: 'Availability' },
-  { href: 'sessions', label: 'Sessions' },
+  { href: 'sessions', label: 'Sessions', divider: true },
   { href: 'screening', label: 'Intake' },
   { href: 'settings', label: 'Settings' },
 ];
@@ -74,21 +77,25 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
 
   const navItems = (onNavigate?: () => void) =>
     NAV.map((item) => (
-      <a
-        key={item.href}
-        href={`/admin/${slug}/${item.href}`}
-        className={`admin-nav-item${isActive(item.href) ? ' active' : ''}`}
-        onClick={onNavigate}
-      >
-        <NavIcon name={item.href} />
-        {item.label}
-      </a>
+      <div key={item.href}>
+        {item.divider && <div className="admin-nav-divider" role="separator" />}
+        <a
+          href={`/admin/${slug}/${item.href}`}
+          className={`admin-nav-item${isActive(item.href) ? ' active' : ''}`}
+          onClick={onNavigate}
+        >
+          <NavIcon name={item.href} />
+          {item.label}
+        </a>
+      </div>
     ));
 
   return (
     <div className="admin-app">
       <aside className="admin-side">
-        <div className="admin-brand">intro</div>
+        <a href={`/admin/${slug}/overview`} className="admin-brand">
+          intro
+        </a>
         <nav className="admin-nav">{navItems()}</nav>
         <div className="admin-side-foot">
           {tenantName}
@@ -108,7 +115,9 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="admin-topbar">
-          <div className="admin-brand">intro</div>
+          <a href={`/admin/${slug}/overview`} className="admin-brand">
+            intro
+          </a>
           <button
             type="button"
             className="admin-menu-btn"
