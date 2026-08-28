@@ -1,13 +1,31 @@
 import { DateTime } from 'luxon';
 import { describe, expect, it } from 'vitest';
 import {
+  carveRange,
   dayBoundsUtc,
   minutesIntoDay,
   minutesToTimeLabel,
   parseTimeToMinutes,
+  type BlockedInterval,
 } from '@/lib/blocked-slots';
 
 const MADRID = 'Europe/Madrid';
+
+/** A blocked interval on 2027-06-15 Madrid, given as plain "HH:mm" bounds —
+ * carveRange tests read far more clearly in wall-clock terms than in raw
+ * instants. */
+function interval(id: string, start: string, end: string, reason: string | null = null): BlockedInterval {
+  return {
+    id,
+    startsAt: DateTime.fromISO(`2027-06-15T${start}`, { zone: MADRID }),
+    endsAt: DateTime.fromISO(`2027-06-15T${end}`, { zone: MADRID }),
+    reason,
+  };
+}
+
+function at(time: string): DateTime {
+  return DateTime.fromISO(`2027-06-15T${time}`, { zone: MADRID });
+}
 
 describe('parseTimeToMinutes', () => {
   it('parses "HH:mm"', () => {
@@ -75,5 +93,72 @@ describe('minutesIntoDay', () => {
     const bounds = dayBoundsUtc('2027-06-15', MADRID)!;
     expect(minutesIntoDay(bounds.end, bounds)).toBe(1440);
     expect(minutesIntoDay(bounds.end.plus({ hours: 3 }), bounds)).toBe(1440);
+  });
+});
+
+describe('carveRange', () => {
+  it('deletes a block the range covers entirely', () => {
+    const plan = carveRange([interval('a', '11:30', '12:00')], at('11:00'), at('13:00'));
+    expect(plan.toDelete).toEqual(['a']);
+    expect(plan.toUpdate).toEqual([]);
+    expect(plan.toInsert).toEqual([]);
+  });
+
+  it('deletes a block exactly matching the range (the common single-drag case)', () => {
+    const plan = carveRange([interval('a', '11:00', '13:00')], at('11:00'), at('13:00'));
+    expect(plan.toDelete).toEqual(['a']);
+  });
+
+  it('splits a block in two when the range is a hole in the middle', () => {
+    // The bug this exists to fix: clicking one 30-minute cell in the middle
+    // of a longer drag-created block must not remove the whole block.
+    const plan = carveRange([interval('a', '09:00', '13:00', 'Dentist')], at('11:00'), at('11:30'));
+    expect(plan.toDelete).toEqual([]);
+    expect(plan.toUpdate).toEqual([
+      { id: 'a', startsAt: at('09:00'), endsAt: at('11:00') },
+    ]);
+    expect(plan.toInsert).toEqual([
+      { startsAt: at('11:30'), endsAt: at('13:00'), reason: 'Dentist' },
+    ]);
+  });
+
+  it('shrinks a block from the tail when the range overlaps only its end', () => {
+    const plan = carveRange([interval('a', '09:00', '11:00')], at('10:00'), at('12:00'));
+    expect(plan.toDelete).toEqual([]);
+    expect(plan.toInsert).toEqual([]);
+    expect(plan.toUpdate).toEqual([{ id: 'a', startsAt: at('09:00'), endsAt: at('10:00') }]);
+  });
+
+  it('shrinks a block from the front when the range overlaps only its start', () => {
+    const plan = carveRange([interval('a', '10:00', '12:00')], at('09:00'), at('11:00'));
+    expect(plan.toDelete).toEqual([]);
+    expect(plan.toInsert).toEqual([]);
+    expect(plan.toUpdate).toEqual([{ id: 'a', startsAt: at('11:00'), endsAt: at('12:00') }]);
+  });
+
+  it('resolves several affected blocks in one call, each on its own terms', () => {
+    const plan = carveRange(
+      [
+        interval('gone', '10:15', '10:45'), // fully inside the range -> deleted
+        interval('shrunk-tail', '09:00', '10:30'), // -> ends at 10:15
+        interval('shrunk-front', '10:30', '12:00'), // -> starts at 11:00
+      ],
+      at('10:15'),
+      at('11:00'),
+    );
+    expect(plan.toDelete).toEqual(['gone']);
+    expect(plan.toUpdate).toEqual([
+      { id: 'shrunk-tail', startsAt: at('09:00'), endsAt: at('10:15') },
+      { id: 'shrunk-front', startsAt: at('11:00'), endsAt: at('12:00') },
+    ]);
+    expect(plan.toInsert).toEqual([]);
+  });
+
+  it('does nothing given no overlapping intervals', () => {
+    expect(carveRange([], at('10:00'), at('11:00'))).toEqual({
+      toDelete: [],
+      toUpdate: [],
+      toInsert: [],
+    });
   });
 });

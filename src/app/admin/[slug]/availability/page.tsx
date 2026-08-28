@@ -195,7 +195,7 @@ export default function AvailabilityPage() {
         <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           <div className="card">
             <div className="admin-card-title">Weekly hours</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {WEEKDAYS.map((day) => {
                 const dayRules = rules.filter((r) => r.weekday === day.value);
                 return (
@@ -206,17 +206,17 @@ export default function AvailabilityPage() {
                       flexWrap: 'wrap',
                       alignItems: 'center',
                       gap: 10,
-                      padding: '11px 0',
+                      padding: '6px 0',
                       borderBottom: '1px solid var(--rule)',
                     }}
                   >
-                    <span style={{ width: 100, flex: '0 0 auto', fontSize: '0.9rem' }}>
+                    <span style={{ width: 92, flex: '0 0 auto', fontSize: '0.85rem' }}>
                       {day.label}
                     </span>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flex: 1 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1 }}>
                       {dayRules.length === 0 && addingForDay !== day.value && (
-                        <span style={{ fontSize: '0.85rem', color: 'var(--ghost)' }}>Closed</span>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--ghost)' }}>Closed</span>
                       )}
                       {dayRules.map((r) => (
                         <span
@@ -224,11 +224,11 @@ export default function AvailabilityPage() {
                           style={{
                             background: 'var(--side)',
                             borderRadius: 100,
-                            padding: '4px 12px',
-                            fontSize: '0.85rem',
+                            padding: '2px 10px',
+                            fontSize: '0.8rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 8,
+                            gap: 6,
                             fontVariantNumeric: 'tabular-nums',
                           }}
                         >
@@ -236,7 +236,7 @@ export default function AvailabilityPage() {
                           <button
                             type="button"
                             className="btn-link"
-                            style={{ fontSize: '0.8rem' }}
+                            style={{ fontSize: '0.78rem' }}
                             onClick={() => removeRule(r.id)}
                           >
                             ×

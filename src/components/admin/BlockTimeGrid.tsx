@@ -81,21 +81,33 @@ function buildCells(window: { startMinutes: number; endMinutes: number }, blocks
  * dozens of children, and it is what makes a fast drag past a cell (the
  * pointer moves faster than pointermove fires) still select every row in
  * between rather than skipping some.
+ *
+ * Which cell the drag started on decides the mode for that whole gesture:
+ * starting on an open cell selects a range to block; starting on an already
+ * -blocked one selects a range to reopen. Either way the selection is
+ * clamped so it never crosses from one kind of cell into the other — a
+ * single drag never both blocks and unblocks.
  */
 function WindowGrid({
   cells,
   busy,
-  onCreateBlock,
-  onRemoveBlocks,
+  pendingRange,
+  onSelectBlockRange,
+  onUnblockRange,
 }: {
   cells: Cell[];
   busy: boolean;
-  onCreateBlock: (startMinutes: number, endMinutes: number) => void;
-  onRemoveBlocks: (blockIds: string[]) => void;
+  /** A block-mode selection this window made that is still awaiting the
+   * caller's reason-and-confirm panel — kept highlighted even though the
+   * live drag that produced it has already ended. */
+  pendingRange: [number, number] | null;
+  onSelectBlockRange: (startMinutes: number, endMinutes: number) => void;
+  onUnblockRange: (startMinutes: number, endMinutes: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [anchor, setAnchor] = useState<number | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
+  const [mode, setMode] = useState<'block' | 'unblock' | null>(null);
 
   function indexAtY(clientY: number): number {
     const el = containerRef.current;
@@ -106,13 +118,14 @@ function WindowGrid({
     return Math.max(0, Math.min(cells.length - 1, raw));
   }
 
-  /** Stop a selection the moment it would swallow an already-blocked cell,
-   * rather than let one drag create an overlapping second block. */
-  function clampToOpenRun(from: number, to: number): number {
+  /** Stop a selection the moment it would cross from open into blocked
+   * cells, or vice versa — a drag stays one mode from anchor to release. */
+  function clampToRun(from: number, to: number, wantBlocked: boolean): number {
     const step = to >= from ? 1 : -1;
     let i = from;
     while (i !== to + step) {
-      if (cells[i]!.blockIds.length > 0) return i - step;
+      const isBlocked = cells[i]!.blockIds.length > 0;
+      if (isBlocked !== wantBlocked) return i - step;
       i += step;
     }
     return to;
@@ -121,38 +134,44 @@ function WindowGrid({
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (busy || cells.length === 0) return;
     const index = indexAtY(event.clientY);
-    const cell = cells[index]!;
-    // A plain click on an already-blocked cell unblocks it — no drag needed.
-    if (cell.blockIds.length > 0) {
-      onRemoveBlocks(cell.blockIds);
-      return;
-    }
+    const startingMode = cells[index]!.blockIds.length > 0 ? 'unblock' : 'block';
     containerRef.current?.setPointerCapture(event.pointerId);
+    setMode(startingMode);
     setAnchor(index);
     setDragEnd(index);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (anchor === null) return;
-    setDragEnd(clampToOpenRun(anchor, indexAtY(event.clientY)));
+    if (anchor === null || mode === null) return;
+    setDragEnd(clampToRun(anchor, indexAtY(event.clientY), mode === 'unblock'));
   }
 
   function commitSelection() {
-    if (anchor === null || dragEnd === null) return;
+    if (anchor === null || dragEnd === null || mode === null) return;
     const start = Math.min(anchor, dragEnd);
     const end = Math.max(anchor, dragEnd);
-    onCreateBlock(cells[start]!.startMinutes, cells[end]!.endMinutes);
+    const startMinutes = cells[start]!.startMinutes;
+    const endMinutes = cells[end]!.endMinutes;
+    if (mode === 'block') {
+      onSelectBlockRange(startMinutes, endMinutes);
+    } else {
+      onUnblockRange(startMinutes, endMinutes);
+    }
     setAnchor(null);
     setDragEnd(null);
+    setMode(null);
   }
 
   function cancelSelection() {
     setAnchor(null);
     setDragEnd(null);
+    setMode(null);
   }
 
-  const selectedRange: [number, number] | null =
+  const liveRange: [number, number] | null =
     anchor !== null && dragEnd !== null ? [Math.min(anchor, dragEnd), Math.max(anchor, dragEnd)] : null;
+  const selectedRange = liveRange ?? pendingRange;
+  const selectingMode = liveRange ? mode : pendingRange ? 'block' : null;
 
   return (
     <div
@@ -166,11 +185,16 @@ function WindowGrid({
       {cells.map((cell, i) => {
         const blocked = cell.blockIds.length > 0;
         const selecting = selectedRange !== null && i >= selectedRange[0] && i <= selectedRange[1];
+        const className = [
+          'block-cell',
+          blocked && 'blocked',
+          selecting && selectingMode === 'block' && 'selecting',
+          selecting && selectingMode === 'unblock' && 'unselecting',
+        ]
+          .filter(Boolean)
+          .join(' ');
         return (
-          <div
-            key={cell.startMinutes}
-            className={`block-cell${blocked ? ' blocked' : ''}${selecting ? ' selecting' : ''}`}
-          >
+          <div key={cell.startMinutes} className={className}>
             <span>
               {minutesToTimeLabel(cell.startMinutes)} – {minutesToTimeLabel(cell.endMinutes)}
             </span>
@@ -204,7 +228,17 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // A block-mode selection awaiting its reason-and-confirm step. windowIndex
+  // says which WindowGrid keeps it highlighted after the live drag ends.
+  const [pending, setPending] = useState<{
+    windowIndex: number;
+    startMinutes: number;
+    endMinutes: number;
+    reason: string;
+  } | null>(null);
+
   const windows = useMemo(() => windowsForSelectedDate(date, rules, overrides), [date, rules, overrides]);
+  const cellsByWindow = useMemo(() => windows.map((w) => buildCells(w, blocks)), [windows, blocks]);
 
   async function load() {
     setLoading(true);
@@ -220,6 +254,7 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
   }
 
   useEffect(() => {
+    setPending(null);
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- base is stable for the life of this component
   }, [date]);
@@ -228,10 +263,12 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
     setDate(DateTime.fromISO(date).plus({ days }).toFormat('yyyy-MM-dd'));
   }
 
-  async function createBlock(startMinutes: number, endMinutes: number) {
-    const reason = window.prompt('What is this for? (optional, only your team sees it)');
-    if (reason === null) return; // they hit Cancel on the prompt itself — same convention as Bookings' cancel-reason prompt
+  function selectBlockRange(windowIndex: number, startMinutes: number, endMinutes: number) {
+    setPending({ windowIndex, startMinutes, endMinutes, reason: '' });
+  }
 
+  async function confirmPending() {
+    if (!pending) return;
     setBusy(true);
     setError(null);
     try {
@@ -240,11 +277,12 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           date,
-          startTime: minutesToTimeLabel(startMinutes),
-          endTime: minutesToTimeLabel(endMinutes),
-          reason: reason || undefined,
+          startTime: minutesToTimeLabel(pending.startMinutes),
+          endTime: minutesToTimeLabel(pending.endMinutes),
+          reason: pending.reason.trim() || undefined,
         }),
       });
+      setPending(null);
       await load();
     } catch (cause) {
       setError((cause as Error).message);
@@ -253,12 +291,34 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
     }
   }
 
-  async function removeBlocks(ids: string[]) {
+  async function unblockRange(startMinutes: number, endMinutes: number) {
     setBusy(true);
     setError(null);
-    setBlocks((prev) => prev.filter((b) => !ids.includes(b.id)));
     try {
-      await Promise.all(ids.map((id) => adminFetchJson(`${base}/${id}`, { method: 'DELETE' })));
+      const result = await adminFetchJson<{ blocks: Block[] }>(`${base}/unblock`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          date,
+          startTime: minutesToTimeLabel(startMinutes),
+          endTime: minutesToTimeLabel(endMinutes),
+        }),
+      });
+      setBlocks(result.blocks);
+    } catch (cause) {
+      setError((cause as Error).message);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeBlock(id: string) {
+    setBusy(true);
+    setError(null);
+    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await adminFetchJson(`${base}/${id}`, { method: 'DELETE' });
     } catch (cause) {
       setError((cause as Error).message);
       await load();
@@ -317,12 +377,60 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
         windows.map((window, i) => (
           <WindowGrid
             key={i}
-            cells={buildCells(window, blocks)}
+            cells={cellsByWindow[i]!}
             busy={busy}
-            onCreateBlock={createBlock}
-            onRemoveBlocks={removeBlocks}
+            pendingRange={
+              pending && pending.windowIndex === i
+                ? [
+                    cellsByWindow[i]!.findIndex((c) => c.startMinutes === pending.startMinutes),
+                    cellsByWindow[i]!.findIndex((c) => c.endMinutes === pending.endMinutes),
+                  ]
+                : null
+            }
+            onSelectBlockRange={(start, end) => selectBlockRange(i, start, end)}
+            onUnblockRange={unblockRange}
           />
         ))}
+
+      {pending && (
+        <div
+          style={{
+            border: '1px solid var(--accent)',
+            borderRadius: 'var(--radius)',
+            padding: 14,
+            marginTop: 12,
+          }}
+        >
+          <div style={{ fontSize: '0.9rem', marginBottom: 10 }}>
+            Block {minutesToTimeLabel(pending.startMinutes)} – {minutesToTimeLabel(pending.endMinutes)}?
+          </div>
+          <div className="field" style={{ marginBottom: 12 }}>
+            <label htmlFor="block-reason">What is this for? (optional, only your team sees it)</label>
+            <input
+              id="block-reason"
+              type="text"
+              autoFocus
+              value={pending.reason}
+              onChange={(e) => setPending({ ...pending, reason: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void confirmPending();
+                }
+                if (e.key === 'Escape') setPending(null);
+              }}
+            />
+          </div>
+          <div className="actions">
+            <button type="button" className="btn-primary" disabled={busy} onClick={() => void confirmPending()}>
+              {busy ? 'Blocking…' : 'Block this time'}
+            </button>
+            <button type="button" className="btn-link" onClick={() => setPending(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {!loading && blocks.length > 0 && (
         <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--rule)' }}>
@@ -339,7 +447,7 @@ export default function BlockTimeGrid({ slug, rules, overrides }: Props) {
                   {minutesToTimeLabel(b.startMinutes)} – {minutesToTimeLabel(b.endMinutes)}
                   {b.reason ? <span style={{ color: 'var(--faint)' }}> · {b.reason}</span> : null}
                 </div>
-                <button type="button" className="btn-link" onClick={() => removeBlocks([b.id])}>
+                <button type="button" className="btn-link" onClick={() => removeBlock(b.id)}>
                   Remove
                 </button>
               </div>

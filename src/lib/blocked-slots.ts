@@ -83,3 +83,65 @@ export function minutesIntoDay(
   const local = instant.setZone(bounds.start.zone);
   return local.hour * 60 + local.minute;
 }
+
+/** One stored blocked_slots row, as absolute instants rather than strings. */
+export interface BlockedInterval {
+  id: string;
+  startsAt: DateTime;
+  endsAt: DateTime;
+  reason: string | null;
+}
+
+/** What applying a carve actually means, in terms of blocked_slots writes. */
+export interface CarvePlan {
+  toDelete: string[];
+  toUpdate: Array<{ id: string; startsAt: DateTime; endsAt: DateTime }>;
+  toInsert: Array<{ startsAt: DateTime; endsAt: DateTime; reason: string | null }>;
+}
+
+/**
+ * Remove one range from a set of existing blocked intervals — the "click a
+ * blocked cell to reopen it" operation.
+ *
+ * A cell the grid shows as "blocked" might belong to a block spanning many
+ * other cells too (it was created by a single earlier drag); clicking one
+ * cell must only reopen *that* cell, not the whole block it happens to
+ * belong to. So this shrinks or splits what's already there rather than
+ * ever deleting more than the requested range actually covers — an
+ * interval untouched by the range is left alone (the caller only passes in
+ * intervals that already overlap it, via the same query GET uses).
+ *
+ * Every case: the range can swallow an interval whole (delete), sit fully
+ * inside one and split it in two, or overlap just one edge (shrink). Purely
+ * a plan — the caller applies toDelete/toUpdate/toInsert; nothing here
+ * touches a database.
+ */
+export function carveRange(
+  existing: readonly BlockedInterval[],
+  rangeStart: DateTime,
+  rangeEnd: DateTime,
+): CarvePlan {
+  const plan: CarvePlan = { toDelete: [], toUpdate: [], toInsert: [] };
+
+  for (const block of existing) {
+    const startsBefore = block.startsAt < rangeStart;
+    const endsAfter = block.endsAt > rangeEnd;
+
+    if (!startsBefore && !endsAfter) {
+      // The range being cleared covers this block entirely.
+      plan.toDelete.push(block.id);
+    } else if (startsBefore && endsAfter) {
+      // The range is a hole in the middle of this block — split it in two.
+      plan.toUpdate.push({ id: block.id, startsAt: block.startsAt, endsAt: rangeStart });
+      plan.toInsert.push({ startsAt: rangeEnd, endsAt: block.endsAt, reason: block.reason });
+    } else if (startsBefore) {
+      // Overlaps only this block's tail end.
+      plan.toUpdate.push({ id: block.id, startsAt: block.startsAt, endsAt: rangeStart });
+    } else {
+      // Overlaps only this block's leading end.
+      plan.toUpdate.push({ id: block.id, startsAt: rangeEnd, endsAt: block.endsAt });
+    }
+  }
+
+  return plan;
+}
