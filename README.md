@@ -321,14 +321,9 @@ Small, concrete feature ideas raised in passing — worth keeping so they
 don't get lost, not yet sized or sequenced against `PRODUCT_VISION.md`'s
 hierarchy the way the Roadmap below is.
 
-- **Ad hoc hour blocking, drag-to-select.** A UI on the Availability page
-  where the tenant can drag across a day's grid to block off an arbitrary
-  stretch of time (a dentist appointment, a slow morning) without editing
-  their recurring weekly hours or adding a full date override. The backend
-  piece already exists and is already respected by the slot engine —
-  `blocked_slots` (migration 0001/0002, read in `booking-service.ts`) — but
-  nothing writes to it yet: no admin API route, no UI. This is purely a
-  missing front door onto an existing table.
+- ~~Ad hoc hour blocking, drag-to-select~~ — built. See "Block time" on the
+  Availability page: `src/components/admin/BlockTimeGrid.tsx`,
+  `/api/admin/[slug]/blocked-slots`, `src/lib/blocked-slots.ts`.
 
 ---
 

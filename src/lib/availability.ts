@@ -73,8 +73,13 @@ export interface DaySlots {
  * A date override, when present, fully replaces the weekly rules for that date
  * rather than adding to them — a holiday closes the day outright, and special
  * hours mean *those* hours, not those plus the usual ones.
+ *
+ * Exported (not just an internal step of generateSlots) so the dashboard's ad
+ * hoc hour-blocking grid can ask "what does this day normally look like?"
+ * without a second copy of this rule — see the blocked-slots admin route and
+ * the Availability page.
  */
-function windowsForDate(
+export function windowsForDate(
   date: DateTime,
   rules: readonly AvailabilityRule[],
   overrides: ReadonlyMap<string, DateOverride>,
@@ -100,8 +105,12 @@ function windowsForDate(
  * by a spring-forward DST transition. Luxon silently normalises such a time to
  * the following hour, which would invent an availability window the tenant
  * never configured, so it is rejected explicitly instead.
+ *
+ * Exported so anywhere else that turns a tenant-local date + wall-clock time
+ * into an absolute instant gets the same DST safety — see the blocked-slots
+ * admin route, which uses it to turn a chosen block into starts_at/ends_at.
  */
-function atLocalTime(date: DateTime, time: string): DateTime | null {
+export function atLocalTime(date: DateTime, time: string): DateTime | null {
   const parts = time.split(':');
   const hour = Number(parts[0]);
   const minute = Number(parts[1] ?? '0');

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import BlockTimeGrid from '@/components/admin/BlockTimeGrid';
 
 interface Rule {
   id: string;
@@ -428,6 +429,8 @@ export default function AvailabilityPage() {
               ))}
             </div>
           </div>
+
+          <BlockTimeGrid slug={slug} rules={rules} overrides={overrides} />
         </div>
       )}
 

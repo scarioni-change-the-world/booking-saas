@@ -42,12 +42,13 @@ function bearerToken(request: Request): string {
 }
 
 /**
- * Require that the caller is an owner or admin of the tenant named in the URL.
- *
- * Connecting or disconnecting a calendar changes what the whole tenant can
- * book, so it is deliberately not open to the `member` role.
+ * Require that the caller belongs to the tenant named in the URL, at any
+ * role. The shared lookup behind requireTenantAdmin below — factored out
+ * because day-to-day actions like blocking an ad hoc hour (migration 0005's
+ * blocked_write policy: "members, not just admins") need this check without
+ * the admin-only gate.
  */
-export async function requireTenantAdmin(
+async function requireTenantMembership(
   request: Request,
   slug: string,
 ): Promise<AuthenticatedTenant> {
@@ -72,11 +73,37 @@ export async function requireTenantAdmin(
 
   const role = (membership.data as { role: MemberRole } | null)?.role;
   if (!role) throw new AuthError('Not found', 404);
-  if (role !== 'owner' && role !== 'admin') {
-    throw new AuthError('You do not have permission to change this setting', 403);
-  }
 
   return { ...resolved, userId: data.user.id, role };
+}
+
+/**
+ * Require that the caller is a member of the tenant named in the URL, at
+ * any role — owner, admin, or member. For day-to-day actions any team
+ * member should be able to do, like blocking off an ad hoc hour.
+ */
+export async function requireTenantMember(
+  request: Request,
+  slug: string,
+): Promise<AuthenticatedTenant> {
+  return requireTenantMembership(request, slug);
+}
+
+/**
+ * Require that the caller is an owner or admin of the tenant named in the URL.
+ *
+ * Connecting or disconnecting a calendar changes what the whole tenant can
+ * book, so it is deliberately not open to the `member` role.
+ */
+export async function requireTenantAdmin(
+  request: Request,
+  slug: string,
+): Promise<AuthenticatedTenant> {
+  const membership = await requireTenantMembership(request, slug);
+  if (membership.role !== 'owner' && membership.role !== 'admin') {
+    throw new AuthError('You do not have permission to change this setting', 403);
+  }
+  return membership;
 }
 
 export interface AuthenticatedStaff {

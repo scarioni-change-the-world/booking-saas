@@ -1003,6 +1003,57 @@ button {
   left: 17.5px;
 }
 
+/* Ad hoc hour blocking — the Availability page's "Block time" grid
+   (BlockTimeGrid.tsx). One window of open hours per .block-window, half-hour
+   .block-cell rows inside it; a fixed row height is load-bearing, not just
+   tidy — the component locates which cell a pointer is over purely by
+   arithmetic on this height, no per-cell hit-testing. */
+.block-window {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+  user-select: none;
+  touch-action: none; /* the drag gesture owns vertical movement here */
+}
+.block-window:last-child {
+  margin-bottom: 0;
+}
+.block-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--muted);
+  transition: background 0.1s, color 0.1s;
+}
+.block-window .block-cell:last-child {
+  border-bottom: none;
+}
+.block-cell:hover {
+  background: var(--side);
+}
+.block-cell.selecting {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.block-cell.blocked {
+  background: var(--status-broken-tint);
+  color: var(--status-broken-ink);
+}
+.block-cell-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.85;
+}
+
 .admin-field-row {
   display: flex;
   gap: 12px;

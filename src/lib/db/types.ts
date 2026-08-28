@@ -107,6 +107,7 @@ export interface BlockedSlotRow {
   starts_at: string;
   ends_at: string;
   reason: string | null;
+  created_at: string;
 }
 
 export interface QualificationQuestionRow {

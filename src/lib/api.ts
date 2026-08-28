@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon';
 import { NextResponse } from 'next/server';
 import { AuthError } from './auth';
 import { BookingError } from './booking-service';
@@ -133,6 +134,33 @@ export function requireInt(
     throw new BookingError(`"${key}" must be a whole number between ${min} and ${max}`, 400);
   }
   return num;
+}
+
+/**
+ * True for a real calendar date in "yyyy-MM-dd" form — rejects both a
+ * malformed string and a well-formed but nonexistent one like "2027-02-30".
+ */
+function isValidCalendarDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && DateTime.fromISO(value).isValid;
+}
+
+/** A calendar date as "yyyy-MM-dd", from a JSON body. */
+export function requireDate(body: Record<string, unknown>, key: string): string {
+  const value = requireString(body, key, { maxLength: 10 });
+  if (!isValidCalendarDate(value)) {
+    throw new BookingError(`"${key}" must be a real date like "2027-01-01"`, 400);
+  }
+  return value;
+}
+
+/** The same, from a URL's query string — GET routes have no JSON body to read it from. */
+export function requireDateParam(params: URLSearchParams, key: string): string {
+  const value = params.get(key);
+  if (!value) throw new BookingError(`Missing "${key}"`, 400);
+  if (!isValidCalendarDate(value)) {
+    throw new BookingError(`"${key}" must be a real date like "2027-01-01"`, 400);
+  }
+  return value;
 }
 
 /** A wall-clock time as "HH:MM" or "HH:MM:SS" — what a Postgres `time` column accepts. */

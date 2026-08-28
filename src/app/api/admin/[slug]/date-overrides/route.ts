@@ -5,7 +5,7 @@ import {
   optionalBoolean,
   optionalString,
   readJson,
-  requireString,
+  requireDate,
   requireTime,
 } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
@@ -42,11 +42,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const { scope } = await requireTenantAdmin(request, slug);
     const body = await readJson(request);
 
-    const date = requireString(body, 'date', { maxLength: 10 });
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      throw new BookingError('"date" must look like "2027-01-01"', 400);
-    }
-
+    const date = requireDate(body, 'date');
     const isClosed = optionalBoolean(body, 'isClosed') ?? true;
     const note = optionalString(body, 'note', { maxLength: 500 });
 
