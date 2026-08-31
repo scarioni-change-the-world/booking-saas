@@ -42,6 +42,9 @@ const dayFormat = new Intl.DateTimeFormat(undefined, {
 });
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
+/** A count on its own is chrome; "aligned" vs "other path" is a judgement,
+ * so only those two get a tone (a soft status tint) — see the CSS comment
+ * on .admin-tile for why the other three tiles stay neutral. */
 function Tile({
   label,
   value,
@@ -51,13 +54,10 @@ function Tile({
   value: number | string;
   tone?: 'live' | 'attention';
 }) {
-  const color = tone === 'live' ? 'var(--status-live-ink)' : tone === 'attention' ? 'var(--status-attention-ink)' : 'var(--ink)';
   return (
-    <div className="card" style={{ flex: '1 1 140px' }}>
-      <div style={{ fontSize: '1.9rem', fontWeight: 500, color, fontVariantNumeric: 'tabular-nums' }}>
-        {value}
-      </div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 2 }}>{label}</div>
+    <div className={`card admin-tile${tone ? ` tone-${tone}` : ''}`} style={{ flex: '1 1 140px' }}>
+      <div className="admin-tile-value">{value}</div>
+      <div className="admin-tile-label">{label}</div>
     </div>
   );
 }
@@ -144,29 +144,41 @@ export default function OverviewPage() {
             )}
             {data.nextUp.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {data.nextUp.map((b, i) => (
-                  <div
-                    key={b.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'baseline',
-                      gap: 12,
-                      paddingBottom: i === data.nextUp.length - 1 ? 0 : 12,
-                      borderBottom: i === data.nextUp.length - 1 ? 'none' : '1px solid var(--border)',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '0.95rem' }}>{b.name}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>{b.eventTypeName}</div>
+                {data.nextUp.map((b, i) => {
+                  const lead = i === 0;
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        gap: 12,
+                        paddingBottom: i === data.nextUp.length - 1 ? 0 : 12,
+                        borderBottom: i === data.nextUp.length - 1 ? 'none' : '1px solid var(--border)',
+                      }}
+                    >
+                      <div>
+                        <div className={lead ? 'admin-next-up-lead-name' : undefined} style={lead ? undefined : { fontSize: '0.95rem' }}>
+                          {b.name}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>{b.eventTypeName}</div>
+                      </div>
+                      {lead ? (
+                        <div className="admin-next-up-time-chip">
+                          <span>{dayFormat.format(new Date(b.startsAt))}</span>
+                          <span>{timeFormat.format(new Date(b.startsAt))}</span>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', textAlign: 'right' }}>
+                          {dayFormat.format(new Date(b.startsAt))}
+                          <br />
+                          {timeFormat.format(new Date(b.startsAt))}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)', textAlign: 'right' }}>
-                      {dayFormat.format(new Date(b.startsAt))}
-                      <br />
-                      {timeFormat.format(new Date(b.startsAt))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
