@@ -101,3 +101,45 @@ export async function loadFunnelStats(scope: TenantScope, sinceIso: string): Pro
     other: completedRows.filter((r) => r.outcome_path_type === 'other').length,
   };
 }
+
+/** One response, as the Responses tab shows it — the funnel's numbers with a
+ * name attached. `answers` is passed through as stored (question id, prompt,
+ * kind and answer text, denormalised at completion time by evaluateQualification
+ * — see qualification.ts's AnsweredQuestion) so a tenant can read exactly what
+ * someone said without a join back to qualification_questions, whose prompts
+ * may since have changed or been removed. Empty ('[]') on a response that was
+ * started but never finished — that emptiness is itself the signal. */
+export interface ResponseListItem {
+  id: string;
+  email: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  outcomePathType: OutcomePathType | null;
+  answers: unknown;
+}
+
+/** The most recent responses since `sinceIso`, newest first, capped at
+ * `limit` — this is a glance-at-the-list view for a tenant tuning their
+ * questions, not a reporting export, so an unbounded query isn't needed. */
+export async function listRecentResponses(
+  scope: TenantScope,
+  sinceIso: string,
+  limit: number,
+): Promise<ResponseListItem[]> {
+  const { data, error } = await scope
+    .select('qualification_responses')
+    .gte('started_at', sinceIso)
+    .order('started_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as QualificationResponseRow[];
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    startedAt: r.started_at,
+    completedAt: r.completed_at,
+    outcomePathType: r.outcome_path_type,
+    answers: r.answers,
+  }));
+}

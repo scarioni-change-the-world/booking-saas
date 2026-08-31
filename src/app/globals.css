@@ -968,6 +968,267 @@ button {
   font-weight: 600;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Intake's step-tab builder (Questions / Next steps / Responses)          */
+/* ---------------------------------------------------------------------- */
+
+/* Unlike the sidebar's flat nav — where a numbered badge deliberately does
+   NOT imply sequence — these three steps genuinely are one: you write the
+   questions, then decide what each answer does, then see who answered.
+   Literal 01/02/03 order is the honest device here, not a borrowed one. */
+.step-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--side);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 22px;
+}
+.step-tab {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) - 4px);
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.86rem;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.step-tab .step-tab-num {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.step-tab:hover {
+  color: var(--ink);
+}
+.step-tab.active {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(20, 20, 18, 0.08);
+}
+.step-tab.active .step-tab-num {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .step-tab {
+    transition: none;
+  }
+}
+@media (max-width: 720px) {
+  .step-tabs {
+    flex-wrap: wrap;
+  }
+  .step-tab {
+    flex: 1 1 45%;
+  }
+}
+
+/* The builder/preview split every step but Responses uses — an editor on
+   the left, a truthful (if static) read of what the prospect sees on the
+   right, so a tenant can see the effect of a change without leaving the
+   page to go check the widget. Stacks under the same width the admin shell
+   already collapses its own sidebar at. */
+.builder-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .builder-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.preview-panel-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 16px;
+}
+/* The mock phone-card itself: a tinted mat (echoing .admin-side's own
+   shade-deeper-than-canvas move) behind a white card, so the preview reads
+   as "a device showing your product" rather than another admin card. */
+.preview-mat {
+  background: var(--side);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+.preview-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.preview-wordmark {
+  font-family: var(--font-wordmark);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 18px;
+}
+.preview-lede {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+/* Static representations, not real inputs — same choice the reference
+   mockup makes: a preview proves what the copy and the field order will
+   be, it doesn't need to be operable to do that job. */
+.preview-field {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  font-size: 0.88rem;
+  color: var(--faint);
+  margin-bottom: 10px;
+  background: var(--canvas);
+}
+.preview-meta {
+  font-size: 0.78rem;
+  color: var(--faint);
+  margin-top: 14px;
+}
+.preview-empty {
+  font-size: 0.85rem;
+  color: var(--faint);
+  font-style: italic;
+}
+
+/* Next steps' live logic preview: two small flow cards, accent for
+   "continues to booking", emphasis (ochre) for "the other path" — the same
+   accent/emphasis split the rest of the brand uses, not a new colour
+   language invented for this one panel. */
+.logic-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--canvas);
+  margin-bottom: 10px;
+}
+.logic-card:last-child {
+  margin-bottom: 0;
+}
+.logic-card-bar {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+.logic-card.continues .logic-card-bar {
+  background: var(--accent);
+}
+.logic-card.other .logic-card-bar {
+  background: var(--emphasis);
+}
+.logic-card-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.logic-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  margin: 2px 4px 2px 0;
+}
+.logic-card.continues .logic-chip {
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+}
+.logic-card.other .logic-chip {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+
+/* Responses tab: a filter row of pills (reused for "which bucket") and a
+   flat list with a lettered avatar per row, since a response has no name
+   yet — email is all it has — the way the reference's lead list marks each
+   row without needing a photo. */
+.filter-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.filter-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.filter-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+.response-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--side);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex: 0 0 auto;
+}
+.response-status-pill {
+  padding: 3px 11px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.response-status-pill.meeting {
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+}
+.response-status-pill.other {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+.response-status-pill.in-progress {
+  background: var(--border);
+  color: var(--muted);
+}
+.response-answers {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.response-answer-prompt {
+  font-size: 0.8rem;
+  color: var(--faint);
+  margin-bottom: 2px;
+}
+.response-answer-value {
+  font-size: 0.9rem;
+}
+
 .admin-card-title {
   font-size: 12.5px;
   font-weight: 600;

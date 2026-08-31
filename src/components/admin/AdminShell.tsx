@@ -47,7 +47,15 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const isActive = (href: string) => pathname === `/admin/${slug}/${href}`;
+  // startsWith, not ===: Intake is now a section with its own sub-routes
+  // (screening/next-steps, screening/responses) via a step-tab layout, and
+  // the sidebar entry should stay highlighted across all of them. The
+  // trailing slash on the prefix keeps "screening" from matching a
+  // future "screening-x" segment.
+  const isActive = (href: string) => {
+    const base = `/admin/${slug}/${href}`;
+    return pathname === base || pathname.startsWith(`${base}/`);
+  };
 
   async function signOut() {
     await supabaseBrowser().auth.signOut();
