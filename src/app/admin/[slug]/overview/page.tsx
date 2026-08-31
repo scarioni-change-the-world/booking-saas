@@ -15,7 +15,7 @@ interface Overview {
   upcomingCount: number;
   thisWeekCount: number;
   needsAttentionCount: number;
-  last30Days: { meeting: number; other: number };
+  last30Days: { started: number; completed: number; meeting: number; other: number };
   nextUp: NextUpBooking[];
   calendarStatus: 'not_connected' | 'active' | 'needs_reconnect' | 'revoked';
 }
@@ -27,6 +27,14 @@ const CALENDAR_COPY: Record<Overview['calendarStatus'], string> = {
   revoked: 'Google Calendar was disconnected by Google',
 };
 
+/** "—" rather than a misleading 0% (or NaN) when nobody has started the
+ * questionnaire yet in the window at all — "no signal" and "everyone left"
+ * are different facts and shouldn't render the same. */
+function completionRate(started: number, completed: number): string {
+  if (started === 0) return '—';
+  return `${Math.round((completed / started) * 100)}%`;
+}
+
 const dayFormat = new Intl.DateTimeFormat(undefined, {
   weekday: 'short',
   day: 'numeric',
@@ -34,7 +42,15 @@ const dayFormat = new Intl.DateTimeFormat(undefined, {
 });
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
-function Tile({ label, value, tone }: { label: string; value: number; tone?: 'live' | 'attention' }) {
+function Tile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  tone?: 'live' | 'attention';
+}) {
   const color = tone === 'live' ? 'var(--status-live-ink)' : tone === 'attention' ? 'var(--status-attention-ink)' : 'var(--ink)';
   return (
     <div className="card" style={{ flex: '1 1 140px' }}>
@@ -103,6 +119,10 @@ export default function OverviewPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
             <Tile label="Upcoming" value={data.upcomingCount} />
             <Tile label="This week" value={data.thisWeekCount} />
+            <Tile
+              label="Completion rate · 30 days"
+              value={completionRate(data.last30Days.started, data.last30Days.completed)}
+            />
             <Tile label="Aligned · 30 days" value={data.last30Days.meeting} tone="live" />
             <Tile label="Other path · 30 days" value={data.last30Days.other} tone="attention" />
           </div>

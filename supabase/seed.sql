@@ -70,3 +70,20 @@ values
      {"label": "500 - 2.000 €", "outcomePathType": "meeting"},
      {"label": "I can''t afford this right now", "outcomePathType": "other"}]'::jsonb,
    true, 3);
+
+-- A sample month of questionnaire activity (migration 0012), so the
+-- Screening page's "How it's performing" card and Overview's completion
+-- rate tile have something to show rather than "nobody has started yet" on
+-- a brand new project. Two people started and never finished (answers still
+-- '[]', completed_at still null) — real drop-off, the exact thing that card
+-- exists to surface. answers is left empty even on the completed ones: it's
+-- a denormalised snapshot with no bearing on these counts, and nothing here
+-- links back to a real booking that would need it filled in.
+insert into qualification_responses (tenant_id, email, answers, outcome_path_type, started_at, completed_at)
+values
+  ('00000000-0000-4000-8000-000000000001', 'left-early@example.com', '[]'::jsonb, null, now() - interval '2 days', null),
+  ('00000000-0000-4000-8000-000000000001', 'maybe-later@example.com', '[]'::jsonb, null, now() - interval '9 days', null),
+  ('00000000-0000-4000-8000-000000000001', 'ready-now@example.com', '[]'::jsonb, 'meeting', now() - interval '3 days', now() - interval '3 days' + interval '4 minutes'),
+  ('00000000-0000-4000-8000-000000000001', 'good-fit@example.com', '[]'::jsonb, 'meeting', now() - interval '11 days', now() - interval '11 days' + interval '3 minutes'),
+  ('00000000-0000-4000-8000-000000000001', 'not-yet@example.com', '[]'::jsonb, 'other', now() - interval '6 days', now() - interval '6 days' + interval '5 minutes'),
+  ('00000000-0000-4000-8000-000000000001', 'budget-tight@example.com', '[]'::jsonb, 'other', now() - interval '18 days', now() - interval '18 days' + interval '4 minutes');

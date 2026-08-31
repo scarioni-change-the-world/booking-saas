@@ -1,10 +1,7 @@
 import { handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
-import type {
-  BookingRow,
-  CalendarConnectionRow,
-  QualificationResponseRow,
-} from '@/lib/db/types';
+import { loadFunnelStats } from '@/lib/qualification-response-service';
+import type { BookingRow, CalendarConnectionRow } from '@/lib/db/types';
 
 const NEXT_UP_LIMIT = 5;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -41,7 +38,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     const weekAheadIso = new Date(now.getTime() + WEEK_MS).toISOString();
     const thirtyDaysAgoIso = new Date(now.getTime() - THIRTY_DAYS_MS).toISOString();
 
-    const [upcomingResult, weekResult, failedResult, qualResult, nextUpResult, calendarResult] =
+    const [upcomingResult, weekResult, failedResult, nextUpResult, calendarResult, funnel] =
       await Promise.all([
         scope.select('bookings', 'id').eq('status', 'confirmed').gte('starts_at', nowIso),
         scope
@@ -51,28 +48,19 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
           .lt('starts_at', weekAheadIso),
         scope.select('bookings', 'id').eq('sync_status', 'failed'),
         scope
-          .select('qualification_responses', 'outcome_path_type')
-          .gte('created_at', thirtyDaysAgoIso),
-        scope
           .select('bookings', 'id, name, starts_at, event_types(name)')
           .eq('status', 'confirmed')
           .gte('starts_at', nowIso)
           .order('starts_at', { ascending: true })
           .limit(NEXT_UP_LIMIT),
         scope.select('calendar_connections', 'status').maybeSingle(),
+        loadFunnelStats(scope, thirtyDaysAgoIso),
       ]);
 
-    for (const result of [upcomingResult, weekResult, failedResult, qualResult, nextUpResult]) {
+    for (const result of [upcomingResult, weekResult, failedResult, nextUpResult]) {
       if (result.error) throw result.error;
     }
     if (calendarResult.error) throw calendarResult.error;
-
-    const qualRows = (qualResult.data ?? []) as unknown as Pick<
-      QualificationResponseRow,
-      'outcome_path_type'
-    >[];
-    const meeting = qualRows.filter((r) => r.outcome_path_type === 'meeting').length;
-    const other = qualRows.filter((r) => r.outcome_path_type === 'other').length;
 
     const nextUpRows = (nextUpResult.data ?? []) as unknown as NextUpRow[];
     const connection = calendarResult.data as unknown as Pick<CalendarConnectionRow, 'status'> | null;
@@ -81,7 +69,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       upcomingCount: (upcomingResult.data ?? []).length,
       thisWeekCount: (weekResult.data ?? []).length,
       needsAttentionCount: (failedResult.data ?? []).length,
-      last30Days: { meeting, other },
+      last30Days: funnel,
       nextUp: nextUpRows.map((b) => ({
         id: b.id,
         name: b.name,

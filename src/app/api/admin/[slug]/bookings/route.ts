@@ -3,7 +3,7 @@ import { requireTenantAdmin } from '@/lib/auth';
 import { serializeBooking, type BookingWithJoins } from '@/lib/admin-serializers';
 import { BookingError } from '@/lib/booking-service';
 
-const EMBED = '*, event_types(name), qualification_responses(answers, outcome)';
+const EMBED = '*, event_types(name), qualification_responses(answers, outcome_path_type)';
 
 /**
  * The three lists a tenant actually wants to look at, kept mutually

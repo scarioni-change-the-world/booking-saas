@@ -9,6 +9,7 @@ type Audience = 'prospect' | 'client';
 
 type Step =
   | 'loading'
+  | 'email'
   | 'questions'
   | 'other-path'
   | 'pick-type'
@@ -110,8 +111,11 @@ export default function BookingFlow({ slug, audience }: Props) {
           const q = await getJson<{ questions: PublicQuestion[] }>(`${base}/questions`);
           if (cancelled) return;
           setQuestions(q.questions);
-          // A tenant with no questions configured has no gate to apply.
-          setStep(q.questions.length > 0 ? 'questions' : 'pick-type');
+          // A tenant with no questions configured has no gate to apply, and
+          // nothing for the email-first step to protect or measure either —
+          // there's no questionnaire completion rate to speak of, so skip
+          // straight to the calendar exactly as before.
+          setStep(q.questions.length > 0 ? 'email' : 'pick-type');
         } else {
           setStep('pick-type');
         }
@@ -160,6 +164,28 @@ export default function BookingFlow({ slug, audience }: Props) {
     if (step === 'pick-time' && eventType) void loadAvailability(eventType);
   }, [step, eventType, loadAvailability]);
 
+  /**
+   * The very first step for a prospect, ahead of the questions themselves —
+   * see .../qualify/start. Nothing about the answers is known yet; this
+   * only fixes who the response belongs to, so a prospect who leaves partway
+   * through the questions still shows up in the tenant's own numbers instead
+   * of vanishing without a trace.
+   */
+  async function submitEmail(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await postJson<{ responseId: string }>(`${base}/qualify/start`, { email });
+      setResponseId(result.responseId);
+      setStep('questions');
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitAnswers(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -171,7 +197,7 @@ export default function BookingFlow({ slug, audience }: Props) {
         message?: string;
         redirectUrl?: string | null;
         redirectLabel?: string | null;
-      }>(`${base}/qualify`, { answers });
+      }>(`${base}/qualify`, { responseId, answers });
 
       if (result.outcomePathType === 'other') {
         setRedirect({
@@ -183,7 +209,6 @@ export default function BookingFlow({ slug, audience }: Props) {
         return;
       }
 
-      setResponseId(result.responseId);
       setStep('pick-type');
     } catch (cause) {
       setError((cause as Error).message);
@@ -285,6 +310,33 @@ export default function BookingFlow({ slug, audience }: Props) {
         <div className="notice notice-error" role="alert">
           {error}
         </div>
+      )}
+
+      {step === 'email' && (
+        <form onSubmit={submitEmail}>
+          <p className="lede">
+            A few quick questions first — starting with how to reach you, so we can follow up
+            either way.
+          </p>
+
+          <div className="field">
+            <label htmlFor="prospect-email">
+              Email<span className="required">*</span>
+            </label>
+            <input
+              id="prospect-email"
+              type="email"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <button type="submit" className="btn-primary btn-full" disabled={busy}>
+            {busy ? 'Continuing…' : 'Continue'}
+          </button>
+        </form>
       )}
 
       {step === 'questions' && (

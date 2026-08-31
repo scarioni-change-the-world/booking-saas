@@ -10,11 +10,24 @@ const TENANT = 'demo-coaching';
 test.describe('prospect flow', () => {
   test('shows every question on one page, not stepwise', async ({ page }) => {
     // An explicit product decision after testing — stepwise felt like an
-    // interrogation (brief 2.2).
+    // interrogation (brief 2.2). Email comes first, on its own — see the
+    // next test — but the questions themselves stay all-at-once.
     await page.goto(`/t/${TENANT}`);
+    await page.getByLabel('Email').fill('prospect@example.com');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
     await expect(page.getByText('What would you most like to change')).toBeVisible();
     await expect(page.getByText('Have you worked with a coach before?')).toBeVisible();
     await expect(page.getByText('What are you able to invest')).toBeVisible();
+  });
+
+  test('asks for email before any question, so a drop-off is still visible', async ({ page }) => {
+    // migration 0012: a response row (and therefore a completion rate) now
+    // exists from the moment someone gives their email, not only for those
+    // who finish.
+    await page.goto(`/t/${TENANT}`);
+    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(page.getByText('What would you most like to change')).toBeHidden();
   });
 
   test('does not reveal the calendar before the questions are answered', async ({ page }) => {
@@ -24,6 +37,8 @@ test.describe('prospect flow', () => {
 
   test('an answer sent down the other path never reaches the calendar', async ({ page }) => {
     await page.goto(`/t/${TENANT}`);
+    await page.getByLabel('Email').fill('redirected@example.com');
+    await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByRole('textbox').first().fill('More clients');
     // exact: true throughout. Playwright matches accessible names as
@@ -43,6 +58,8 @@ test.describe('prospect flow', () => {
 
   test('an answer on the meeting path books a discovery call', async ({ page }) => {
     await page.goto(`/t/${TENANT}`);
+    await page.getByLabel('Email').fill('ana@example.com');
+    await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByRole('textbox').first().fill('More clients');
     await page.getByRole('radio', { name: 'No', exact: true }).check();
@@ -54,7 +71,9 @@ test.describe('prospect flow', () => {
 
     await page.locator('.slot').first().click();
     await page.getByLabel('Name').fill('Ana Test');
-    await page.getByLabel('Email').fill('ana@example.com');
+    // Pre-filled from the email step above — confirm it carried over rather
+    // than asking again from blank, and leave it as-is.
+    await expect(page.getByLabel('Email')).toHaveValue('ana@example.com');
     await page.getByRole('button', { name: 'Confirm booking' }).click();
 
     await expect(page.getByRole('heading', { name: "You're booked" })).toBeVisible();

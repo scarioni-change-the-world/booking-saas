@@ -1,25 +1,22 @@
-import {
-  handleError,
-  isResponse,
-  ok,
-  optionalString,
-  readJson,
-  requireTenant,
-} from '@/lib/api';
+import { handleError, isResponse, ok, readJson, requireString, requireTenant } from '@/lib/api';
 import { BookingError } from '@/lib/booking-service';
 import { evaluateQualification, type Question } from '@/lib/qualification';
+import { completeResponse } from '@/lib/qualification-response-service';
 import type { OutcomePathRow, QualificationQuestionRow } from '@/lib/db/types';
 
 /**
- * Score a submitted questionnaire and record the response.
+ * Score a submitted questionnaire and complete the response.
  *
  * Scoring happens here, never in the browser — the client is handed questions
  * with the outcome-path flags stripped, so it has no way to compute the
  * outcome and no way to claim one.
  *
- * A prospect sent down the 'other' path gets that path's configured message
- * and optional redirect, and never sees the calendar (brief 2.2). The copy is
- * the tenant's to write and is meant to be warm rather than a rejection.
+ * `responseId` names a row .../qualify/start already created when the
+ * prospect gave their email, before this request — this completes it
+ * (completeResponse), it doesn't create a new one. A prospect sent down the
+ * 'other' path gets that path's configured message and optional redirect,
+ * and never sees the calendar (brief 2.2). The copy is the tenant's to
+ * write and is meant to be warm rather than a rejection.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -29,13 +26,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
 
     const { scope } = resolved;
     const body = await readJson(request);
+    const responseId = requireString(body, 'responseId', { maxLength: 64 });
     const answers = body.answers;
 
     if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
       throw new BookingError('Missing "answers"', 400);
     }
-
-    const email = optionalString(body, 'email', { maxLength: 320 });
 
     const [questionsResult, pathsResult] = await Promise.all([
       scope.select('qualification_questions').order('sort_order', { ascending: true }),
@@ -55,17 +51,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     }));
 
     const result = evaluateQualification(questions, answers as Record<string, string>);
+    const outcomePathType = await completeResponse(
+      scope,
+      responseId,
+      result.answers,
+      result.outcomePathType,
+    );
 
-    const { data, error } = await scope.insert('qualification_responses', {
-      answers: result.answers,
-      outcome_path_type: result.outcomePathType,
-      email: email ?? null,
-    });
-    if (error) throw error;
-
-    const responseId = (data as unknown as Array<{ id: string }>)[0]!.id;
-
-    if (result.outcomePathType === 'other') {
+    if (outcomePathType === 'other') {
       const paths = (pathsResult.data ?? []) as unknown as OutcomePathRow[];
       const otherPath = paths.find((p) => p.type === 'other');
       return ok({

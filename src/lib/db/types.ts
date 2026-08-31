@@ -120,13 +120,21 @@ export interface QualificationQuestionRow {
   sort_order: number;
 }
 
+/**
+ * A response has a lifecycle now (migration 0012): started the moment a
+ * prospect gives their email, before they've answered anything, completed
+ * once they finish and get scored. outcome_path_type and completed_at are
+ * null together (a response in progress) or set together (finished) —
+ * never a mix, enforced by the response_completion_paired constraint.
+ */
 export interface QualificationResponseRow {
   id: string;
   tenant_id: string;
   answers: unknown;
-  outcome_path_type: OutcomePathType;
+  outcome_path_type: OutcomePathType | null;
   email: string | null;
-  created_at: string;
+  started_at: string;
+  completed_at: string | null;
 }
 
 export interface BookingRow {

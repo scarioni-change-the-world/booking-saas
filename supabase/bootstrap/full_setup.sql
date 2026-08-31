@@ -973,6 +973,53 @@ create policy outcome_paths_write on outcome_paths
   using (auth_is_tenant_admin(tenant_id)) with check (auth_is_tenant_admin(tenant_id));
 
 -- ==========================================================================
+-- supabase/migrations/0012_response_lifecycle.sql
+-- ==========================================================================
+
+-- A qualification response now has a lifecycle: started the moment a
+-- prospect gives their email, before they've answered a single question;
+-- completed once they finish and get scored.
+--
+-- Until now this table was written exactly once, atomically, on full
+-- submission (migration 0003) — which meant nobody who started the
+-- questionnaire and left partway through existed anywhere. There was no way
+-- to answer "how many people even started," and therefore no real
+-- completion rate — which is the whole point of collecting email up front:
+-- the questions are what turns a visitor into a meeting, so knowing how
+-- many drop out, and whether they land on the meeting path once they
+-- finish, is what tells a tenant whether a question is working.
+--
+-- started_at is created_at, renamed to say what it now means: every
+-- existing row already represents a completed submission (there was no
+-- other kind before this migration), so backfilling completed_at = started_at
+-- for all of them is exactly correct, not an approximation.
+alter table qualification_responses rename column created_at to started_at;
+
+alter table qualification_responses add column completed_at timestamptz;
+update qualification_responses set completed_at = started_at;
+
+-- outcome_path_type is null for a response still in progress — it was
+-- historically not-null because every row was already complete by the time
+-- it existed at all.
+alter table qualification_responses alter column outcome_path_type drop not null;
+
+-- A response is either not finished (both null) or finished (both set),
+-- never a mix — encoded here rather than left to the application layer to
+-- get right on every write path that touches this table.
+alter table qualification_responses
+  add constraint response_completion_paired
+  check ((completed_at is null) = (outcome_path_type is null));
+
+-- A started response has an empty answer set until it's completed.
+alter table qualification_responses alter column answers set default '[]'::jsonb;
+
+-- email was optional, collected only at the very end, alongside the full
+-- answer set. The new /qualify/start route is what makes it required and
+-- moves its collection to the front of the flow — enforced at the API
+-- layer (requireEmail), not here, so this migration doesn't need to touch
+-- or backfill any existing row's email.
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -1049,12 +1096,30 @@ values
      {"label": "I can''t afford this right now", "outcomePathType": "other"}]'::jsonb,
    true, 3);
 
+-- A sample month of questionnaire activity (migration 0012), so the
+-- Screening page's "How it's performing" card and Overview's completion
+-- rate tile have something to show rather than "nobody has started yet" on
+-- a brand new project. Two people started and never finished (answers still
+-- '[]', completed_at still null) — real drop-off, the exact thing that card
+-- exists to surface. answers is left empty even on the completed ones: it's
+-- a denormalised snapshot with no bearing on these counts, and nothing here
+-- links back to a real booking that would need it filled in.
+insert into qualification_responses (tenant_id, email, answers, outcome_path_type, started_at, completed_at)
+values
+  ('00000000-0000-4000-8000-000000000001', 'left-early@example.com', '[]'::jsonb, null, now() - interval '2 days', null),
+  ('00000000-0000-4000-8000-000000000001', 'maybe-later@example.com', '[]'::jsonb, null, now() - interval '9 days', null),
+  ('00000000-0000-4000-8000-000000000001', 'ready-now@example.com', '[]'::jsonb, 'meeting', now() - interval '3 days', now() - interval '3 days' + interval '4 minutes'),
+  ('00000000-0000-4000-8000-000000000001', 'good-fit@example.com', '[]'::jsonb, 'meeting', now() - interval '11 days', now() - interval '11 days' + interval '3 minutes'),
+  ('00000000-0000-4000-8000-000000000001', 'not-yet@example.com', '[]'::jsonb, 'other', now() - interval '6 days', now() - interval '6 days' + interval '5 minutes'),
+  ('00000000-0000-4000-8000-000000000001', 'budget-tight@example.com', '[]'::jsonb, 'other', now() - interval '18 days', now() - interval '18 days' + interval '4 minutes');
+
 commit;
 
 -- =============================================================================
 -- Verification — expect: 16 tables, 16 rls enabled, 27 policies, 0 anon
 -- policies, 16 tables granted to service_role, 1 tenant, 2 event types,
--- 3 questions, 5 availability rules, 2 outcome paths.
+-- 3 questions, 5 availability rules, 2 outcome paths, 6 questionnaire
+-- responses (2 still in progress, 4 completed).
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
 union all select 'rls enabled',      count(*)::text from pg_tables t join pg_class c on c.relname = t.tablename
@@ -1069,4 +1134,6 @@ union all select 'tenants',          count(*)::text from tenants
 union all select 'event types',      count(*)::text from event_types
 union all select 'questions',        count(*)::text from qualification_questions
 union all select 'availability rules', count(*)::text from availability_rules
-union all select 'outcome paths',    count(*)::text from outcome_paths;
+union all select 'outcome paths',    count(*)::text from outcome_paths
+union all select 'questionnaire responses', count(*)::text from qualification_responses
+union all select 'responses still in progress', count(*)::text from qualification_responses where completed_at is null;

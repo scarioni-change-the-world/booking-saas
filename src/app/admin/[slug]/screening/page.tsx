@@ -68,6 +68,20 @@ const EMPTY_OTHER_PATH: OtherPathForm = {
   redirectLabel: '',
 };
 
+interface Funnel {
+  started: number;
+  completed: number;
+  meeting: number;
+  other: number;
+}
+
+/** "—" rather than a misleading 0% when nobody has started at all yet — "no
+ * signal" and "everyone left" are different facts. */
+function rate(numerator: number, denominator: number): string {
+  if (denominator === 0) return '—';
+  return `${Math.round((numerator / denominator) * 100)}%`;
+}
+
 function formToPayload(form: FormState) {
   return {
     prompt: form.prompt,
@@ -256,6 +270,8 @@ export default function ScreeningPage() {
   const [savingOtherPath, setSavingOtherPath] = useState(false);
   const [otherPathSaved, setOtherPathSaved] = useState(false);
 
+  const [funnel, setFunnel] = useState<Funnel | null>(null);
+
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
@@ -298,6 +314,9 @@ export default function ScreeningPage() {
   useEffect(() => {
     void load();
     void loadOtherPath();
+    void adminFetchJson<Funnel>(`/api/admin/${slug}/funnel`)
+      .then(setFunnel)
+      .catch((cause) => setError((cause as Error).message));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable for the life of this page
   }, [slug]);
 
@@ -426,6 +445,71 @@ export default function ScreeningPage() {
       {error && (
         <div className="notice notice-error" role="alert">
           {error}
+        </div>
+      )}
+
+      {funnel && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="admin-card-title">How it's performing · 30 days</div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '-6px 0 16px', maxWidth: 560 }}>
+            These questions are what turns a visitor into a meeting — a low completion rate
+            usually means there are too many, or one is asked in a way that makes people leave.
+          </p>
+          {funnel.started === 0 ? (
+            <p className="notice notice-muted" style={{ margin: 0 }}>
+              Nobody has started the questionnaire yet in the last 30 days.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                  {funnel.started}
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Started</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                  {funnel.completed}{' '}
+                  <span style={{ fontSize: '1rem', color: 'var(--faint)' }}>
+                    ({rate(funnel.completed, funnel.started)})
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Finished</div>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: '1.6rem',
+                    fontWeight: 500,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--status-live-ink)',
+                  }}
+                >
+                  {funnel.meeting}{' '}
+                  <span style={{ fontSize: '1rem', color: 'var(--faint)' }}>
+                    ({rate(funnel.meeting, funnel.completed)})
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Aligned, of finished</div>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: '1.6rem',
+                    fontWeight: 500,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--status-attention-ink)',
+                  }}
+                >
+                  {funnel.other}{' '}
+                  <span style={{ fontSize: '1rem', color: 'var(--faint)' }}>
+                    ({rate(funnel.other, funnel.completed)})
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Other path, of finished</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
