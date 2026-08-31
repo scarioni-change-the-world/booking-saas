@@ -131,7 +131,7 @@ export default function AvailabilityPage() {
                       borderBottom: '1px solid var(--rule)',
                     }}
                   >
-                    <span style={{ width: 92, flex: '0 0 auto', fontSize: '0.85rem' }}>
+                    <span style={{ width: 92, flex: '0 0 auto', fontSize: '0.85rem', fontWeight: 600 }}>
                       {day.label}
                     </span>
 
