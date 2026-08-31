@@ -420,11 +420,20 @@ export default function SessionsPage() {
           marginTop: 20,
         }}
       >
-        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6 }}>
-          The two toggles are independent. A session can be offered to both new enquiries and
-          existing clients, either one, or neither — new enquiries answer your screening
-          questions first; existing clients book straight from their own private link.
-        </p>
+        <div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6 }}>
+            The two toggles are independent. A session can be offered to both new enquiries and
+            existing clients, either one, or neither — new enquiries answer your screening
+            questions first; existing clients book straight from their own private link.
+          </p>
+          <a
+            href={`/admin/${slug}/screening`}
+            className="btn-link"
+            style={{ display: 'inline-block', marginTop: 10 }}
+          >
+            Manage your intake questions →
+          </a>
+        </div>
       </div>
     </>
   );

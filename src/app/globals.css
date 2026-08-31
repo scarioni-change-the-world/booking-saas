@@ -106,22 +106,26 @@
   --radius: 11px;
   --radius-lg: 14px;
 
-  /* Mangal Pro Bold is the brand guide's specified display face for the
-     wordmark, hero headlines, major statements and selected section
-     headings. It is a licensed, non-Google-Fonts typeface this project does
-     not have — Plus Jakarta Sans stands in for it, exactly as the guide's
-     own "Implementation note" allows: a temporary fallback, not a permanent
-     substitute. Swap the font-display variable in layout.tsx for a
-     self-hosted Mangal Pro Bold webfont when one is licensed, and nothing
-     else here needs to change. */
-  --font-heading: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  /* Per the brand guide's §7 Typography, the wordmark and the general
+     headline system are deliberately two different weights of the same
+     Arial family, not one face reused everywhere the way the earlier
+     Plus-Jakarta-Sans stand-in was:
+       - --font-wordmark is "Arial Black" specifically — a distinct font
+         family on most systems, not just a heavy weight of "Arial" — used
+         ONLY for the "intro" wordmark itself (see .admin-brand,
+         .preview-wordmark). Its consuming rules force font-weight: 900.
+       - --font-heading is plain "Arial", used for hero numerals, page
+         headings and other display moments, at weight 700 (Bold) —
+         the guide is explicit that Arial Black's density "belongs to the
+         intro wordmark" and headlines should read lighter and calmer.
+     Both are system fonts, loaded via no webfont at all (see layout.tsx) —
+     that's what makes this the real, final answer rather than another
+     placeholder like Plus Jakarta Sans was. */
+  --font-heading: Arial, ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     sans-serif;
   --font: var(--font-body);
-  /* "intro" itself, nowhere else — see the note in layout.tsx. Same face as
-     --font-heading (the guide treats wordmark and display headings as one
-     face), tracked tighter — see .admin-brand. */
-  --font-wordmark: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-wordmark: 'Arial Black', Arial, ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -733,8 +737,11 @@ button {
   display: block;
   font-family: var(--font-wordmark);
   font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  /* Exact spec from the brand guide's Logo CSS reference: weight 900,
+     letter-spacing -0.075em, lowercase. */
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  text-transform: lowercase;
   padding-left: 3px;
   text-decoration: none;
 }
@@ -921,7 +928,12 @@ button {
    alert soup instead of a bold moment. */
 .admin-tile-value {
   font-family: var(--font-heading);
-  font-weight: 800;
+  /* 700 (Bold), not heavier — Arial's real distinct faces are Regular and
+     Bold; anything past that has no matching face to render and either
+     fakes-bold or silently clamps back to 700 depending on the browser.
+     Arial Black is a genuinely different family (--font-wordmark), kept for
+     the wordmark alone per the brand guide. */
+  font-weight: 700;
   font-size: 2.5rem;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1072,8 +1084,9 @@ button {
 .preview-wordmark {
   font-family: var(--font-wordmark);
   font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  text-transform: lowercase;
   margin-bottom: 18px;
 }
 .preview-lede {

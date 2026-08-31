@@ -382,10 +382,13 @@ export default function ScreeningQuestionsPage() {
           )}
         </div>
 
-        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '0 0 18px', maxWidth: 560 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '0 0 6px', maxWidth: 560 }}>
           Everyone answers these on one page before any times are shown. Which answers send someone
           down a different path is set on the next step.
         </p>
+        <a href={`/admin/${slug}/sessions`} className="btn-link" style={{ display: 'inline-block', marginBottom: 18 }}>
+          See what's bookable →
+        </a>
 
         {error && (
           <div className="notice notice-error" role="alert">

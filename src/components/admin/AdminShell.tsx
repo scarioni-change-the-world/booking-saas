@@ -6,13 +6,21 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
 
 /**
  * The nav list — grouped by how often it gets used, not by topic. Overview,
- * Meetings, Clients and Availability are the things a tenant checks day to
- * day; Sessions, Intake and Settings are set up once and revisited rarely.
+ * Meetings, Clients, Availability and Intake are the things a tenant checks
+ * day to day; Sessions and Settings are set up once and revisited rarely.
  * `divider: true` on Sessions is what makes that grouping visible rather
  * than just a comment here that nobody looking at the sidebar can see — a
  * UX audit of this shell flagged the two being disconnected as a real gap.
  * Same order and same items on desktop and mobile — see the note in
  * globals.css on why mobile doesn't fold anything under a "More" tab.
+ *
+ * Intake sits in the daily group, not the setup-once one it started in:
+ * once it grew a Responses tab (screening/responses), it stopped being a
+ * pure builder — watching how the questionnaire is converting is exactly
+ * the kind of thing worth checking often, same as Meetings or Clients.
+ * Sessions stayed below the divider on its own merits: it is a catalogue
+ * of what's bookable, genuinely configured once and rarely revisited, like
+ * Settings next to it.
  *
  * Labels only, not the URLs: "screening" and "bookings" stay as route
  * segments (nothing bookmarked or linked should break over a rename), but
@@ -31,8 +39,8 @@ const NAV = [
   { href: 'bookings', label: 'Meetings' },
   { href: 'clients', label: 'Clients' },
   { href: 'availability', label: 'Availability' },
-  { href: 'sessions', label: 'Sessions', divider: true },
   { href: 'screening', label: 'Intake' },
+  { href: 'sessions', label: 'Sessions', divider: true },
   { href: 'settings', label: 'Settings' },
 ];
 

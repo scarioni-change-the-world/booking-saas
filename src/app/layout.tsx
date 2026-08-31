@@ -1,30 +1,25 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans, Plus_Jakarta_Sans } from 'next/font/google';
+import { IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 
 /**
  * IBM Plex Sans for UI and body copy, per the brand guide's §7 exactly.
  *
- * Plus Jakarta Sans stands in for Mangal Pro Bold — the guide's specified
- * display face for the wordmark, hero headlines and major statements — which
- * is a licensed webfont this project doesn't have and isn't on a public font
- * service. The guide's own implementation note allows exactly this: "a
- * temporary development fallback is acceptable only until the actual brand
- * font is implemented." When a licensed Mangal Pro Bold webfont exists,
- * swap it in here — nothing else in the app needs to change, since every
- * consumer reads the --font-display variable, not this file directly.
+ * The display family is Arial / Arial Black (wordmark and headline system —
+ * see --font-heading and --font-wordmark in globals.css), per the brand
+ * guide's Implementation note: "use the system Arial family rather than
+ * embedding or redistributing font files." That's why there's no next/font
+ * entry for it here the way there is for IBM Plex Sans below — Arial ships
+ * with the OS, so the CSS variable just names the system font stack
+ * directly rather than pulling in a webfont. An earlier version of this
+ * project ran Plus Jakarta Sans as a temporary stand-in for a then-unnamed
+ * display face; the brand guide now specifies Arial as the real answer, not
+ * a placeholder, so that stand-in is gone.
  */
 const plexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
   variable: '--font-sans',
-  display: 'swap',
-});
-
-const display = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['700', '800'],
-  variable: '--font-display',
   display: 'swap',
 });
 
@@ -36,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${display.variable}`}>
+    <html lang="en" className={plexSans.variable}>
       <body>{children}</body>
     </html>
   );
