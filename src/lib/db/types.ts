@@ -22,6 +22,10 @@ export type OutcomePathType = 'meeting' | 'other';
 export type CalendarProviderId = 'google' | 'microsoft';
 export type CalendarConnectionStatus = 'active' | 'needs_reconnect' | 'revoked';
 export type PlatformRole = 'owner' | 'admin' | 'support';
+/** How a session is booked (migration 0013) — declared on the session
+ * itself, not on any one client's grant. See the migration for why this is
+ * a declaration only and doesn't yet drive an actual checkout. */
+export type BookingMode = 'single' | 'pack';
 
 export interface TenantBranding {
   logoUrl?: string;
@@ -81,6 +85,8 @@ export interface EventTypeRow {
   available_to_existing_clients: boolean;
   active: boolean;
   created_at: string;
+  booking_mode: BookingMode;
+  pack_size: number | null;
 }
 
 export interface AvailabilityRuleRow {

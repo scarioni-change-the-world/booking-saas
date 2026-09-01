@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0010 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0013 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -1020,6 +1020,48 @@ alter table qualification_responses alter column answers set default '[]'::jsonb
 -- or backfill any existing row's email.
 
 -- ==========================================================================
+-- supabase/migrations/0013_booking_mode.sql
+-- ==========================================================================
+
+-- How a session is booked — one at a time, or as a declared pack of several
+-- (brief: the service-builder reference the tenant is modelling this admin
+-- UI on shows a pack size — "5 / 8 / 10" — declared on the service itself,
+-- not granted ad hoc afterward the way client_entitlements works today).
+--
+-- This migration adds the declaration only. It does not touch how a package
+-- actually gets onto a client's account — that is still a manual grant from
+-- the Clients page (migration 0010's client_entitlements), because there is
+-- no checkout in this product yet (README: Stripe billing is milestone 3)
+-- and a client can't literally buy a pack through intro today. What this
+-- *does* do is give the admin dashboard's "grant a package" form something
+-- real to default to, instead of every grant starting from a bare "10".
+--
+-- single: booked one at a time — today's only behaviour, and stays the
+--         default so every existing session type is unaffected.
+-- pack:   the tenant is declaring this session is meant to be sold as a
+--         bundle of pack_size sessions. pack_size is required exactly when
+--         the mode is 'pack' and forbidden otherwise — enforced by the
+--         paired check below, the same pattern migration 0012's
+--         response_completion_paired uses for started_at/outcome_path_type.
+
+create type booking_mode as enum ('single', 'pack');
+
+alter table event_types add column booking_mode booking_mode not null default 'single';
+alter table event_types add column pack_size integer;
+
+alter table event_types
+  add constraint event_types_pack_size_paired
+  check ((booking_mode = 'pack') = (pack_size is not null));
+
+-- 2, not 1: a "pack" of one session is just a single booking with an extra
+-- field. 50 is a generous ceiling for a real bundle, not a load-bearing
+-- number — same spirit as the other "sane" range checks in this schema
+-- (event_types_duration_sane, event_types_buffers_sane).
+alter table event_types
+  add constraint event_types_pack_size_sane
+  check (pack_size is null or pack_size between 2 and 50);
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -1058,16 +1100,20 @@ update outcome_paths set
 where tenant_id = '00000000-0000-4000-8000-000000000001' and type = 'other';
 
 -- Two event types, one per audience, to keep the independent-booleans
--- behaviour visible in development (brief 2.1).
+-- behaviour visible in development (brief 2.1). Coaching is also the
+-- sample for migration 0013's booking_mode: a pack of 10, the kind of
+-- service the field exists for — Discovery stays 'single' (its default),
+-- a one-off call nobody sells as a bundle.
 insert into event_types (
   tenant_id, slug, name, description, duration_minutes,
   buffer_before_minutes, buffer_after_minutes, sort_order,
-  available_to_prospects, available_to_existing_clients
+  available_to_prospects, available_to_existing_clients,
+  booking_mode, pack_size
 ) values
   ('00000000-0000-4000-8000-000000000001', 'discovery', 'Discovery call',
-   'A free 30-minute conversation', 30, 0, 15, 1, true, false),
+   'A free 30-minute conversation', 30, 0, 15, 1, true, false, 'single', null),
   ('00000000-0000-4000-8000-000000000001', 'coaching', 'Coaching session',
-   'A 60-minute working session', 60, 15, 15, 2, false, true);
+   'A 60-minute working session', 60, 15, 15, 2, false, true, 'pack', 10);
 
 -- Monday to Friday, 09:00-17:00.
 insert into availability_rules (tenant_id, weekday, start_time, end_time)
@@ -1118,8 +1164,8 @@ commit;
 -- =============================================================================
 -- Verification — expect: 16 tables, 16 rls enabled, 27 policies, 0 anon
 -- policies, 16 tables granted to service_role, 1 tenant, 2 event types,
--- 3 questions, 5 availability rules, 2 outcome paths, 6 questionnaire
--- responses (2 still in progress, 4 completed).
+-- 1 pack-mode event type, 3 questions, 5 availability rules, 2 outcome
+-- paths, 6 questionnaire responses (2 still in progress, 4 completed).
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
 union all select 'rls enabled',      count(*)::text from pg_tables t join pg_class c on c.relname = t.tablename
@@ -1132,6 +1178,7 @@ union all select 'anon tables (must be 0)', count(distinct table_name)::text fro
                                      where table_schema = 'public' and grantee = 'anon'
 union all select 'tenants',          count(*)::text from tenants
 union all select 'event types',      count(*)::text from event_types
+union all select 'pack-mode event types', count(*)::text from event_types where booking_mode = 'pack'
 union all select 'questions',        count(*)::text from qualification_questions
 union all select 'availability rules', count(*)::text from availability_rules
 union all select 'outcome paths',    count(*)::text from outcome_paths

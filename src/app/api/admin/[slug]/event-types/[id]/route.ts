@@ -9,6 +9,7 @@ import {
 } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
+import { parseBookingModeForUpdate } from '@/lib/admin-event-types';
 import type { EventTypeRow } from '@/lib/db/types';
 
 /**
@@ -64,6 +65,12 @@ export async function PATCH(
 
     const active = optionalBoolean(body, 'active');
     if (active !== undefined) patch.active = active;
+
+    const bookingModeUpdate = parseBookingModeForUpdate(body);
+    if (bookingModeUpdate !== undefined) {
+      patch.booking_mode = bookingModeUpdate.bookingMode;
+      patch.pack_size = bookingModeUpdate.packSize;
+    }
 
     const { data, error } = await scope
       .update('event_types', patch)

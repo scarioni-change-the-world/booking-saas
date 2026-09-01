@@ -27,6 +27,8 @@ interface EventType {
   id: string;
   name: string;
   active: boolean;
+  bookingMode: 'single' | 'pack';
+  packSize: number | null;
 }
 
 const EMPTY_CLIENT_FORM = { name: '', email: '' };
@@ -347,7 +349,22 @@ export default function ClientsPage() {
                           id={`grant-type-${client.id}`}
                           required
                           value={grantForm.eventTypeId}
-                          onChange={(e) => setGrantForm({ ...grantForm, eventTypeId: e.target.value })}
+                          onChange={(e) => {
+                            const eventTypeId = e.target.value;
+                            // Suggest the session's own declared pack size as
+                            // a starting point — still just a default, not a
+                            // constraint, since the actual grant is a
+                            // separate, manual step from the service's
+                            // config (see the note on Sessions).
+                            const matched = eventTypes.find((t) => t.id === eventTypeId);
+                            setGrantForm({
+                              eventTypeId,
+                              sessions:
+                                matched?.bookingMode === 'pack' && matched.packSize
+                                  ? String(matched.packSize)
+                                  : grantForm.sessions,
+                            });
+                          }}
                         >
                           <option value="" disabled>
                             Choose a session type
@@ -355,6 +372,7 @@ export default function ClientsPage() {
                           {eventTypes.map((t) => (
                             <option key={t.id} value={t.id}>
                               {t.name}
+                              {t.bookingMode === 'pack' ? ` (pack of ${t.packSize})` : ''}
                             </option>
                           ))}
                         </select>

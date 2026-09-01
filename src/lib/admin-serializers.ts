@@ -32,6 +32,8 @@ export function serializeEventType(row: EventTypeRow) {
     availableToExistingClients: row.available_to_existing_clients,
     active: row.active,
     createdAt: row.created_at,
+    bookingMode: row.booking_mode,
+    packSize: row.pack_size,
   };
 }
 

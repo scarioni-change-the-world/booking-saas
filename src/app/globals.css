@@ -1272,6 +1272,100 @@ button {
   opacity: 0.55;
 }
 
+/* Sessions' "service builder" list — modelled on a service-builder pattern
+   from the marketing site: numbered rows in one flat card, hairline
+   dividers instead of a border per row, each row expanding in place to
+   edit rather than opening a separate form. Flatter than .admin-row on
+   purpose (brief 10: "flat or nearly flat surfaces... minimal shadows"),
+   and it reads calmer with N services in a list than N separate cards did. */
+.service-list {
+  display: flex;
+  flex-direction: column;
+}
+.service-row {
+  border-bottom: 1px solid var(--border);
+}
+.service-row:last-child {
+  border-bottom: none;
+}
+.service-row-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 6px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.service-row-summary:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.service-row.expanded .service-row-summary {
+  background: var(--side);
+}
+.service-row-num {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--emphasis);
+  flex: 0 0 auto;
+  width: 20px;
+}
+.service-row-name {
+  font-weight: 600;
+  font-size: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+.service-row-meta {
+  font-size: 0.8rem;
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+.service-row-chevron {
+  flex: 0 0 auto;
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+.service-row.expanded .service-row-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .service-row-summary,
+  .service-row-chevron {
+    transition: none;
+  }
+}
+.service-row-body {
+  padding: 2px 6px 24px 42px;
+}
+/* The inline "create a service" row — a name field and a button, not a
+   full form, matching the reference's minimal add-by-name flow. The new
+   row lands expanded (see SessionsPage) so duration/buffers/audience get
+   filled in right after, rather than needing a second trip back in. */
+.service-create-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 18px 6px 6px;
+}
+.service-create-row .field {
+  flex: 1;
+  margin-bottom: 0;
+}
+.service-create-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 9px;
+  display: block;
+}
+
 .admin-toggle {
   display: flex;
   align-items: center;

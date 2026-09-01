@@ -33,16 +33,20 @@ update outcome_paths set
 where tenant_id = '00000000-0000-4000-8000-000000000001' and type = 'other';
 
 -- Two event types, one per audience, to keep the independent-booleans
--- behaviour visible in development (brief 2.1).
+-- behaviour visible in development (brief 2.1). Coaching is also the
+-- sample for migration 0013's booking_mode: a pack of 10, the kind of
+-- service the field exists for — Discovery stays 'single' (its default),
+-- a one-off call nobody sells as a bundle.
 insert into event_types (
   tenant_id, slug, name, description, duration_minutes,
   buffer_before_minutes, buffer_after_minutes, sort_order,
-  available_to_prospects, available_to_existing_clients
+  available_to_prospects, available_to_existing_clients,
+  booking_mode, pack_size
 ) values
   ('00000000-0000-4000-8000-000000000001', 'discovery', 'Discovery call',
-   'A free 30-minute conversation', 30, 0, 15, 1, true, false),
+   'A free 30-minute conversation', 30, 0, 15, 1, true, false, 'single', null),
   ('00000000-0000-4000-8000-000000000001', 'coaching', 'Coaching session',
-   'A 60-minute working session', 60, 15, 15, 2, false, true);
+   'A 60-minute working session', 60, 15, 15, 2, false, true, 'pack', 10);
 
 -- Monday to Friday, 09:00-17:00.
 insert into availability_rules (tenant_id, weekday, start_time, end_time)

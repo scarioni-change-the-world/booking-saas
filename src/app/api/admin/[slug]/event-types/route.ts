@@ -10,7 +10,14 @@ import {
 } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
+import { parseBookingModeForCreate } from '@/lib/admin-event-types';
 import type { EventTypeRow } from '@/lib/db/types';
+
+/** Duration and buffers default rather than being required, so the
+ * dashboard's inline "just type a name" create row (see SessionsPage) can
+ * post nothing but a name and get a real, editable row back — the same
+ * quick-add-then-refine shape as EMPTY_FORM there. */
+const DEFAULT_DURATION_MINUTES = 30;
 
 /** "Coaching Session (60 min)" → "coaching-session-60-min". */
 function slugify(name: string): string {
@@ -70,13 +77,23 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const body = await readJson(request);
 
     const name = requireString(body, 'name', { maxLength: 200 });
-    const durationMinutes = requireInt(body, 'durationMinutes', { min: 5, max: 1440 });
-    const bufferBefore = requireInt(body, 'bufferBeforeMinutes', { min: 0, max: 720 });
-    const bufferAfter = requireInt(body, 'bufferAfterMinutes', { min: 0, max: 720 });
+    const durationMinutes =
+      body.durationMinutes === undefined
+        ? DEFAULT_DURATION_MINUTES
+        : requireInt(body, 'durationMinutes', { min: 5, max: 1440 });
+    const bufferBefore =
+      body.bufferBeforeMinutes === undefined
+        ? 0
+        : requireInt(body, 'bufferBeforeMinutes', { min: 0, max: 720 });
+    const bufferAfter =
+      body.bufferAfterMinutes === undefined
+        ? 0
+        : requireInt(body, 'bufferAfterMinutes', { min: 0, max: 720 });
     const description = optionalString(body, 'description', { maxLength: 2000 });
     const availableToProspects = optionalBoolean(body, 'availableToProspects') ?? false;
     const availableToExistingClients =
       optionalBoolean(body, 'availableToExistingClients') ?? false;
+    const { bookingMode, packSize } = parseBookingModeForCreate(body);
 
     const base = slugify(name);
 
@@ -95,6 +112,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
         buffer_after_minutes: bufferAfter,
         available_to_prospects: availableToProspects,
         available_to_existing_clients: availableToExistingClients,
+        booking_mode: bookingMode,
+        pack_size: packSize,
       });
 
       if (!error) {
