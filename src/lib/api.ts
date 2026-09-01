@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import { NextResponse } from 'next/server';
+import { AiUnavailableError } from './ai';
 import { AuthError } from './auth';
 import { BookingError } from './booking-service';
 import { CalendarUnavailableError } from './calendar';
@@ -49,6 +50,14 @@ export function handleError(error: unknown) {
   if (error instanceof CalendarUnavailableError) {
     console.error('[calendar] unavailable, refusing to serve slots:', error.message);
     return fail('Booking is temporarily unavailable. Please try again shortly.', 503);
+  }
+
+  // Unlike CalendarUnavailableError, this message IS returned as-is: every
+  // AiUnavailableError is constructed here with a hand-written, admin-safe
+  // string (see src/lib/ai) — a real provider error is logged inside
+  // anthropic.ts and never threaded into this error's own message.
+  if (error instanceof AiUnavailableError) {
+    return fail(error.message, error.status);
   }
 
   console.error('[api] unhandled error:', error);
