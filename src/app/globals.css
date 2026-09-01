@@ -1,7 +1,11 @@
 /*
  * intro design tokens — built from Intro's brand strategy and web
- * guidelines (the "design bible"). Exact hex values below are taken
- * directly from that document's colour system table.
+ * guidelines. Exact hex values below are taken directly from the "INTRO —
+ * DIGITAL BRAND KIT" colour system table, the live site's own source of
+ * truth — a later, more complete document than the earlier brand-guidelines
+ * PDF this file originally cited; every value matched except Soft Mineral,
+ * which the digital kit gives as a genuinely different hex (#566B68, not
+ * the earlier #435A66) — see --accent below.
  *
  * One rule governs every colour decision here, carried over verbatim from
  * the guide: a colour either identifies the brand or carries meaning,
@@ -9,11 +13,15 @@
  *
  *   --accent      is BRAND. It is the one token a tenant may override — see
  *                 the inline style set from `branding.accentColor` in
- *                 BookingFlow. Buttons, links, the selected-answer highlight.
- *                 Mineral Blue is the default for a tenant who has not set
- *                 their own; it is not "intro's colour" applied to their
- *                 page, it is simply what an unbranded page looks like
- *                 until they pick one.
+ *                 BookingFlow. Links, active/selected states, the
+ *                 selected-answer highlight — but NOT a primary button's
+ *                 fill: the kit's own button spec fills a primary button
+ *                 with Ink at rest and swaps to Soft Mineral on hover (see
+ *                 .btn-primary), which is why "buttons" isn't in this
+ *                 list the way it used to be. Soft Mineral is the default
+ *                 for a tenant who has not set their own; it is not
+ *                 "intro's colour" applied to their page, it is simply what
+ *                 an unbranded page looks like until they pick one.
  *
  *   --emphasis    is ALSO brand, but the guide is explicit that Muted Ochre
  *                 works because it stays scarce (2-5% of a page). It marks a
@@ -55,15 +63,15 @@
   --faint: #666a67; /* Graphite — secondary text, metadata, eyebrows */
   --ghost: #9a988f;
 
-  /* Brand — tenant-owned. See the file header for why Mineral Blue rather
+  /* Brand — tenant-owned. See the file header for why Soft Mineral rather
      than "intro's colour". --accent-tint and --accent-ink are DERIVED from
      --accent with color-mix, not separate hex values — so overriding
      --accent alone (which is all BookingFlow does per tenant) still
      produces a coherent selected-state tint and readable ink, rather than a
-     brand-coloured button next to a Mineral-Blue-tinted highlight.
+     brand-coloured highlight next to a Soft-Mineral-tinted one.
      --accent-contrast stays a fixed light value: real contrast-checking
      against an arbitrary tenant colour is a further step, not done here. */
-  --accent: #435a66; /* Mineral Blue */
+  --accent: #566b68; /* Soft Mineral */
   --accent-tint: color-mix(in srgb, var(--accent) 16%, var(--surface));
   --accent-ink: color-mix(in srgb, var(--accent) 72%, black);
   --accent-contrast: #fcfbf8;
@@ -141,6 +149,27 @@ body {
   font-family: var(--font-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Every admin page's own <h1> ("Today", "What people can book", ...) was
+   riding on nothing but the browser's UA default — no font-family, no
+   weight, no tracking — the one place this app's headline system wasn't
+   actually applied. The digital brand kit's own "major headline" spec
+   (Arial 700, -0.055em tracking, ~0.9 line-height) is tuned for the
+   marketing site's much larger hero type; at admin-page-title size that
+   tracking reads as cramped rather than "tightly composed", so this uses
+   the kit's more moderate "secondary heading" tracking instead — still
+   genuinely tighter than body text, just not hero-scale tight. h2 covers
+   the smaller in-page headings (Sessions/Intake's row names) the same way.
+   .widget h1/h2/h3 (the customer-facing surface) already had its own rule
+   before this and is more specific, so it keeps overriding this one. */
+h1,
+h2 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 /* A bare <a> with no class (e.g. the sidebar's "Sign out") otherwise falls
@@ -344,13 +373,25 @@ button {
   padding: 12px 18px;
   min-height: 48px;
 }
+/* The digital brand kit's "Primary dark button": Ink at rest, not Soft
+   Mineral — a primary button is a distinct thing from an active/selected
+   state, which is what --accent still means everywhere else (see the file
+   header). Hover swaps to Soft Mineral outright, per the kit's own hover
+   spec (background/border-color: #566B68), rather than the brightness
+   filter this used before there was a real hover colour to swap to. */
 .btn-primary {
-  background: var(--accent);
+  background: var(--ink);
   color: var(--accent-contrast);
   font-weight: 500;
+  transition: background 0.15s;
 }
 .btn-primary:hover {
-  filter: brightness(0.94);
+  background: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary {
+    transition: none;
+  }
 }
 .btn-primary:disabled {
   opacity: 0.45;
@@ -850,11 +891,15 @@ button {
   margin-bottom: 26px;
   flex-wrap: wrap;
 }
+/* The digital brand kit's ".section-label" spec exactly: 12px/600/0.16em
+   tracking/uppercase/Soft Mineral — a wider track and a brand-coloured
+   eyebrow than this used to be (11.5px/--faint/0.09em). */
 .admin-eyebrow {
-  font-size: 11.5px;
-  letter-spacing: 0.09em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--accent);
   margin-bottom: 7px;
 }
 

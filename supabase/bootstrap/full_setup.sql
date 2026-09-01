@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0013 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0014 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -1054,12 +1054,25 @@ alter table event_types
   check ((booking_mode = 'pack') = (pack_size is not null));
 
 -- 2, not 1: a "pack" of one session is just a single booking with an extra
--- field. 50 is a generous ceiling for a real bundle, not a load-bearing
--- number — same spirit as the other "sane" range checks in this schema
--- (event_types_duration_sane, event_types_buffers_sane).
+-- field. 50 was a generous placeholder ceiling, since tightened to the real
+-- spec by migration 0014 below — same spirit as the other "sane" range
+-- checks in this schema (event_types_duration_sane, event_types_buffers_sane).
 alter table event_types
   add constraint event_types_pack_size_sane
   check (pack_size is null or pack_size between 2 and 50);
+
+-- ==========================================================================
+-- supabase/migrations/0014_pack_size_ceiling.sql
+-- ==========================================================================
+
+-- Tighten booking-pack size to the digital brand kit's real ceiling.
+-- "Booking packs of up to ten bookings" — 50 above was a guess made before
+-- that spec was in hand.
+alter table event_types drop constraint event_types_pack_size_sane;
+
+alter table event_types
+  add constraint event_types_pack_size_sane
+  check (pack_size is null or pack_size between 2 and 10);
 
 -- ==========================================================================
 -- supabase/seed.sql

@@ -3,7 +3,12 @@ import type { BookingMode } from './db/types';
 
 const MODES: BookingMode[] = ['single', 'pack'];
 const PACK_SIZE_MIN = 2;
-const PACK_SIZE_MAX = 50;
+/** "Booking packs of up to ten bookings" — the digital brand kit's own
+ * product-interface spec. Migration 0013 shipped with a looser range
+ * (2-50, this file's original guess); migration 0014 tightens the DB
+ * constraint to match once the real ceiling was known — see its comment
+ * for why that's a new migration rather than an edit to 0013. */
+const PACK_SIZE_MAX = 10;
 
 export interface BookingModeInput {
   bookingMode: BookingMode;

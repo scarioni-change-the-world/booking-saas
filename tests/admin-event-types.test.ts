@@ -31,7 +31,7 @@ describe('parseBookingModeForCreate', () => {
     expect(() => parseBookingModeForCreate({ bookingMode: 'pack' })).toThrow(BookingError);
   });
 
-  it.each([1, 51, 0, -3, 2.5])('rejects an out-of-range packSize (%s)', (bad) => {
+  it.each([1, 11, 0, -3, 2.5])('rejects an out-of-range packSize (%s)', (bad) => {
     expect(() => parseBookingModeForCreate({ bookingMode: 'pack', packSize: bad })).toThrow(
       BookingError,
     );
