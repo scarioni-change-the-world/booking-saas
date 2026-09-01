@@ -235,14 +235,30 @@ interface Draft {
   otherPathMessage: string;
 }
 
+/** A drafted question, in the same FormState shape QuestionForm already
+ * edits — so reviewing a draft reuses the exact same editor manual entry
+ * uses, rather than a second, parallel way to edit a question. */
+function draftQuestionToForm(q: Draft['questions'][number]): FormState {
+  return {
+    prompt: q.prompt,
+    kind: q.kind,
+    required: q.required,
+    yesNo: q.kind === 'yes_no' && q.options.length === 2 ? [q.options[0]!, q.options[1]!] : EMPTY_FORM.yesNo,
+    choices: q.kind === 'single_choice' && q.options.length > 0 ? q.options : EMPTY_FORM.choices,
+  };
+}
+
 /**
  * PRODUCT_VISION.md's "AI-assisted intake design": describe how you decide
  * who's ready to meet, get a draft to review. Nothing here saves anything
  * directly — "Add" on a drafted question calls the same POST /questions
- * route manual entry uses, so there is exactly one path a question is
- * actually created through. Starts collapsed: useful mainly for a first
- * pass or a fresh service, not something that should compete for space
- * with the manual builder on every visit.
+ * route manual entry uses (via the same formToPayload every manually
+ * created question already goes through), so there is exactly one path a
+ * question is actually created through, and one editor (QuestionForm) for
+ * every question whether it started as a draft or from scratch. Starts
+ * collapsed: useful mainly for a first pass or a fresh service, not
+ * something that should compete for space with the manual builder on
+ * every visit.
  */
 function AiSetupCard({
   slug,
@@ -258,11 +274,13 @@ function AiSetupCard({
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draftForms, setDraftForms] = useState<FormState[] | null>(null);
   const [removed, setRemoved] = useState<Set<number>>(new Set());
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
 
   const [otherPathId, setOtherPathId] = useState<string | null>(null);
+  const [otherPathAvailable, setOtherPathAvailable] = useState(false);
   const [otherPathMessage, setOtherPathMessage] = useState('');
   const [otherPathSaving, setOtherPathSaving] = useState(false);
   const [otherPathSaved, setOtherPathSaved] = useState(false);
@@ -271,8 +289,9 @@ function AiSetupCard({
     event.preventDefault();
     setLoading(true);
     setError(null);
-    setDraft(null);
+    setDraftForms(null);
     setRemoved(new Set());
+    setEditingIndex(null);
     setOtherPathSaved(false);
     try {
       const result = await adminFetchJson<{ draft: Draft }>(
@@ -283,8 +302,9 @@ function AiSetupCard({
           body: JSON.stringify({ description, eventTypeId: eventTypeId || undefined }),
         },
       );
-      setDraft(result.draft);
+      setDraftForms(result.draft.questions.map(draftQuestionToForm));
       setOtherPathMessage(result.draft.otherPathMessage);
+      setOtherPathAvailable(result.draft.otherPathMessage.trim() !== '');
       // The other outcome path is only fetched once a draft actually needs
       // one to save into — no reason to load it on every visit to this tab.
       if (!otherPathId) {
@@ -300,26 +320,24 @@ function AiSetupCard({
     }
   }
 
+  function updateDraftForm(index: number, form: FormState) {
+    setDraftForms((prev) => (prev ? prev.map((f, i) => (i === index ? form : f)) : prev));
+  }
+
   async function addRemaining() {
-    if (!draft) return;
+    if (!draftForms) return;
     setAdding(true);
     setError(null);
     try {
-      for (let i = 0; i < draft.questions.length; i += 1) {
+      for (let i = 0; i < draftForms.length; i += 1) {
         if (removed.has(i)) continue;
-        const q = draft.questions[i]!;
         await adminFetchJson(`/api/admin/${slug}/questions`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            prompt: q.prompt,
-            kind: q.kind,
-            required: q.required,
-            options: q.options,
-          }),
+          body: JSON.stringify(formToPayload(draftForms[i]!)),
         });
       }
-      setDraft(null);
+      setDraftForms(null);
       setDescription('');
       onQuestionsAdded();
     } catch (cause) {
@@ -347,12 +365,12 @@ function AiSetupCard({
     }
   }
 
-  const remainingCount = draft ? draft.questions.filter((_, i) => !removed.has(i)).length : 0;
+  const remainingCount = draftForms ? draftForms.filter((_, i) => !removed.has(i)).length : 0;
 
   if (!open) {
     return (
       <button type="button" className="btn-secondary" style={{ marginBottom: 18 }} onClick={() => setOpen(true)}>
-        ✨ AI-assisted setup
+        AI-assisted setup
       </button>
     );
   }
@@ -410,16 +428,42 @@ function AiSetupCard({
         </button>
       </div>
 
-      {draft && (
+      {draftForms && (
         <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
           <div className="admin-card-title">Draft — review before adding</div>
           <div className="admin-list">
-            {draft.questions.map((q, i) =>
-              removed.has(i) ? null : (
+            {draftForms.map((form, i) => {
+              if (removed.has(i)) return null;
+              const q = formToPayload(form);
+
+              if (editingIndex === i) {
+                return (
+                  <div key={i} className="card">
+                    <QuestionForm form={form} setForm={(f) => updateDraftForm(i, f)} idPrefix={`ai-draft-${i}`} />
+                    <div className="actions">
+                      <button type="button" className="btn-primary" onClick={() => setEditingIndex(null)}>
+                        Done editing
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-link"
+                        onClick={() => {
+                          setRemoved((prev) => new Set(prev).add(i));
+                          setEditingIndex(null);
+                        }}
+                      >
+                        Discard
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
                 <div key={i} className="card admin-row">
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
-                      <h2 style={{ fontSize: '1.05rem' }}>{q.prompt}</h2>
+                      <h2 style={{ fontSize: '1.05rem' }}>{q.prompt || 'Untitled question'}</h2>
                       <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>
                         {KIND_LABEL[q.kind]}
                         {q.required ? ' · required' : ''}
@@ -427,9 +471,9 @@ function AiSetupCard({
                     </div>
                     {q.options.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                        {q.options.map((opt) => (
+                        {q.options.map((opt, optIndex) => (
                           <span
-                            key={opt.label}
+                            key={`${opt.label}-${optIndex}`}
                             className="notice"
                             style={{
                               padding: '4px 11px',
@@ -450,16 +494,21 @@ function AiSetupCard({
                       </div>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    className="btn-link"
-                    onClick={() => setRemoved((prev) => new Set(prev).add(i))}
-                  >
-                    Discard
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                    <button type="button" className="btn-secondary" onClick={() => setEditingIndex(i)}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-link"
+                      onClick={() => setRemoved((prev) => new Set(prev).add(i))}
+                    >
+                      Discard
+                    </button>
+                  </div>
                 </div>
-              ),
-            )}
+              );
+            })}
           </div>
 
           {remainingCount > 0 && (
@@ -467,7 +516,8 @@ function AiSetupCard({
               type="button"
               className="btn-primary"
               style={{ marginTop: 14 }}
-              disabled={adding}
+              disabled={adding || editingIndex !== null}
+              title={editingIndex !== null ? 'Finish editing first' : undefined}
               onClick={addRemaining}
             >
               {adding
@@ -476,7 +526,7 @@ function AiSetupCard({
             </button>
           )}
 
-          {draft.otherPathMessage && (
+          {otherPathAvailable && (
             <div style={{ marginTop: 20 }}>
               <label htmlFor="ai-other-path" style={{ display: 'block', fontWeight: 500, marginBottom: 9 }}>
                 Suggested message for the other path
