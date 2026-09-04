@@ -12,11 +12,10 @@ import type { EventTypeRow } from '@/lib/db/types';
  * there is exactly one path a question actually gets saved through,
  * whether it was typed by hand or accepted from a draft.
  *
- * `eventTypeId` is optional prompt context, not a storage scope — today's
- * intake is one shared questionnaire per tenant (see the note on Intake's
- * step-tab layout), not yet per-service. Accepting it here now, before
- * storage catches up, means this route's shape doesn't need to change the
- * day it does — only what happens with the id internally will.
+ * `eventTypeId` is prompt context for the draft — the resulting questions
+ * are scoped to that service only once the admin actually accepts them
+ * (POST .../questions, migration 0016); nothing is scoped here, since
+ * nothing is saved here.
  *
  * Capped per tenant per calendar month (src/lib/ai/usage.ts) — checked
  * before the provider call so a tenant at their cap never triggers another

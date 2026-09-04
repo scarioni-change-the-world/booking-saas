@@ -12,13 +12,26 @@ import type { OutcomePathType, QualificationResponseRow } from './db/types';
  * DB-independent), so this file stands alone rather than pairing with one.
  */
 
-/** Begin a response: record who's here before they've answered anything. */
-export async function startResponse(scope: TenantScope, email: string): Promise<string> {
+/**
+ * Begin a response: record who's here before they've answered anything.
+ *
+ * `eventTypeId` is which service the questionnaire is being answered for —
+ * always known by this point since migration 0016's reordered flow picks a
+ * service before the gate ever runs. Stamped here rather than left for
+ * completion time, so a response started but never finished still shows up
+ * against the right service in the funnel.
+ */
+export async function startResponse(
+  scope: TenantScope,
+  email: string,
+  eventTypeId: string,
+): Promise<string> {
   const { data, error } = await scope.insert('qualification_responses', {
     email,
     answers: [],
     outcome_path_type: null,
     completed_at: null,
+    event_type_id: eventTypeId,
   });
   if (error) throw error;
 

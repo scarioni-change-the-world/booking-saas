@@ -47,6 +47,7 @@ export function serializeQuestion(row: QualificationQuestionRow) {
     options: row.options,
     required: row.required,
     sortOrder: row.sort_order,
+    eventTypeId: row.event_type_id,
   };
 }
 

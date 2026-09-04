@@ -66,7 +66,16 @@ async function loadSettings(scope: TenantScope): Promise<TenantSettingsRow> {
   return data as unknown as TenantSettingsRow;
 }
 
-async function loadEventType(scope: TenantScope, eventTypeId: string): Promise<EventTypeRow> {
+/**
+ * Load one active event type belonging to this tenant, or throw.
+ *
+ * Exported so the qualification routes (.../questions, .../qualify/start)
+ * can validate a prospect-supplied eventTypeId the same way booking
+ * creation already does — a question set or a questionnaire response
+ * scoped to a service the tenant doesn't have (or has archived) should
+ * fail the same clear way an attempt to book it does.
+ */
+export async function loadEventType(scope: TenantScope, eventTypeId: string): Promise<EventTypeRow> {
   const { data, error } = await scope
     .select('event_types')
     .eq('id', eventTypeId)

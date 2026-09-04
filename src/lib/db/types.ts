@@ -124,6 +124,9 @@ export interface QualificationQuestionRow {
   options: Array<{ label: string; outcomePathType: OutcomePathType }>;
   required: boolean;
   sort_order: number;
+  /** null = asked for every prospect-facing service; set = only when
+   * booking that one service — see migration 0016. */
+  event_type_id: string | null;
 }
 
 /**
@@ -141,6 +144,12 @@ export interface QualificationResponseRow {
   email: string | null;
   started_at: string;
   completed_at: string | null;
+  /** Which service this response is for — known and stamped the moment
+   * the response starts, since migration 0016's reordered flow always has
+   * a service picked before the gate ever runs. Nullable at the schema
+   * level for the same "outlive the referenced row" reason every other
+   * on-delete-set-null column in this schema is. */
+  event_type_id: string | null;
 }
 
 export interface BookingRow {

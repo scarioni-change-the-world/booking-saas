@@ -1,4 +1,5 @@
 import { BookingError } from './booking-service';
+import type { TenantScope } from './db';
 import type { OutcomePathType, QuestionKind } from './db/types';
 
 const KINDS: QuestionKind[] = ['text', 'yes_no', 'single_choice'];
@@ -22,6 +23,27 @@ function requirePathType(value: unknown, context: string): OutcomePathType {
     throw new BookingError(`${context} needs a valid outcome path`, 400);
   }
   return value as OutcomePathType;
+}
+
+/**
+ * Resolve an optional `eventTypeId` into what qualification_questions'
+ * event_type_id column wants: null for "asked for every service" (the
+ * absent case), or the id itself once confirmed to belong to this tenant —
+ * see migration 0016. Deliberately does not require the event type to
+ * still be active: an admin scoping a question to a service they've
+ * temporarily paused is not a mistake worth blocking.
+ */
+export async function validateEventTypeId(
+  scope: TenantScope,
+  eventTypeId: string | undefined,
+): Promise<string | null> {
+  if (!eventTypeId) return null;
+
+  const { data, error } = await scope.select('event_types', 'id').eq('id', eventTypeId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new BookingError('Unknown session type', 404);
+
+  return eventTypeId;
 }
 
 /**

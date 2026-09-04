@@ -1,6 +1,6 @@
-import { handleError, ok, readJson, requireString } from '@/lib/api';
+import { handleError, ok, optionalString, readJson, requireString } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
-import { normaliseOptions, requireKind } from '@/lib/admin-questions';
+import { normaliseOptions, requireKind, validateEventTypeId } from '@/lib/admin-questions';
 import { serializeQuestion } from '@/lib/admin-serializers';
 import type { QualificationQuestionRow } from '@/lib/db/types';
 
@@ -37,12 +37,20 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const kind = requireKind(body);
     const options = normaliseOptions(kind, body);
     const required = body.required !== false;
+    const eventTypeId = await validateEventTypeId(
+      scope,
+      optionalString(body, 'eventTypeId', { maxLength: 100 }),
+    );
 
-    const last = await scope
+    // "End of the list" means end of this question's own scope — a global
+    // question and a service-specific one keep independent sort_order
+    // sequences (migration 0016), never sharing one counter.
+    let lastQuery = scope
       .select('qualification_questions', 'sort_order')
       .order('sort_order', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    lastQuery = eventTypeId ? lastQuery.eq('event_type_id', eventTypeId) : lastQuery.is('event_type_id', null);
+    const last = await lastQuery.maybeSingle();
     if (last.error) throw last.error;
     const nextSortOrder = ((last.data as { sort_order: number } | null)?.sort_order ?? -1) + 1;
 
@@ -52,6 +60,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       options,
       required,
       sort_order: nextSortOrder,
+      event_type_id: eventTypeId,
     });
     if (error) throw error;
 

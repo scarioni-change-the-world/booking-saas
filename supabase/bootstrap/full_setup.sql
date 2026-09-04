@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0015 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0016 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -1098,6 +1098,19 @@ create policy ai_usage_read on ai_usage_events
 create policy ai_usage_write on ai_usage_events
   for all to authenticated
   using (auth_is_tenant_admin(tenant_id)) with check (auth_is_tenant_admin(tenant_id));
+
+-- ==========================================================================
+-- supabase/migrations/0016_question_scoping.sql
+-- ==========================================================================
+
+alter table qualification_questions
+  add column event_type_id uuid references event_types(id) on delete set null;
+
+alter table qualification_responses
+  add column event_type_id uuid references event_types(id) on delete set null;
+
+create index qualification_questions_tenant_scope_idx
+  on qualification_questions (tenant_id, event_type_id, sort_order);
 
 -- ==========================================================================
 -- supabase/seed.sql

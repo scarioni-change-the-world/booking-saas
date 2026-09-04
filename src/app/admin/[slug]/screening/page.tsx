@@ -20,6 +20,10 @@ interface Question {
   options: Option[];
   required: boolean;
   sortOrder: number;
+  /** null = asked for every service; set = only when booking that one
+   * (migration 0016). Fixed at creation — moving a question between scopes
+   * isn't supported yet; remove and re-add it in the right section. */
+  eventTypeId: string | null;
 }
 
 interface FormState {
@@ -267,7 +271,9 @@ function AiSetupCard({
 }: {
   slug: string;
   eventTypes: EventTypeOption[];
-  onQuestionsAdded: () => void;
+  /** Which service (if any) the accepted questions were scoped to, so the
+   * page can bring that service's section into view right away. */
+  onQuestionsAdded: (eventTypeId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [eventTypeId, setEventTypeId] = useState('');
@@ -331,15 +337,19 @@ function AiSetupCard({
     try {
       for (let i = 0; i < draftForms.length; i += 1) {
         if (removed.has(i)) continue;
+        // Groundwork paying off: the service this draft was generated
+        // about (if any) is exactly the scope the accepted questions land
+        // in — same field, now a real save target instead of just prompt
+        // context (migration 0016).
         await adminFetchJson(`/api/admin/${slug}/questions`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(formToPayload(draftForms[i]!)),
+          body: JSON.stringify({ ...formToPayload(draftForms[i]!), eventTypeId: eventTypeId || undefined }),
         });
       }
       setDraftForms(null);
       setDescription('');
-      onQuestionsAdded();
+      onQuestionsAdded(eventTypeId || null);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -387,13 +397,13 @@ function AiSetupCard({
       </div>
       <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '6px 0 16px', maxWidth: 560 }}>
         Describe how you decide who&apos;s ready to work with you, and we&apos;ll draft a starting
-        set of questions to review. Applies to all your prospect-facing services for now — it
-        isn&apos;t scoped to one service yet.
+        set of questions to review. Pick a service below to scope the accepted questions to just
+        that one — leave it as &quot;No particular one&quot; and they&apos;ll apply to every service.
       </p>
 
       {eventTypes.length > 1 && (
         <div className="field">
-          <label htmlFor="ai-event-type">Mainly about which service?</label>
+          <label htmlFor="ai-event-type">Which service is this for?</label>
           <select id="ai-event-type" value={eventTypeId} onChange={(e) => setEventTypeId(e.target.value)}>
             <option value="">No particular one</option>
             {eventTypes.map((t) => (
@@ -588,6 +598,128 @@ function QuestionsPreview({ questions }: { questions: Question[] }) {
   );
 }
 
+/**
+ * One question, in either its display row or its edit form — the same
+ * block the flat list used to inline once, now shared between the "asked
+ * for every service" section and the "asked only for {service}" one
+ * (migration 0016) so the two don't drift into two slightly different
+ * question rows over time.
+ */
+function QuestionRow({
+  q,
+  isFirst,
+  isLast,
+  editingId,
+  editForm,
+  setEditForm,
+  saving,
+  onEdit,
+  onCancelEdit,
+  onSubmitEdit,
+  onMove,
+  onToggleRequired,
+  onRemove,
+}: {
+  q: Question;
+  isFirst: boolean;
+  isLast: boolean;
+  editingId: string | null;
+  editForm: FormState;
+  setEditForm: (f: FormState) => void;
+  saving: boolean;
+  onEdit: (q: Question) => void;
+  onCancelEdit: () => void;
+  onSubmitEdit: (event: React.FormEvent, id: string) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
+  onToggleRequired: (q: Question) => void;
+  onRemove: (id: string) => void;
+}) {
+  if (editingId === q.id) {
+    return (
+      <form className="card" onSubmit={(e) => onSubmitEdit(e, q.id)}>
+        <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`edit-${q.id}`} />
+        <div className="actions">
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button type="button" className="btn-link" onClick={onCancelEdit}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="card admin-row">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <button
+          type="button"
+          className="btn-link"
+          disabled={isFirst}
+          style={{ opacity: isFirst ? 0.3 : 1 }}
+          onClick={() => onMove(q.id, 'up')}
+          aria-label="Move up"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          className="btn-link"
+          disabled={isLast}
+          style={{ opacity: isLast ? 0.3 : 1 }}
+          onClick={() => onMove(q.id, 'down')}
+          aria-label="Move down"
+        >
+          ↓
+        </button>
+      </div>
+
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: '1.05rem' }}>{q.prompt}</h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>
+            {KIND_LABEL[q.kind]}
+            {q.required ? ' · required' : ''}
+          </span>
+        </div>
+
+        {q.options.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+            {q.options.map((opt) => (
+              <span
+                key={opt.label}
+                className="notice"
+                style={{
+                  padding: '4px 11px',
+                  margin: 0,
+                  background:
+                    opt.outcomePathType === 'meeting' ? 'var(--status-live-tint)' : 'var(--accent-tint)',
+                  color: opt.outcomePathType === 'meeting' ? 'var(--status-live-ink)' : 'var(--accent-ink)',
+                }}
+              >
+                {opt.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+        <button type="button" className="btn-secondary" onClick={() => onEdit(q)}>
+          Edit
+        </button>
+        <button type="button" className="btn-link" onClick={() => onToggleRequired(q)}>
+          {q.required ? 'Make optional' : 'Make required'}
+        </button>
+        <button type="button" className="btn-link" onClick={() => onRemove(q.id)}>
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ScreeningQuestionsPage() {
   const { slug } = useParams<{ slug: string }>();
   const base = `/api/admin/${slug}/questions`;
@@ -598,7 +730,15 @@ export default function ScreeningQuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [creating, setCreating] = useState(false);
+  // Which service's own questions are showing alongside the shared ones —
+  // '' means just the shared list (migration 0016). Hidden entirely for a
+  // single-service tenant, where the distinction is moot.
+  const [viewServiceId, setViewServiceId] = useState('');
+
+  // Only one create form open at a time, and it knows which of the two
+  // sections it belongs to — 'global' saves with no eventTypeId, 'service'
+  // saves into viewServiceId.
+  const [creatingScope, setCreatingScope] = useState<'none' | 'global' | 'service'>('none');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -619,9 +759,10 @@ export default function ScreeningQuestionsPage() {
 
   useEffect(() => {
     void load();
-    // For the AI-assist panel's "which service is this about" picker —
-    // only prospect-facing services are relevant, since existing clients
-    // never see the questionnaire at all.
+    // For the per-service section's own picker and the AI-assist panel's
+    // "which service is this about" one — only prospect-facing services
+    // are relevant, since existing clients never see the questionnaire at
+    // all.
     adminFetchJson<{
       eventTypes: Array<{ id: string; name: string; active: boolean; availableToProspects: boolean }>;
     }>(`/api/admin/${slug}/event-types`)
@@ -638,7 +779,17 @@ export default function ScreeningQuestionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable for the life of this page
   }, [slug]);
 
-  async function submitCreate(event: React.FormEvent) {
+  function startCreate(scope: 'global' | 'service') {
+    setForm(EMPTY_FORM);
+    setCreatingScope(scope);
+  }
+
+  function cancelCreate() {
+    setCreatingScope('none');
+    setForm(EMPTY_FORM);
+  }
+
+  async function submitCreate(event: React.FormEvent, eventTypeId: string | undefined) {
     event.preventDefault();
     setSaving(true);
     setError(null);
@@ -646,16 +797,21 @@ export default function ScreeningQuestionsPage() {
       await adminFetchJson(base, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(formToPayload(form)),
+        body: JSON.stringify({ ...formToPayload(form), eventTypeId }),
       });
       setForm(EMPTY_FORM);
-      setCreating(false);
+      setCreatingScope('none');
       await load();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
       setSaving(false);
     }
+  }
+
+  function startEdit(q: Question) {
+    setEditingId(q.id);
+    setEditForm(questionToForm(q));
   }
 
   async function submitEdit(event: React.FormEvent, id: string) {
@@ -717,30 +873,49 @@ export default function ScreeningQuestionsPage() {
     }
   }
 
+  const globalQuestions = questions.filter((q) => q.eventTypeId === null);
+  const serviceQuestions = viewServiceId ? questions.filter((q) => q.eventTypeId === viewServiceId) : [];
+  const viewServiceName = eventTypes.find((t) => t.id === viewServiceId)?.name ?? '';
+  // What a prospect booking the viewed service would actually be asked —
+  // shared questions, then that service's own, same order the widget uses.
+  const previewQuestions = viewServiceId ? [...globalQuestions, ...serviceQuestions] : globalQuestions;
+
+  const rowProps = {
+    editingId,
+    editForm,
+    setEditForm,
+    saving,
+    onEdit: startEdit,
+    onCancelEdit: () => setEditingId(null),
+    onSubmitEdit: submitEdit,
+    onMove: move,
+    onToggleRequired: toggleRequired,
+    onRemove: remove,
+  };
+
   return (
     <div className="builder-split">
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 6 }}>
-          <div className="admin-card-title" style={{ marginBottom: 0 }}>
-            Question builder
-          </div>
-          {!creating && (
-            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-              Add question
-            </button>
-          )}
+        <div className="admin-card-title" style={{ marginBottom: 6 }}>
+          Question builder
         </div>
-
         <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '0 0 6px', maxWidth: 560 }}>
-          Everyone answers these on one page before any times are shown. Which answers send someone
-          down a different path is set on the next step.
+          Everyone answers the shared questions on one page before any times are shown. Which
+          answers send someone down a different path is set on the next step.
         </p>
         <a href={`/admin/${slug}/sessions`} className="btn-link" style={{ display: 'inline-block', marginBottom: 18 }}>
           See what's bookable →
         </a>
 
         <div>
-          <AiSetupCard slug={slug} eventTypes={eventTypes} onQuestionsAdded={load} />
+          <AiSetupCard
+            slug={slug}
+            eventTypes={eventTypes}
+            onQuestionsAdded={(eventTypeId) => {
+              void load();
+              if (eventTypeId) setViewServiceId(eventTypeId);
+            }}
+          />
         </div>
 
         {error && (
@@ -749,133 +924,155 @@ export default function ScreeningQuestionsPage() {
           </div>
         )}
 
-        {creating && (
-          <form className="card" onSubmit={submitCreate} style={{ marginBottom: 14 }}>
-            <div className="admin-card-title">New question</div>
-            <QuestionForm form={form} setForm={setForm} idPrefix="new" />
-            <div className="actions">
-              <button type="submit" className="btn-primary" disabled={saving}>
-                {saving ? 'Saving…' : 'Add question'}
-              </button>
-              <button
-                type="button"
-                className="btn-link"
-                onClick={() => {
-                  setCreating(false);
-                  setForm(EMPTY_FORM);
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
         {loading && <p className="status">Loading…</p>}
 
-        {!loading && questions.length === 0 && !creating && (
-          <p className="notice notice-muted">
-            No questions yet — prospects go straight to the calendar until you add one.
-          </p>
-        )}
+        {!loading && (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                gap: 12,
+                marginBottom: 6,
+              }}
+            >
+              <div className="admin-card-title" style={{ marginBottom: 0 }}>
+                Asked for every service
+              </div>
+              {creatingScope === 'none' && (
+                <button type="button" className="btn-primary" onClick={() => startCreate('global')}>
+                  Add question
+                </button>
+              )}
+            </div>
 
-        <div className="admin-list">
-          {questions.map((q, i) =>
-            editingId === q.id ? (
-              <form key={q.id} className="card" onSubmit={(e) => submitEdit(e, q.id)}>
-                <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`edit-${q.id}`} />
+            {creatingScope === 'global' && (
+              <form className="card" onSubmit={(e) => submitCreate(e, undefined)} style={{ marginBottom: 14 }}>
+                <div className="admin-card-title">New question</div>
+                <QuestionForm form={form} setForm={setForm} idPrefix="new-global" />
                 <div className="actions">
                   <button type="submit" className="btn-primary" disabled={saving}>
-                    {saving ? 'Saving…' : 'Save'}
+                    {saving ? 'Saving…' : 'Add question'}
                   </button>
-                  <button type="button" className="btn-link" onClick={() => setEditingId(null)}>
+                  <button type="button" className="btn-link" onClick={cancelCreate}>
                     Cancel
                   </button>
                 </div>
               </form>
-            ) : (
-              <div key={q.id} className="card admin-row">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <button
-                    type="button"
-                    className="btn-link"
-                    disabled={i === 0}
-                    style={{ opacity: i === 0 ? 0.3 : 1 }}
-                    onClick={() => move(q.id, 'up')}
-                    aria-label="Move up"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-link"
-                    disabled={i === questions.length - 1}
-                    style={{ opacity: i === questions.length - 1 ? 0.3 : 1 }}
-                    onClick={() => move(q.id, 'down')}
-                    aria-label="Move down"
-                  >
-                    ↓
-                  </button>
-                </div>
+            )}
 
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
-                    <h2 style={{ fontSize: '1.05rem' }}>{q.prompt}</h2>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>
-                      {KIND_LABEL[q.kind]}
-                      {q.required ? ' · required' : ''}
-                    </span>
-                  </div>
+            {globalQuestions.length === 0 && creatingScope !== 'global' && (
+              <p className="notice notice-muted">
+                No shared questions yet — prospects go straight to the calendar (or straight to a
+                service's own questions, if it has any) until you add one.
+              </p>
+            )}
 
-                  {q.options.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                      {q.options.map((opt) => (
-                        <span
-                          key={opt.label}
-                          className="notice"
-                          style={{
-                            padding: '4px 11px',
-                            margin: 0,
-                            background:
-                              opt.outcomePathType === 'meeting' ? 'var(--status-live-tint)' : 'var(--accent-tint)',
-                            color:
-                              opt.outcomePathType === 'meeting' ? 'var(--status-live-ink)' : 'var(--accent-ink)',
-                          }}
-                        >
-                          {opt.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            <div className="admin-list" style={{ marginBottom: eventTypes.length > 1 ? 26 : 0 }}>
+              {globalQuestions.map((q, i) => (
+                <QuestionRow
+                  key={q.id}
+                  q={q}
+                  isFirst={i === 0}
+                  isLast={i === globalQuestions.length - 1}
+                  {...rowProps}
+                />
+              ))}
+            </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setEditingId(q.id);
-                      setEditForm(questionToForm(q));
+            {eventTypes.length > 1 && (
+              <>
+                <div className="field" style={{ maxWidth: 320 }}>
+                  <label htmlFor="view-service">Also show one service&apos;s own questions</label>
+                  <select
+                    id="view-service"
+                    value={viewServiceId}
+                    onChange={(e) => {
+                      setViewServiceId(e.target.value);
+                      cancelCreate();
                     }}
                   >
-                    Edit
-                  </button>
-                  <button type="button" className="btn-link" onClick={() => toggleRequired(q)}>
-                    {q.required ? 'Make optional' : 'Make required'}
-                  </button>
-                  <button type="button" className="btn-link" onClick={() => remove(q.id)}>
-                    Remove
-                  </button>
+                    <option value="">None</option>
+                    {eventTypes.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-            ),
-          )}
-        </div>
+
+                {viewServiceId && (
+                  <div style={{ marginTop: 18 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        gap: 12,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <div className="admin-card-title" style={{ marginBottom: 0 }}>
+                        Asked only for {viewServiceName}
+                      </div>
+                      {creatingScope === 'none' && (
+                        <button type="button" className="btn-secondary" onClick={() => startCreate('service')}>
+                          Add question
+                        </button>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 10px' }}>
+                      Shown after the shared questions above, only when someone books this service.
+                    </p>
+
+                    {creatingScope === 'service' && (
+                      <form
+                        className="card"
+                        onSubmit={(e) => submitCreate(e, viewServiceId)}
+                        style={{ marginBottom: 14 }}
+                      >
+                        <div className="admin-card-title">New question</div>
+                        <QuestionForm form={form} setForm={setForm} idPrefix="new-service" />
+                        <div className="actions">
+                          <button type="submit" className="btn-primary" disabled={saving}>
+                            {saving ? 'Saving…' : 'Add question'}
+                          </button>
+                          <button type="button" className="btn-link" onClick={cancelCreate}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {serviceQuestions.length === 0 && creatingScope !== 'service' && (
+                      <p className="notice notice-muted">
+                        No questions specific to {viewServiceName} yet — only the shared ones above apply.
+                      </p>
+                    )}
+
+                    <div className="admin-list">
+                      {serviceQuestions.map((q, i) => (
+                        <QuestionRow
+                          key={q.id}
+                          q={q}
+                          isFirst={i === 0}
+                          isLast={i === serviceQuestions.length - 1}
+                          {...rowProps}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
       </div>
 
       <div>
         <div className="preview-panel-label">Customer preview</div>
-        <QuestionsPreview questions={questions} />
+        <QuestionsPreview questions={previewQuestions} />
       </div>
     </div>
   );

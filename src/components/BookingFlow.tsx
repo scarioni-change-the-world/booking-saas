@@ -106,19 +106,9 @@ export default function BookingFlow({ slug, audience }: Props) {
 
         setConfig(cfg);
         setEventTypes(types.eventTypes);
-
-        if (audience === 'prospect') {
-          const q = await getJson<{ questions: PublicQuestion[] }>(`${base}/questions`);
-          if (cancelled) return;
-          setQuestions(q.questions);
-          // A tenant with no questions configured has no gate to apply, and
-          // nothing for the email-first step to protect or measure either —
-          // there's no questionnaire completion rate to speak of, so skip
-          // straight to the calendar exactly as before.
-          setStep(q.questions.length > 0 ? 'email' : 'pick-type');
-        } else {
-          setStep('pick-type');
-        }
+        // Which service is being booked decides which questions apply
+        // (migration 0016), so that has to come first now — see chooseEventType.
+        setStep('pick-type');
       } catch (cause) {
         if (!cancelled) setError((cause as Error).message);
       }
@@ -129,13 +119,53 @@ export default function BookingFlow({ slug, audience }: Props) {
     };
   }, [base, audience]);
 
+  /**
+   * A service has been picked — explicitly, via the one-choice auto-skip
+   * below, or by picking a *different* one after already qualifying for a
+   * first ("Choose a different session" at the pick-time step). Called
+   * every time, deliberately: each service can have its own questions
+   * (migration 0016), so switching services means re-checking what *this*
+   * one asks, not assuming the last service's gate still applies. Existing
+   * clients never see a gate at all (brief 2.1, 2.3); a prospect's gate is
+   * the tenant's shared questions plus this service's own
+   * (GET .../questions?eventTypeId=). A service with nothing to ask goes
+   * straight to the calendar, same as a tenant with no questions at all did
+   * before this existed. Answers already given for a still-shared question
+   * (`answers` state isn't cleared on a switch) carry over rather than
+   * being asked twice.
+   */
+  const chooseEventType = useCallback(
+    async (type: PublicEventType) => {
+      setEventType(type);
+
+      if (audience !== 'prospect') {
+        setStep('pick-time');
+        return;
+      }
+
+      setBusy(true);
+      setError(null);
+      try {
+        const q = await getJson<{ questions: PublicQuestion[] }>(
+          `${base}/questions?eventTypeId=${encodeURIComponent(type.id)}`,
+        );
+        setQuestions(q.questions);
+        setStep(q.questions.length > 0 ? 'email' : 'pick-time');
+      } catch (cause) {
+        setError((cause as Error).message);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [audience, base],
+  );
+
   // Auto-skip the type picker when there is only one choice (brief 2.3).
   useEffect(() => {
     if (step === 'pick-type' && eventTypes.length === 1) {
-      setEventType(eventTypes[0]!);
-      setStep('pick-time');
+      void chooseEventType(eventTypes[0]!);
     }
-  }, [step, eventTypes]);
+  }, [step, eventTypes, chooseEventType]);
 
   const loadAvailability = useCallback(
     async (chosen: PublicEventType) => {
@@ -169,14 +199,20 @@ export default function BookingFlow({ slug, audience }: Props) {
    * see .../qualify/start. Nothing about the answers is known yet; this
    * only fixes who the response belongs to, so a prospect who leaves partway
    * through the questions still shows up in the tenant's own numbers instead
-   * of vanishing without a trace.
+   * of vanishing without a trace. `eventType` is already set by this point —
+   * chooseEventType is what got the prospect here — and the server stamps
+   * the response with it, so .../qualify never needs it sent again.
    */
   async function submitEmail(event: React.FormEvent) {
     event.preventDefault();
+    if (!eventType) return;
     setBusy(true);
     setError(null);
     try {
-      const result = await postJson<{ responseId: string }>(`${base}/qualify/start`, { email });
+      const result = await postJson<{ responseId: string }>(`${base}/qualify/start`, {
+        email,
+        eventTypeId: eventType.id,
+      });
       setResponseId(result.responseId);
       setStep('questions');
     } catch (cause) {
@@ -209,7 +245,9 @@ export default function BookingFlow({ slug, audience }: Props) {
         return;
       }
 
-      setStep('pick-type');
+      // The service was already chosen before the gate ran — no need to ask
+      // again, straight to the calendar for it.
+      setStep('pick-time');
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -423,10 +461,8 @@ export default function BookingFlow({ slug, audience }: Props) {
                   key={type.id}
                   type="button"
                   className="type"
-                  onClick={() => {
-                    setEventType(type);
-                    setStep('pick-time');
-                  }}
+                  disabled={busy}
+                  onClick={() => void chooseEventType(type)}
                 >
                   <strong>{type.name}</strong>
                   <span>
