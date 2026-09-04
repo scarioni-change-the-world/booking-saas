@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0014 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0015 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -1075,6 +1075,31 @@ alter table event_types
   check (pack_size is null or pack_size between 2 and 10);
 
 -- ==========================================================================
+-- supabase/migrations/0015_ai_usage.sql
+-- ==========================================================================
+
+create table ai_usage_events (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid not null references tenants(id) on delete cascade,
+  kind       text not null,
+  created_at timestamptz not null default now(),
+
+  constraint ai_usage_events_kind_known check (kind in ('intake_draft'))
+);
+
+create index ai_usage_events_tenant_kind_created_idx
+  on ai_usage_events (tenant_id, kind, created_at);
+
+alter table ai_usage_events enable row level security;
+alter table ai_usage_events force row level security;
+
+create policy ai_usage_read on ai_usage_events
+  for select to authenticated using (auth_is_tenant_member(tenant_id));
+create policy ai_usage_write on ai_usage_events
+  for all to authenticated
+  using (auth_is_tenant_admin(tenant_id)) with check (auth_is_tenant_admin(tenant_id));
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -1175,10 +1200,11 @@ values
 commit;
 
 -- =============================================================================
--- Verification — expect: 16 tables, 16 rls enabled, 27 policies, 0 anon
--- policies, 16 tables granted to service_role, 1 tenant, 2 event types,
+-- Verification — expect: 17 tables, 17 rls enabled, 29 policies, 0 anon
+-- policies, 17 tables granted to service_role, 1 tenant, 2 event types,
 -- 1 pack-mode event type, 3 questions, 5 availability rules, 2 outcome
--- paths, 6 questionnaire responses (2 still in progress, 4 completed).
+-- paths, 6 questionnaire responses (2 still in progress, 4 completed),
+-- 0 AI usage events (the seed never calls the AI feature).
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
 union all select 'rls enabled',      count(*)::text from pg_tables t join pg_class c on c.relname = t.tablename
@@ -1196,4 +1222,5 @@ union all select 'questions',        count(*)::text from qualification_questions
 union all select 'availability rules', count(*)::text from availability_rules
 union all select 'outcome paths',    count(*)::text from outcome_paths
 union all select 'questionnaire responses', count(*)::text from qualification_responses
-union all select 'responses still in progress', count(*)::text from qualification_responses where completed_at is null;
+union all select 'responses still in progress', count(*)::text from qualification_responses where completed_at is null
+union all select 'AI usage events',    count(*)::text from ai_usage_events;

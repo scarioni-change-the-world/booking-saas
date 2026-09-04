@@ -211,6 +211,25 @@ export interface CalendarConnectionRow {
   updated_at: string;
 }
 
+/** What an AI generation call is billed against — see migration 0015's
+ * ai_usage_events.kind check constraint and src/lib/ai/usage.ts, which caps
+ * each kind independently. One value today; a future AI feature (draft
+ * history, per-service scoping, ...) adds its own rather than reusing this
+ * one. */
+export type AiUsageKind = 'intake_draft';
+
+/**
+ * One metered AI generation, recorded after it succeeds — see
+ * src/lib/ai/usage.ts for why only successes are counted. Exists purely to
+ * cap cost; nothing reads these rows back except that monthly count.
+ */
+export interface AiUsageEventRow {
+  id: string;
+  tenant_id: string;
+  kind: AiUsageKind;
+  created_at: string;
+}
+
 /**
  * The company's own team, not any one tenant's — see migration 0009. Not a
  * TenantScopedTable: there is no tenant_id to scope by, which is the whole
@@ -237,6 +256,7 @@ export interface TenantScopedTables {
   calendar_connections: CalendarConnectionRow;
   clients: ClientRow;
   client_entitlements: ClientEntitlementRow;
+  ai_usage_events: AiUsageEventRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

@@ -1,6 +1,7 @@
 import { handleError, ok, optionalString, readJson, requireString } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { aiProvider } from '@/lib/ai';
+import { assertUnderMonthlyLimit, recordUsage } from '@/lib/ai/usage';
 import type { EventTypeRow } from '@/lib/db/types';
 
 /**
@@ -16,11 +17,18 @@ import type { EventTypeRow } from '@/lib/db/types';
  * step-tab layout), not yet per-service. Accepting it here now, before
  * storage catches up, means this route's shape doesn't need to change the
  * day it does — only what happens with the id internally will.
+ *
+ * Capped per tenant per calendar month (src/lib/ai/usage.ts) — checked
+ * before the provider call so a tenant at their cap never triggers another
+ * billed request, recorded only after the provider call succeeds so a
+ * failure on our end doesn't spend the tenant's quota.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await ctx.params;
     const { scope } = await requireTenantAdmin(request, slug);
+    await assertUnderMonthlyLimit(scope, 'intake_draft');
+
     const body = await readJson(request);
 
     const description = requireString(body, 'description', { maxLength: 4000 });
@@ -38,6 +46,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     }
 
     const draft = await aiProvider().draftIntake({ description, serviceContext });
+    await recordUsage(scope, 'intake_draft');
     return ok({ draft });
   } catch (error) {
     return handleError(error);
