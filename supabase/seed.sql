@@ -32,11 +32,18 @@ update outcome_paths set
   redirect_label = 'Get the free guide'
 where tenant_id = '00000000-0000-4000-8000-000000000001' and type = 'other';
 
--- Two event types, one per audience, to keep the independent-booleans
--- behaviour visible in development (brief 2.1). Coaching is also the
--- sample for migration 0013's booking_mode: a pack of 10, the kind of
--- service the field exists for — Discovery stays 'single' (its default),
--- a one-off call nobody sells as a bundle.
+-- Three event types. Discovery and Coaching keep the independent-booleans
+-- behaviour visible in development (brief 2.1) — one per audience. Coaching
+-- is also the sample for migration 0013's booking_mode: a pack of 10, the
+-- kind of service the field exists for — Discovery stays 'single' (its
+-- default), a one-off call nobody sells as a bundle.
+--
+-- Strategy session is the second prospect-facing service, added for
+-- migration 0016: with only one prospect-facing type, the widget's own
+-- one-choice auto-skip means the per-service gate is never actually
+-- exercised end to end. Two gives the type picker something real to show,
+-- and a service of its own to carry the one service-specific question
+-- below — see e2e/booking.spec.ts's "multi-service" tests.
 insert into event_types (
   tenant_id, slug, name, description, duration_minutes,
   buffer_before_minutes, buffer_after_minutes, sort_order,
@@ -46,7 +53,9 @@ insert into event_types (
   ('00000000-0000-4000-8000-000000000001', 'discovery', 'Discovery call',
    'A free 30-minute conversation', 30, 0, 15, 1, true, false, 'single', null),
   ('00000000-0000-4000-8000-000000000001', 'coaching', 'Coaching session',
-   'A 60-minute working session', 60, 15, 15, 2, false, true, 'pack', 10);
+   'A 60-minute working session', 60, 15, 15, 2, false, true, 'pack', 10),
+  ('00000000-0000-4000-8000-000000000001', 'strategy', 'Strategy session',
+   'A focused 45-minute session on your next 90 days', 45, 15, 15, 3, true, false, 'single', null);
 
 -- Monday to Friday, 09:00-17:00.
 insert into availability_rules (tenant_id, weekday, start_time, end_time)
@@ -74,6 +83,20 @@ values
      {"label": "500 - 2.000 €", "outcomePathType": "meeting"},
      {"label": "I can''t afford this right now", "outcomePathType": "other"}]'::jsonb,
    true, 3);
+
+-- One question scoped to Strategy session alone (migration 0016) — the
+-- three above stay global (event_type_id left null), asked no matter which
+-- of the two prospect-facing services someone books; this one is asked in
+-- addition, only when booking Strategy. Free text, so it never interacts
+-- with outcome routing — this exists to prove scoping, not to add a second
+-- gate.
+insert into qualification_questions (tenant_id, prompt, kind, options, required, sort_order, event_type_id)
+values
+  ('00000000-0000-4000-8000-000000000001',
+   'What''s the single biggest obstacle in your next 90 days?',
+   'text', '[]'::jsonb, true, 1,
+   (select id from event_types
+    where tenant_id = '00000000-0000-4000-8000-000000000001' and slug = 'strategy'));
 
 -- A sample month of questionnaire activity (migration 0012), so the
 -- Screening page's "How it's performing" card and Overview's completion
