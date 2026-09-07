@@ -381,9 +381,10 @@ export default function BookingFlow({ slug, audience }: Props) {
         <form onSubmit={submitAnswers}>
           <p className="lede">A few questions before we find a time.</p>
 
-          {questions.map((question) => (
+          {questions.map((question, i) => (
             <div className="field" key={question.id}>
               <span className="prompt">
+                <span className="question-num">{i + 1}.</span>
                 {question.prompt}
                 {question.required && <span className="required">*</span>}
               </span>

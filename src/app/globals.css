@@ -282,6 +282,17 @@ a:visited {
   margin-bottom: 9px;
   font-size: 0.95rem;
 }
+
+/* One-page questionnaire, several questions at once (brief 2.2) — a plain
+   ordinal per question so a prospect can see how many are left, without
+   turning it into a stepwise wizard. Same numeral treatment as the
+   Sessions builder's .service-row-num: heading font, --emphasis. */
+.question-num {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--emphasis);
+  margin-right: 6px;
+}
 .required {
   color: var(--status-broken-ink);
   margin-left: 2px;
