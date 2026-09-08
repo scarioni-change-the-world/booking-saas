@@ -22,9 +22,10 @@ brief.
 ## Status
 
 **Milestone 1 complete; Google Calendar landed.** The tenancy model, the slot
-engine, the full prospect → booking → manage path and the Google Calendar
-integration are implemented and covered by tests. Email, Stripe, signup and the
-admin dashboard UI are not yet built.
+engine, the full prospect → booking → manage path, the Google Calendar
+integration and transactional email are implemented and covered by tests.
+Stripe and signup are not yet built; the admin dashboard UI has grown
+significantly since this line was last accurate — see the table below.
 
 | Area | State |
 |---|---|
@@ -39,8 +40,8 @@ admin dashboard UI are not yet built.
 | Google Calendar (busy, events, Meet, health) | Built — 20 tests, unverified against the live API |
 | Google OAuth connect / disconnect | Built — routes only, no dashboard UI |
 | Encrypted token storage | Built — AES-256-GCM, 12 tests |
-| Email provider interface | Built — only the console provider |
-| Transactional email + templates | Not built (§7.5, milestone 2) |
+| Email provider interface | Built — console fallback + real SMTP provider |
+| Transactional email + templates | Built — confirmed/rescheduled/cancelled/owner notification, tenant-editable, .ics attached, admin retry on failure |
 | Signup, onboarding, admin dashboard | Not built (§7.3, milestone 2) |
 | Stripe billing | Not built (§7.4, milestone 3) |
 
@@ -120,8 +121,9 @@ src/
 │   │   └── types.ts          # row types
 │   │   ├── crypto.ts             # AES-256-GCM for tokens, HMAC for OAuth state
 │   ├── auth.ts               # dashboard session + tenant-admin check
+│   ├── booking-email.ts      # lifecycle emails — DB-touching half of email/
 ├── calendar/                 # provider interface (§7.6), `none`, Google
-│   └── email/                # provider interface (§7.5) + console provider
+│   └── email/                # provider interface (§7.5), console + SMTP, templates.ts
 ├── app/
 │   ├── page.tsx              # public homepage, doubles as OAuth homepage (§6.5)
 │   ├── t/[slug]/             # prospect widget
@@ -334,11 +336,17 @@ hierarchy the way the Roadmap below is.
   the checklist above.
 - **Start OAuth verification now.** It is the only remaining item with a lead
   time you cannot compress (§9.5).
-- Transactional email via Resend or Postmark, product-owned sending domain with
-  the tenant on `Reply-To`, tenant-driven branding (§7.5). SPF/DKIM is the step
-  that gets skipped and then causes "our emails go to spam" tickets.
-- Confirmation / notification / reminder / cancellation emails, `.ics`
-  attachments. The `TODO(milestone 2)` markers in the route handlers show where.
+- ~~Transactional email, product-owned sending domain with the tenant on
+  `Reply-To`~~ — done, via plain SMTP rather than Resend/Postmark (whatever
+  mailbox the host hands you). SPF/DKIM on `EMAIL_FROM_ADDRESS`'s domain is
+  still the step that gets skipped and then causes "our emails go to spam"
+  tickets — worth doing once, outside this code.
+- ~~Confirmation / notification / cancellation emails, `.ics` attachments~~ —
+  done, tenant-editable templates, admin retry on a failed send
+  (src/lib/booking-email.ts). **Reminder emails are not**: `reminder_sent_at`
+  and `CRON_SECRET` exist in the schema/env but nothing reads or writes
+  either yet — that's a scheduled job, a different shape of work from the
+  event-triggered emails this covers.
 - Signup, tenant provisioning, and the onboarding wizard, with questionnaire
   starter templates per vertical — a blank questionnaire is a bad first run
   (§7.3).

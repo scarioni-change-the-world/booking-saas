@@ -68,19 +68,22 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
     const action = requireString(body, 'action', { maxLength: 20 });
 
     if (action === 'cancel') {
+      // The cancellation email goes out from inside cancelBooking itself
+      // (src/lib/booking-email.ts) — the same function the admin-side
+      // cancel route calls, so both paths notify the client identically.
       await cancelBooking(tenant, scope, booking, optionalString(body, 'reason', { maxLength: 2000 }));
-      // TODO(milestone 2): cancellation email to client and owner.
       return ok({ status: 'cancelled' });
     }
 
     if (action === 'reschedule') {
+      // Same posture: the reschedule confirmation email goes out from
+      // inside rescheduleBooking itself.
       const moved = await rescheduleBooking(
         tenant,
         scope,
         booking,
         requireString(body, 'startsAt', { maxLength: 40 }),
       );
-      // TODO(milestone 2): reschedule confirmation email.
       return ok({ status: 'confirmed', startsAt: moved.starts_at, endsAt: moved.ends_at });
     }
 

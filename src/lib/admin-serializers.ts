@@ -4,6 +4,7 @@ import type {
   BookingRow,
   ClientRow,
   DateOverrideRow,
+  EmailTemplateRow,
   EventTypeRow,
   OutcomePathRow,
   OutcomePathType,
@@ -150,6 +151,8 @@ export function serializeBooking(row: BookingWithJoins) {
     meetingUrl: row.meeting_url,
     syncStatus: row.sync_status,
     syncError: row.sync_error,
+    emailStatus: row.email_status,
+    emailError: row.email_error,
     qualification: row.qualification_responses
       ? {
           outcomePathType: row.qualification_responses.outcome_path_type,
@@ -174,3 +177,21 @@ export function serializeClient(row: ClientRow) {
 }
 
 export type SerializedClient = ReturnType<typeof serializeClient>;
+
+/**
+ * One kind of transactional email's tenant-authored content (migration
+ * 0017). `kind` never changes once seeded — it is the row's identity, same
+ * as outcome_paths.type — so it's read-only from here, like every other
+ * field on this row except subject/body.
+ */
+export function serializeEmailTemplate(row: EmailTemplateRow) {
+  return {
+    id: row.id,
+    kind: row.kind,
+    subject: row.subject,
+    body: row.body,
+    updatedAt: row.updated_at,
+  };
+}
+
+export type SerializedEmailTemplate = ReturnType<typeof serializeEmailTemplate>;

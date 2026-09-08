@@ -9,6 +9,7 @@ import {
   type SlotQuery,
 } from './availability';
 import { providerForTenant, CalendarUnavailableError } from './calendar';
+import { sendBookingCancelledEmail, sendBookingConfirmedEmail, sendBookingRescheduledEmail } from './booking-email';
 import type { TenantScope } from './db';
 import type {
   AvailabilityRuleRow,
@@ -271,7 +272,15 @@ export async function createBooking(
   }
 
   const booking = (data as unknown as BookingRow[])[0]!;
-  return syncBookingToCalendar(tenant, scope, booking, eventType);
+  const synced = await syncBookingToCalendar(tenant, scope, booking, eventType);
+
+  // After sync, not before: sending the confirmation with meeting_url only
+  // once the calendar side of it actually exists (or has definitively
+  // failed to) means the email a client receives never shows a stale
+  // "no meeting link yet" for a booking that was synced a moment later.
+  await sendBookingConfirmedEmail(tenant, scope, synced);
+
+  return synced;
 }
 
 /** Create the calendar event and record the outcome — success or failure. */
@@ -388,6 +397,8 @@ export async function cancelBooking(
         .eq('id', booking.id);
     }
   }
+
+  await sendBookingCancelledEmail(tenant, scope, booking);
 }
 
 /**
@@ -434,7 +445,7 @@ export async function rescheduleBooking(
     throw error;
   }
 
-  const moved: BookingRow = { ...booking, starts_at: startsAt.toISO()!, ends_at: endsAt.toISO()! };
+  let moved: BookingRow = { ...booking, starts_at: startsAt.toISO()!, ends_at: endsAt.toISO()! };
 
   if (booking.calendar_event_id) {
     try {
@@ -455,9 +466,13 @@ export async function rescheduleBooking(
           sync_error: `Reschedule: ${(cause as Error).message}`.slice(0, 500),
         })
         .eq('id', booking.id);
-      return { ...moved, sync_status: 'failed' };
+      moved = { ...moved, sync_status: 'failed' };
     }
   }
+
+  // Sent either way — the new time is confirmed to the client regardless of
+  // whether the calendar side of the reschedule succeeded.
+  await sendBookingRescheduledEmail(tenant, scope, moved);
 
   return moved;
 }

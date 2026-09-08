@@ -26,6 +26,18 @@ export type PlatformRole = 'owner' | 'admin' | 'support';
  * itself, not on any one client's grant. See the migration for why this is
  * a declaration only and doesn't yet drive an actual checkout. */
 export type BookingMode = 'single' | 'pack';
+/** Same shape and reasoning as SyncStatus (migration 0017) — a booking's
+ * most recent transactional email attempt, reused across create, reschedule
+ * and cancel rather than one column per stage. */
+export type EmailStatus = 'pending' | 'sent' | 'failed' | 'not_configured';
+/** Which transactional email a template's content applies to — see
+ * migration 0017 and src/lib/email/templates.ts for the {{token}} set each
+ * kind renders with. */
+export type EmailTemplateKind =
+  | 'booking_confirmed'
+  | 'booking_rescheduled'
+  | 'booking_cancelled'
+  | 'owner_notification';
 
 export interface TenantBranding {
   logoUrl?: string;
@@ -175,6 +187,26 @@ export interface BookingRow {
   /** Set when this booking drew down a package — see client_entitlements. */
   client_id: string | null;
   entitlement_id: string | null;
+  /** The most recent transactional email attempt for this booking's
+   * current state (migration 0017) — reused across create, reschedule and
+   * cancel, same as sync_status is. */
+  email_status: EmailStatus;
+  email_error: string | null;
+}
+
+/**
+ * One kind of transactional email's tenant-authored content — subject and
+ * body are plain text with {{token}} placeholders, not HTML (migration
+ * 0017's reasoning: same as outcome_paths.message, and for the same
+ * reason). Exactly one row per (tenant_id, kind), auto-seeded.
+ */
+export interface EmailTemplateRow {
+  id: string;
+  tenant_id: string;
+  kind: EmailTemplateKind;
+  subject: string;
+  body: string;
+  updated_at: string;
 }
 
 export interface ClientRow {
@@ -266,6 +298,7 @@ export interface TenantScopedTables {
   clients: ClientRow;
   client_entitlements: ClientEntitlementRow;
   ai_usage_events: AiUsageEventRow;
+  email_templates: EmailTemplateRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

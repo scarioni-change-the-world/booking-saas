@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
--- It contains migrations 0001-0016 plus the development seed, in order, wrapped
+-- It contains migrations 0001-0017 plus the development seed, in order, wrapped
 -- in a single transaction: if anything fails, nothing is applied and you can
 -- fix and re-run against a clean schema rather than a half-built one.
 --
@@ -1113,6 +1113,89 @@ create index qualification_questions_tenant_scope_idx
   on qualification_questions (tenant_id, event_type_id, sort_order);
 
 -- ==========================================================================
+-- supabase/migrations/0017_email.sql
+-- ==========================================================================
+
+create type email_status as enum ('pending', 'sent', 'failed', 'not_configured');
+
+alter table bookings add column email_status email_status not null default 'pending';
+alter table bookings add column email_error text;
+
+create type email_template_kind as enum (
+  'booking_confirmed',
+  'booking_rescheduled',
+  'booking_cancelled',
+  'owner_notification'
+);
+
+create table email_templates (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid not null references tenants(id) on delete cascade,
+  kind       email_template_kind not null,
+  subject    text not null,
+  body       text not null,
+  updated_at timestamptz not null default now(),
+
+  constraint email_templates_one_per_kind unique (tenant_id, kind)
+);
+
+create index email_templates_tenant_idx on email_templates (tenant_id);
+
+insert into email_templates (tenant_id, kind, subject, body)
+select id, 'booking_confirmed'::email_template_kind,
+       'You''re booked with {{tenantName}}',
+       E'Hi {{clientName}},\n\nYou\'re all set for {{serviceName}} on {{dateTime}}. We\'ll see you then.\n\n{{tenantName}}'
+from tenants
+union all
+select id, 'booking_rescheduled'::email_template_kind,
+       'Your {{serviceName}} was moved',
+       E'Hi {{clientName}},\n\nYour {{serviceName}} has been moved to {{dateTime}}.\n\n{{tenantName}}'
+from tenants
+union all
+select id, 'booking_cancelled'::email_template_kind,
+       'Your {{serviceName}} was cancelled',
+       E'Hi {{clientName}},\n\nYour {{serviceName}} on {{dateTime}} has been cancelled. If this wasn\'t expected, just reply to this email.\n\n{{tenantName}}'
+from tenants
+union all
+select id, 'owner_notification'::email_template_kind,
+       'New booking: {{clientName}}',
+       E'{{clientName}} ({{clientEmail}}) just booked {{serviceName}} for {{dateTime}}.'
+from tenants;
+
+create function create_default_email_templates() returns trigger
+language plpgsql as $$
+begin
+  insert into email_templates (tenant_id, kind, subject, body) values
+    (new.id, 'booking_confirmed',
+     'You''re booked with {{tenantName}}',
+     E'Hi {{clientName}},\n\nYou\'re all set for {{serviceName}} on {{dateTime}}. We\'ll see you then.\n\n{{tenantName}}'),
+    (new.id, 'booking_rescheduled',
+     'Your {{serviceName}} was moved',
+     E'Hi {{clientName}},\n\nYour {{serviceName}} has been moved to {{dateTime}}.\n\n{{tenantName}}'),
+    (new.id, 'booking_cancelled',
+     'Your {{serviceName}} was cancelled',
+     E'Hi {{clientName}},\n\nYour {{serviceName}} on {{dateTime}} has been cancelled. If this wasn\'t expected, just reply to this email.\n\n{{tenantName}}'),
+    (new.id, 'owner_notification',
+     'New booking: {{clientName}}',
+     E'{{clientName}} ({{clientEmail}}) just booked {{serviceName}} for {{dateTime}}.');
+  return new;
+end;
+$$;
+
+create trigger tenants_create_email_templates
+  after insert on tenants
+  for each row execute function create_default_email_templates();
+
+alter table email_templates enable row level security;
+alter table email_templates force row level security;
+
+create policy email_templates_read on email_templates
+  for select to authenticated using (auth_is_tenant_member(tenant_id));
+create policy email_templates_write on email_templates
+  for update to authenticated
+  using (auth_is_tenant_admin(tenant_id)) with check (auth_is_tenant_admin(tenant_id));
+
+-- ==========================================================================
 -- supabase/seed.sql
 -- ==========================================================================
 
@@ -1236,11 +1319,12 @@ values
 commit;
 
 -- =============================================================================
--- Verification — expect: 17 tables, 17 rls enabled, 29 policies, 0 anon
--- policies, 17 tables granted to service_role, 1 tenant, 3 event types,
+-- Verification — expect: 18 tables, 18 rls enabled, 31 policies, 0 anon
+-- policies, 18 tables granted to service_role, 1 tenant, 3 event types,
 -- 1 pack-mode event type, 4 questions, 5 availability rules, 2 outcome
 -- paths, 6 questionnaire responses (2 still in progress, 4 completed),
--- 0 AI usage events (the seed never calls the AI feature).
+-- 0 AI usage events (the seed never calls the AI feature), 4 email
+-- templates (the trigger's own defaults — the seed doesn't customise any).
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
 union all select 'rls enabled',      count(*)::text from pg_tables t join pg_class c on c.relname = t.tablename
@@ -1259,4 +1343,5 @@ union all select 'availability rules', count(*)::text from availability_rules
 union all select 'outcome paths',    count(*)::text from outcome_paths
 union all select 'questionnaire responses', count(*)::text from qualification_responses
 union all select 'responses still in progress', count(*)::text from qualification_responses where completed_at is null
-union all select 'AI usage events',    count(*)::text from ai_usage_events;
+union all select 'AI usage events',    count(*)::text from ai_usage_events
+union all select 'email templates',    count(*)::text from email_templates;

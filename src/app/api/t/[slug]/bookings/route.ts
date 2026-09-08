@@ -55,9 +55,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       qualificationResponseId: audience === 'prospect' ? responseId : null,
     });
 
-    // TODO(milestone 2): confirmation email with .ics, meeting link and the
-    // manage link; owner notification. Both go through src/lib/email once a
-    // real provider is wired up (brief 7.5).
+    // The confirmation email (with .ics and the manage link) and the
+    // owner notification already went out from inside createBooking —
+    // src/lib/booking-email.ts, brief 7.5.
 
     return ok(
       {

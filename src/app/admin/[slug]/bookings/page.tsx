@@ -6,6 +6,7 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 
 type View = 'upcoming' | 'past' | 'cancelled';
 type SyncStatus = 'pending' | 'synced' | 'failed' | 'not_configured';
+type EmailStatus = 'pending' | 'sent' | 'failed' | 'not_configured';
 
 interface AnsweredQuestion {
   questionId: string;
@@ -29,6 +30,8 @@ interface Booking {
   meetingUrl: string | null;
   syncStatus: SyncStatus;
   syncError: string | null;
+  emailStatus: EmailStatus;
+  emailError: string | null;
   qualification: { outcomePathType: 'meeting' | 'other'; answers: AnsweredQuestion[] } | null;
   createdAt: string;
 }
@@ -58,6 +61,17 @@ function syncBadge(status: SyncStatus): { label: string; tone: 'live' | 'attenti
   return null;
 }
 
+/** Same shape as syncBadge — both are "a side effect that must never block
+ * the booking, with its outcome shown rather than hidden" (see
+ * src/lib/booking-email.ts). 'not_configured' says nothing here: an admin
+ * who hasn't set up SMTP yet doesn't need a badge on every booking telling
+ * them so. */
+function emailBadge(status: EmailStatus): { label: string; tone: 'live' | 'attention' | 'broken' } | null {
+  if (status === 'failed') return { label: 'Email failed', tone: 'broken' };
+  if (status === 'pending') return { label: 'Sending email…', tone: 'attention' };
+  return null;
+}
+
 function toneStyle(tone: 'live' | 'attention' | 'broken') {
   if (tone === 'live') return { background: 'var(--status-live-tint)', color: 'var(--status-live-ink)' };
   if (tone === 'attention')
@@ -75,6 +89,7 @@ export default function BookingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   async function load(v: View) {
     setLoading(true);
@@ -113,6 +128,19 @@ export default function BookingsPage() {
       setError((cause as Error).message);
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function retryEmail(booking: Booking) {
+    setRetryingId(booking.id);
+    setError(null);
+    try {
+      await adminFetchJson(`${base}/${booking.id}/retry-email`, { method: 'POST' });
+      await load(view);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setRetryingId(null);
     }
   }
 
@@ -158,6 +186,7 @@ export default function BookingsPage() {
         {bookings.map((b) => {
           const expanded = expandedId === b.id;
           const sync = syncBadge(b.syncStatus);
+          const email = emailBadge(b.emailStatus);
           return (
             <div key={b.id} className="card admin-row" style={{ alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
@@ -183,6 +212,15 @@ export default function BookingsPage() {
                   {sync && (
                     <span className="notice" style={{ padding: '4px 11px', margin: 0, ...toneStyle(sync.tone) }}>
                       {sync.label}
+                    </span>
+                  )}
+                  {email && (
+                    <span
+                      className="notice"
+                      style={{ padding: '4px 11px', margin: 0, ...toneStyle(email.tone) }}
+                      title={b.emailError ?? undefined}
+                    >
+                      {email.label}
                     </span>
                   )}
                   {b.meetingUrl && (
@@ -249,16 +287,28 @@ export default function BookingsPage() {
                 )}
               </div>
 
-              {b.status === 'confirmed' && (
-                <button
-                  type="button"
-                  className="btn-link"
-                  disabled={cancellingId === b.id}
-                  onClick={() => cancel(b)}
-                >
-                  {cancellingId === b.id ? 'Cancelling…' : 'Cancel'}
-                </button>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                {b.status === 'confirmed' && (
+                  <button
+                    type="button"
+                    className="btn-link"
+                    disabled={cancellingId === b.id}
+                    onClick={() => cancel(b)}
+                  >
+                    {cancellingId === b.id ? 'Cancelling…' : 'Cancel'}
+                  </button>
+                )}
+                {b.emailStatus === 'failed' && (
+                  <button
+                    type="button"
+                    className="btn-link"
+                    disabled={retryingId === b.id}
+                    onClick={() => retryEmail(b)}
+                  >
+                    {retryingId === b.id ? 'Retrying…' : 'Retry email'}
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

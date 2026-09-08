@@ -35,3 +35,23 @@ export interface EmailProvider {
   readonly id: string;
   send(email: OutboundEmail): Promise<{ id: string }>;
 }
+
+/**
+ * Thrown by a real provider's send() on failure — mirrors
+ * CalendarUnavailableError/AiUnavailableError's shape. Unlike those two,
+ * nothing in this codebase lets this reach an HTTP response: every call
+ * site treats an email send as best-effort (see booking-email.ts) and
+ * records the outcome on the booking row instead of failing the request
+ * that triggered it. The status still exists for the same reason those two
+ * carry one — a caller that does want to branch on it can, without parsing
+ * the message text.
+ */
+export class EmailUnavailableError extends Error {
+  constructor(
+    message: string,
+    readonly status: number = 503,
+  ) {
+    super(message);
+    this.name = 'EmailUnavailableError';
+  }
+}

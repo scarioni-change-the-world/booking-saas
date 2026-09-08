@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { TEMPLATE_TOKENS } from '@/lib/email/templates';
+import type { EmailTemplateKind } from '@/lib/db/types';
 
 interface Settings {
   bookingNoticeHours: number;
@@ -11,6 +13,21 @@ interface Settings {
   replyToEmail: string | null;
   updatedAt: string;
 }
+
+interface EmailTemplate {
+  id: string;
+  kind: EmailTemplateKind;
+  subject: string;
+  body: string;
+  updatedAt: string;
+}
+
+const TEMPLATE_KIND_LABEL: Record<EmailTemplateKind, string> = {
+  booking_confirmed: 'Booking confirmed',
+  booking_rescheduled: 'Booking rescheduled',
+  booking_cancelled: 'Booking cancelled',
+  owner_notification: 'New booking (sent to you)',
+};
 
 type CalendarStatus = 'active' | 'needs_reconnect' | 'revoked';
 
@@ -56,6 +73,27 @@ export default function SettingsPage() {
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [calendarBusy, setCalendarBusy] = useState(false);
 
+  const templatesUrl = `/api/admin/${slug}/email-templates`;
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [templateForm, setTemplateForm] = useState({ subject: '', body: '' });
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  async function loadTemplates() {
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    try {
+      const result = await adminFetchJson<{ templates: EmailTemplate[] }>(templatesUrl);
+      setTemplates(result.templates);
+    } catch (cause) {
+      setTemplatesError((cause as Error).message);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -95,6 +133,7 @@ export default function SettingsPage() {
   useEffect(() => {
     void load();
     void loadCalendar();
+    void loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable for the life of this page
   }, [slug]);
 
@@ -138,6 +177,30 @@ export default function SettingsPage() {
       setError((cause as Error).message);
     } finally {
       setSavingNotify(false);
+    }
+  }
+
+  function startEditTemplate(t: EmailTemplate) {
+    setEditingTemplateId(t.id);
+    setTemplateForm({ subject: t.subject, body: t.body });
+  }
+
+  async function submitTemplate(event: React.FormEvent, id: string) {
+    event.preventDefault();
+    setSavingTemplate(true);
+    setTemplatesError(null);
+    try {
+      await adminFetchJson(`${templatesUrl}/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(templateForm),
+      });
+      setEditingTemplateId(null);
+      await loadTemplates();
+    } catch (cause) {
+      setTemplatesError((cause as Error).message);
+    } finally {
+      setSavingTemplate(false);
     }
   }
 
@@ -271,6 +334,73 @@ export default function SettingsPage() {
           </form>
         </>
       )}
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="admin-card-title">Email templates</div>
+        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-4px 0 16px' }}>
+          What each automatic email says. Use the tokens shown under each one — they're filled in
+          with the real details when it's sent. The line to change or cancel a booking is always
+          added underneath, whatever you write here.
+        </p>
+
+        {templatesError && (
+          <div className="notice notice-error" role="alert">
+            {templatesError}
+          </div>
+        )}
+
+        {templatesLoading && <p className="status">Loading…</p>}
+
+        <div className="admin-list">
+          {templates.map((t) =>
+            editingTemplateId === t.id ? (
+              <form key={t.id} className="card" onSubmit={(e) => submitTemplate(e, t.id)}>
+                <div className="field">
+                  <label htmlFor={`template-subject-${t.id}`}>Subject</label>
+                  <input
+                    id={`template-subject-${t.id}`}
+                    type="text"
+                    required
+                    value={templateForm.subject}
+                    onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`template-body-${t.id}`}>Message</label>
+                  <textarea
+                    id={`template-body-${t.id}`}
+                    required
+                    rows={5}
+                    value={templateForm.body}
+                    onChange={(e) => setTemplateForm({ ...templateForm, body: e.target.value })}
+                  />
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--faint)', margin: '0 0 14px' }}>
+                  Available: {TEMPLATE_TOKENS[t.kind].map((tok) => `{{${tok}}}`).join('  ')}
+                </p>
+                <div className="actions">
+                  <button type="submit" className="btn-primary" disabled={savingTemplate}>
+                    {savingTemplate ? 'Saving…' : 'Save'}
+                  </button>
+                  <button type="button" className="btn-link" onClick={() => setEditingTemplateId(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div key={t.id} className="card admin-row">
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>{TEMPLATE_KIND_LABEL[t.kind]}</div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--muted)', marginTop: 4 }}>{t.subject}</div>
+                </div>
+                <button type="button" className="btn-secondary" onClick={() => startEditTemplate(t)}>
+                  Edit
+                </button>
+              </div>
+            ),
+          )}
+        </div>
+      </div>
 
       <div className="card">
         <div className="admin-card-title">Google Calendar</div>
