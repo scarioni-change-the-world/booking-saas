@@ -136,7 +136,8 @@ async function sendClientEmail(
         ]
       : undefined;
 
-    await emailProvider().send({
+    const provider = emailProvider();
+    await provider.send({
       to: { name: booking.name, email: booking.email },
       fromName: tenant.name,
       replyTo: settings?.reply_to_email ?? undefined,
@@ -145,7 +146,11 @@ async function sendClientEmail(
       text: rendered.text,
       attachments,
     });
-    await recordEmailStatus(scope, booking.id, 'sent');
+    // ConsoleEmailProvider never throws — it logs and returns a fake id, so
+    // a bare "did send() throw" check alone would record 'sent' for
+    // something that never actually left the building. Its id is what
+    // distinguishes a real send from the console fallback.
+    await recordEmailStatus(scope, booking.id, provider.id === 'console' ? 'not_configured' : 'sent');
   } catch (cause) {
     console.error(`[booking-email] ${kind} send failed:`, cause);
     await recordEmailStatus(scope, booking.id, 'failed', (cause as Error).message);

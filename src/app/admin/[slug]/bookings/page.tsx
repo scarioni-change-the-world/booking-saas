@@ -63,19 +63,24 @@ function syncBadge(status: SyncStatus): { label: string; tone: 'live' | 'attenti
 
 /** Same shape as syncBadge — both are "a side effect that must never block
  * the booking, with its outcome shown rather than hidden" (see
- * src/lib/booking-email.ts). 'not_configured' says nothing here: an admin
- * who hasn't set up SMTP yet doesn't need a badge on every booking telling
- * them so. */
-function emailBadge(status: EmailStatus): { label: string; tone: 'live' | 'attention' | 'broken' } | null {
+ * src/lib/booking-email.ts). 'not_configured' gets a badge too, quiet
+ * rather than absent: with no badge at all it looks identical to a real
+ * send, which is exactly the ambiguity worth avoiding while SMTP isn't
+ * set up yet. */
+function emailBadge(
+  status: EmailStatus,
+): { label: string; tone: 'live' | 'attention' | 'broken' | 'muted' } | null {
   if (status === 'failed') return { label: 'Email failed', tone: 'broken' };
   if (status === 'pending') return { label: 'Sending email…', tone: 'attention' };
+  if (status === 'not_configured') return { label: 'Email not sent — SMTP not configured', tone: 'muted' };
   return null;
 }
 
-function toneStyle(tone: 'live' | 'attention' | 'broken') {
+function toneStyle(tone: 'live' | 'attention' | 'broken' | 'muted') {
   if (tone === 'live') return { background: 'var(--status-live-tint)', color: 'var(--status-live-ink)' };
   if (tone === 'attention')
     return { background: 'var(--status-attention-tint)', color: 'var(--status-attention-ink)' };
+  if (tone === 'muted') return { background: 'var(--accent-tint)', color: 'var(--faint)' };
   return { background: 'var(--status-broken-tint)', color: 'var(--status-broken)' };
 }
 
