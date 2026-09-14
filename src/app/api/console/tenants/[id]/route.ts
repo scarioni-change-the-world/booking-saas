@@ -1,4 +1,13 @@
-import { fail, handleError, ok, optionalString, readJson, requireTimezone } from '@/lib/api';
+import {
+  fail,
+  handleError,
+  ok,
+  optionalBoolean,
+  optionalNullableString,
+  optionalString,
+  readJson,
+  requireTimezone,
+} from '@/lib/api';
 import { BookingError } from '@/lib/booking-service';
 import { requirePlatformStaff } from '@/lib/auth';
 import { getTenantById, updateTenant, type UpdateTenantInput } from '@/lib/db/console';
@@ -57,6 +66,21 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
         throw new BookingError(`"plan" must be one of ${PLANS.join(', ')}`, 400);
       }
       patch.plan = plan as TenantPlan;
+    }
+
+    // The comped-access override (customer-service compensation) — always
+    // wins over plan/trial state, see billing-gate.ts.
+    const freeAccess = optionalBoolean(body, 'freeAccess');
+    if (freeAccess !== undefined) patch.free_access = freeAccess;
+
+    // The trial-extension lever — a full ISO timestamp so support can push
+    // it out by however long is fair, not just whole days. null clears it.
+    const trialEndsAt = optionalNullableString(body, 'trialEndsAt', { maxLength: 40 });
+    if (trialEndsAt !== undefined) {
+      if (trialEndsAt !== null && Number.isNaN(new Date(trialEndsAt).getTime())) {
+        throw new BookingError('"trialEndsAt" must be a valid date/time', 400);
+      }
+      patch.trial_ends_at = trialEndsAt;
     }
 
     const tenant = await updateTenant(id, patch);

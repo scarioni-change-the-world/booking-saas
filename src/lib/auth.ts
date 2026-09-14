@@ -1,5 +1,6 @@
 import { __unsafeServiceClient } from './db/client';
 import { resolveTenantBySlug, type ResolvedTenant } from './db';
+import { tenantIsGated, TRIAL_ENDED_MESSAGE } from './billing-gate';
 import type { MemberRole, PlatformRole } from './db/types';
 
 export interface TenantMembership {
@@ -73,6 +74,12 @@ async function requireTenantMembership(
 
   const role = (membership.data as { role: MemberRole } | null)?.role;
   if (!role) throw new AuthError('Not found', 404);
+
+  // 402 Payment Required — distinct from the 401/404 above so the dashboard
+  // can show "your trial ended" instead of bouncing a real member back to
+  // the login page, which would be the wrong message for someone who *is*
+  // who they say they are.
+  if (tenantIsGated(resolved.tenant)) throw new AuthError(TRIAL_ENDED_MESSAGE, 402);
 
   return { ...resolved, userId: data.user.id, role };
 }

@@ -2,6 +2,7 @@ import { DateTime } from 'luxon';
 import { NextResponse } from 'next/server';
 import { AiUnavailableError } from './ai';
 import { AuthError } from './auth';
+import { tenantIsGated } from './billing-gate';
 import { BookingError } from './booking-service';
 import { CalendarUnavailableError } from './calendar';
 import { QualificationError } from './qualification';
@@ -26,7 +27,18 @@ export async function requireTenant(
   slug: string,
 ): Promise<ResolvedTenant | NextResponse> {
   const resolved = await resolveTenantBySlug(slug);
-  return resolved ?? fail('Not found', 404);
+  if (!resolved) return fail('Not found', 404);
+
+  // Same 402 as requireTenantMembership (auth.ts), but a generic message —
+  // a prospect looking at the public booking widget has no billing
+  // relationship with this tenant and can't act on "your trial has ended"
+  // the way the tenant's own team can. The widget just needs to know the
+  // page isn't available right now.
+  if (tenantIsGated(resolved.tenant)) {
+    return fail('This booking page is not currently available.', 402);
+  }
+
+  return resolved;
 }
 
 export function isResponse(value: unknown): value is NextResponse {

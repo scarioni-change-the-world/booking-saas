@@ -52,13 +52,24 @@ export interface CreateTenantInput {
  * here sends mail itself. If the invite fails (most commonly: that email
  * already has an account elsewhere), the tenant is deleted again rather than
  * left behind with no one able to sign in to it.
+ *
+ * Every tenant starts on a 7-day trial (trial_ends_at = now + 7 days) — see
+ * migration 0018 and billing-gate.ts. Adjustable per-tenant afterwards from
+ * the console, same as free_access.
  */
 export async function createTenant(input: CreateTenantInput): Promise<TenantRow> {
   const client = __unsafeServiceClient();
 
+  const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: tenantData, error: tenantError } = await client
     .from('tenants')
-    .insert({ slug: input.slug, name: input.name, timezone: input.timezone })
+    .insert({
+      slug: input.slug,
+      name: input.name,
+      timezone: input.timezone,
+      trial_ends_at: trialEndsAt,
+    })
     .select()
     .single();
 
@@ -100,6 +111,12 @@ export interface UpdateTenantInput {
   timezone?: string;
   status?: TenantStatus;
   plan?: TenantPlan;
+  /** Permanent comp override — see migration 0018 and billing-gate.ts. */
+  free_access?: boolean;
+  /** Temporary extension/shortening of the trial. Null clears it (a trial
+   * tenant with no trial_ends_at is treated as not-yet-expired — see
+   * billing-gate.ts). */
+  trial_ends_at?: string | null;
 }
 
 export async function updateTenant(id: string, patch: UpdateTenantInput): Promise<TenantRow> {

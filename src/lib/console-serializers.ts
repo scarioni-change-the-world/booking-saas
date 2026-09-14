@@ -10,6 +10,8 @@ export function serializeTenant(row: TenantRow) {
     plan: row.plan,
     status: row.status,
     createdAt: row.created_at,
+    trialEndsAt: row.trial_ends_at,
+    freeAccess: row.free_access,
   };
 }
 

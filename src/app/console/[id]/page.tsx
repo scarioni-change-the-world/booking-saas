@@ -12,6 +12,8 @@ interface Tenant {
   plan: 'trial' | 'starter' | 'pro' | 'cancelled';
   status: 'active' | 'suspended' | 'deleted';
   createdAt: string;
+  trialEndsAt: string | null;
+  freeAccess: boolean;
 }
 
 interface Member {
@@ -36,6 +38,9 @@ export default function ConsoleTenantPage() {
   const [savingDetails, setSavingDetails] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [savingFreeAccess, setSavingFreeAccess] = useState(false);
+  const [trialDateDraft, setTrialDateDraft] = useState('');
+  const [savingTrialDate, setSavingTrialDate] = useState(false);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -51,6 +56,7 @@ export default function ConsoleTenantPage() {
       const result = await adminFetchJson<{ tenant: Tenant }>(`/api/console/tenants/${id}`);
       setTenant(result.tenant);
       setDetailsForm({ name: result.tenant.name, timezone: result.tenant.timezone });
+      setTrialDateDraft(result.tenant.trialEndsAt ? result.tenant.trialEndsAt.slice(0, 10) : '');
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -130,6 +136,55 @@ export default function ConsoleTenantPage() {
       setError((cause as Error).message);
     } finally {
       setSavingPlan(false);
+    }
+  }
+
+  async function toggleFreeAccess() {
+    if (!tenant) return;
+    const next = !tenant.freeAccess;
+    if (
+      next &&
+      !window.confirm(
+        `Give ${tenant.name} free access? This overrides their plan and trial — they'll never be gated until you turn it off again.`,
+      )
+    ) {
+      return;
+    }
+    setSavingFreeAccess(true);
+    setError(null);
+    try {
+      const result = await adminFetchJson<{ tenant: Tenant }>(`/api/console/tenants/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ freeAccess: next }),
+      });
+      setTenant(result.tenant);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSavingFreeAccess(false);
+    }
+  }
+
+  async function saveTrialEndsAt(value: string | null) {
+    setSavingTrialDate(true);
+    setError(null);
+    try {
+      // End of the chosen day, in the trial's own time zone-agnostic sense —
+      // this is a coarse "give them the whole day" extension, not a
+      // to-the-minute cutoff.
+      const trialEndsAt = value ? new Date(`${value}T23:59:59`).toISOString() : null;
+      const result = await adminFetchJson<{ tenant: Tenant }>(`/api/console/tenants/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ trialEndsAt }),
+      });
+      setTenant(result.tenant);
+      setTrialDateDraft(result.tenant.trialEndsAt ? result.tenant.trialEndsAt.slice(0, 10) : '');
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSavingTrialDate(false);
     }
   }
 
@@ -246,6 +301,75 @@ export default function ConsoleTenantPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+              <label htmlFor="trial-ends" style={{ fontSize: '0.85rem', color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                Trial ends
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  id="trial-ends"
+                  type="date"
+                  value={trialDateDraft}
+                  disabled={savingTrialDate}
+                  onChange={(e) => setTrialDateDraft(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={savingTrialDate}
+                  onClick={() => saveTrialEndsAt(trialDateDraft || null)}
+                >
+                  {savingTrialDate ? 'Saving…' : 'Save'}
+                </button>
+                {tenant.trialEndsAt && (
+                  <button
+                    type="button"
+                    className="btn-link"
+                    disabled={savingTrialDate}
+                    onClick={() => saveTrialEndsAt(null)}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                Only matters on the trial plan — extend it, shorten it, or clear it to mean
+                &quot;no expiry set yet&quot;. Has no effect on a paid or free-access account.
+              </p>
+            </div>
+
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                Free access
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span
+                  className="notice"
+                  style={{
+                    padding: '4px 11px',
+                    margin: 0,
+                    background: tenant.freeAccess ? 'var(--status-live-tint)' : 'var(--status-attention-tint)',
+                    color: tenant.freeAccess ? 'var(--status-live-ink)' : 'var(--status-attention-ink)',
+                  }}
+                >
+                  {tenant.freeAccess ? 'On — never gated' : 'Off'}
+                </span>
+                <button
+                  type="button"
+                  className={tenant.freeAccess ? 'btn-secondary' : 'btn-primary'}
+                  disabled={savingFreeAccess}
+                  onClick={toggleFreeAccess}
+                >
+                  {savingFreeAccess ? 'Working…' : tenant.freeAccess ? 'Turn off' : 'Give free access'}
+                </button>
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                Overrides plan and trial entirely — use this to comp an account, e.g. as customer-service
+                compensation. Independent of the trial date above; turn it off any time to go back to
+                whatever the plan and trial date say.
+              </p>
             </div>
           </div>
 

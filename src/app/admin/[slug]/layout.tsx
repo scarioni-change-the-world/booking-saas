@@ -3,10 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminShell from '@/components/admin/AdminShell';
-import { adminFetchJson } from '@/lib/admin-fetch';
+import { adminFetch } from '@/lib/admin-fetch';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
-type Check = { state: 'checking' } | { state: 'denied' } | { state: 'ok'; tenantName: string };
+type Check =
+  | { state: 'checking' }
+  | { state: 'denied' }
+  | { state: 'gated' }
+  | { state: 'ok'; tenantName: string };
 
 /**
  * The gate every admin page sits behind.
@@ -35,8 +39,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
 
       try {
-        const me = await adminFetchJson<{ name: string }>(`/api/admin/${slug}/me`);
-        if (!cancelled) setCheck({ state: 'ok', tenantName: me.name });
+        // adminFetch directly, not adminFetchJson, so the 402 that
+        // requireTenantAdmin's gate check produces (see auth.ts) can be told
+        // apart from a 401/404 — those two both mean "you don't belong
+        // here, go sign in as someone who does", but a real member of a
+        // gated tenant needs a different message entirely.
+        const response = await adminFetch(`/api/admin/${slug}/me`);
+        if (response.status === 402) {
+          if (!cancelled) setCheck({ state: 'gated' });
+          return;
+        }
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error();
+        if (!cancelled) setCheck({ state: 'ok', tenantName: (body as { name: string }).name });
       } catch {
         // Signed in, but not as someone who administers this tenant —
         // sending them to login rather than a bare error lets them switch
@@ -57,6 +72,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
       <main className="widget" style={{ paddingTop: 60 }}>
         <p className="status">Checking access…</p>
+      </main>
+    );
+  }
+
+  if (check.state === 'gated') {
+    return (
+      <main className="widget" style={{ paddingTop: 60, textAlign: 'center' }}>
+        <h1>Your trial has ended</h1>
+        <p className="status">
+          Get in touch with us to keep using your booking page and dashboard.
+        </p>
       </main>
     );
   }

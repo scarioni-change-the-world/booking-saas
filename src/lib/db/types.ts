@@ -55,6 +55,13 @@ export interface TenantRow {
   branding: TenantBranding;
   embed_domains: string[];
   created_at: string;
+  /** When a trial-plan tenant loses access — see migration 0018 and
+   * src/lib/billing-gate.ts. Null for a paid plan (irrelevant) or a
+   * tenant that predates the gate (see the migration's backfill). */
+  trial_ends_at: string | null;
+  /** Permanent override, independent of plan/trial state — see migration
+   * 0018 for why this is a separate field from trial_ends_at. */
+  free_access: boolean;
 }
 
 export interface TenantSettingsRow {

@@ -14,6 +14,12 @@ values (
   array['https://example.com']
 );
 
+-- Free access, same as migration 0018's own backfill gives every tenant that
+-- predates the trial gate — the demo tenant is dev/e2e fixture data, not a
+-- real signup with a real trial clock, and it should never start failing
+-- booking.spec.ts just because some number of days passed since it was seeded.
+update tenants set free_access = true where id = '00000000-0000-4000-8000-000000000001';
+
 -- migration 0009's tenants_create_settings trigger already created the
 -- default row the moment the insert above ran; this fills in the demo's own
 -- values rather than inserting a second row.

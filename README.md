@@ -23,8 +23,9 @@ brief.
 
 **Milestone 1 complete; Google Calendar landed.** The tenancy model, the slot
 engine, the full prospect → booking → manage path, the Google Calendar
-integration and transactional email are implemented and covered by tests.
-Stripe and signup are not yet built; the admin dashboard UI has grown
+integration, transactional email, and a trial/free-access gate are
+implemented and covered by tests. Stripe checkout and a public self-serve
+signup page are not yet built; the admin dashboard UI has grown
 significantly since this line was last accurate — see the table below.
 
 | Area | State |
@@ -42,8 +43,9 @@ significantly since this line was last accurate — see the table below.
 | Encrypted token storage | Built — AES-256-GCM, 12 tests |
 | Email provider interface | Built — console fallback + real SMTP provider |
 | Transactional email + templates | Built — confirmed/rescheduled/cancelled/owner notification, tenant-editable, .ics attached, admin retry on failure |
-| Signup, onboarding, admin dashboard | Not built (§7.3, milestone 2) |
-| Stripe billing | Not built (§7.4, milestone 3) |
+| Trial gate + free access | Built — 7-day no-card trial on signup, `/console`-editable trial date and permanent free-access override, enforced server-side (402) on both the dashboard and the public booking page — 6 tests |
+| Public self-serve signup, onboarding | Not built (§7.3, milestone 2) — businesses are onboarded by hand through `/console`, which already sets the 7-day trial |
+| Stripe checkout, webhooks, customer portal | Not built (§7.4, milestone 3) — the gate is deliberately structured to plug into Stripe later without changing its own logic |
 
 ### Not ported from the reference implementation
 
@@ -347,17 +349,24 @@ hierarchy the way the Roadmap below is.
   and `CRON_SECRET` exist in the schema/env but nothing reads or writes
   either yet — that's a scheduled job, a different shape of work from the
   event-triggered emails this covers.
-- Signup, tenant provisioning, and the onboarding wizard, with questionnaire
-  starter templates per vertical — a blank questionnaire is a bad first run
-  (§7.3).
+- ~~Tenant provisioning with a trial~~ — done from `/console` (src/lib/db/console.ts's
+  `createTenant`), including the 7-day no-card trial and a free-access
+  override for comping an account (src/lib/billing-gate.ts, migration 0018).
+  **Not done**: a public self-serve signup page — today a business is
+  provisioned by hand — and the onboarding wizard, with questionnaire starter
+  templates per vertical — a blank questionnaire is a bad first run (§7.3).
 - Admin dashboard, including the day grid and a calendar health panel that
   actually calls the provider (§6.8).
 - Replace the unlisted client URL with a per-client token. Unlisted is not
   authenticated, and today client-only session types rest on obscurity.
 
 **Milestone 3 — commercial layer**
-- Stripe: plans, trials, dunning, and a decided answer to what happens to
-  existing bookings when a tenant lapses (§7.4).
+- Stripe: checkout, webhooks, dunning, and wiring a real subscription into
+  the plan field the trial gate already reads (§7.4). The gate itself — what
+  happens once a tenant lapses — is already decided and built: dashboard and
+  public booking page both 402 (src/lib/billing-gate.ts), while a prospect's
+  already-confirmed booking (`/manage/[token]`) keeps working, since it's a
+  structurally separate lookup from the gated ones.
 - Hourly reminder cron with per-tenant timezone handling; the daily cron does
   not scale across timezones (§7.7).
 - Free/busy caching — it is the hottest call and the Google quota is per OAuth
