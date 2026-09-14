@@ -365,6 +365,16 @@ hierarchy the way the Roadmap below is.
   layer too, not just the page: `POST /api/t/[slug]/bookings` no longer
   accepts a client-audience flag — see `src/lib/booking-service.ts` and
   `src/app/api/t/[slug]/client/[token]/single-session/route.ts`.
+- **Deep vulnerabilities search.** A dedicated security pass across the
+  whole app, not just the pending-diff reviews each feature already gets:
+  auth and session handling, RLS policy coverage (every table, not just the
+  ones touched recently), the token-is-the-credential surfaces (manage,
+  client, OAuth state) for anything weaker than the CSPRNG/HMAC baseline
+  already set, injection and input-validation gaps, secrets handling
+  (`APP_SECRET`, service-role key, SMTP/Anthropic credentials), dependency
+  vulnerabilities, and anything client-only-obscurity in the same shape the
+  unlisted client URL just turned out to be. Worth doing before real
+  customer data is on this beyond the single demo tenant.
 
 **Milestone 3 — commercial layer**
 - Stripe: checkout, webhooks, dunning, and wiring a real subscription into
