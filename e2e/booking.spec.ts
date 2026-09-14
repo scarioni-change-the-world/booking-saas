@@ -186,10 +186,48 @@ test.describe('multi-service scoping (migration 0016)', () => {
   });
 });
 
+// The demo client seeded by supabase/seed.sql — see there for why this is a
+// fixed value rather than a freshly generated one. Their own private link is
+// the *only* way into the existing-client surface now: the old, token-less
+// /t/[slug]/client door (unlisted, but not actually authenticated) is gone.
+const CLIENT_TOKEN = 'qFSo51bjmuFN9cGYsU3YpZDnVyrDkRjrG6yZ2JzM2DI';
+
 test.describe('existing-client flow', () => {
-  test('goes straight to the calendar with no questionnaire', async ({ page }) => {
-    await page.goto(`/t/${TENANT}/client`);
-    await expect(page.getByRole('heading', { name: 'Pick a time' })).toBeVisible();
+  test('an invalid token is rejected, not silently treated as anonymous access', async ({ page }) => {
+    await page.goto(`/t/${TENANT}/client/not-a-real-token`);
+    await expect(page.getByText("This link isn't valid")).toBeVisible();
+  });
+
+  test('offers both what the client can redeem and what they can book outright', async ({ page }) => {
+    await page.goto(`/t/${TENANT}/client/${CLIENT_TOKEN}`);
+    await expect(page.getByRole('heading', { name: /what would you like to book/ })).toBeVisible();
+    // The package (seeded with 5 total, 1 used → 4 left) and the plain
+    // client-only single session both show up as things to pick.
+    await expect(page.getByText('4 of 5 sessions left')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Check-in call' })).toBeVisible();
+  });
+
+  test('books a one-off session straight from the client link, no questionnaire', async ({ page }) => {
+    await page.goto(`/t/${TENANT}/client/${CLIENT_TOKEN}`);
+    await page.getByRole('button', { name: 'Check-in call' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Check-in call' })).toBeVisible();
     await expect(page.getByText('What are you able to invest')).toBeHidden();
+
+    await page.locator('.slots .slot').first().click();
+    await page.getByRole('button', { name: 'Confirm booking' }).click();
+
+    await expect(page.getByRole('heading', { name: "You're booked" })).toBeVisible();
+  });
+
+  test('redeems a session from an existing package', async ({ page }) => {
+    await page.goto(`/t/${TENANT}/client/${CLIENT_TOKEN}`);
+    await page.getByRole('button', { name: 'Coaching session' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Coaching session' })).toBeVisible();
+    await page.locator('.slots.multi .slot').first().click();
+    await page.getByRole('button', { name: /Book 1 session/ }).click();
+
+    await expect(page.getByRole('heading', { name: '1 of 1 booked' })).toBeVisible();
   });
 });

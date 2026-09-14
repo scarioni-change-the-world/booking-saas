@@ -13,11 +13,19 @@ import { createBooking } from '@/lib/booking-service';
 import type { QualificationResponseRow } from '@/lib/db/types';
 
 /**
- * Create a booking.
+ * Create a booking — the prospect path.
  *
- * The prospect path requires a qualified response id, for the same reason the
+ * Always requires a qualified response id, for the same reason the
  * availability endpoint does: the gate has to hold at every door into the
  * calendar, not just the one the widget happens to use.
+ *
+ * There used to be a second, client-audience path here, identified by
+ * nothing more than a request-body flag — anyone could set it, so a
+ * client-only session type rested on the URL being unlisted rather than on
+ * any real identity check. An existing client now books through their own
+ * token instead: .../client/[token]/single-session for a one-off session,
+ * .../client/[token]/bookings for redeeming a package. Both resolve a real
+ * clients row from the token before creating anything.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -28,22 +36,18 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const { tenant, scope } = resolved;
     const body = await readJson(request);
 
-    const audience = body.audience === 'client' ? 'client' : 'prospect';
     const responseId = optionalString(body, 'responseId', { maxLength: 64 }) ?? null;
+    if (!responseId) return fail('Complete the questions first', 403);
 
-    if (audience === 'prospect') {
-      if (!responseId) return fail('Complete the questions first', 403);
+    const { data, error } = await scope
+      .select('qualification_responses')
+      .eq('id', responseId)
+      .maybeSingle();
+    if (error) throw error;
 
-      const { data, error } = await scope
-        .select('qualification_responses')
-        .eq('id', responseId)
-        .maybeSingle();
-      if (error) throw error;
-
-      const response = data as unknown as QualificationResponseRow | null;
-      if (response?.outcome_path_type !== 'meeting') {
-        return fail('Complete the questions first', 403);
-      }
+    const response = data as unknown as QualificationResponseRow | null;
+    if (response?.outcome_path_type !== 'meeting') {
+      return fail('Complete the questions first', 403);
     }
 
     const booking = await createBooking(tenant, scope, {
@@ -52,7 +56,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       name: requireString(body, 'name', { maxLength: 200 }),
       email: requireEmail(body, 'email'),
       notes: optionalString(body, 'notes', { maxLength: 5000 }),
-      qualificationResponseId: audience === 'prospect' ? responseId : null,
+      qualificationResponseId: responseId,
     });
 
     // The confirmation email (with .ics and the manage link) and the

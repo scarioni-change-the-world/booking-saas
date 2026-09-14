@@ -1287,7 +1287,7 @@ update outcome_paths set
   redirect_label = 'Get the free guide'
 where tenant_id = '00000000-0000-4000-8000-000000000001' and type = 'other';
 
--- Three event types. Discovery and Coaching keep the independent-booleans
+-- Four event types. Discovery and Coaching keep the independent-booleans
 -- behaviour visible in development (brief 2.1) — one per audience. Coaching
 -- is also the sample for migration 0013's booking_mode: a pack of 10, the
 -- kind of service the field exists for — Discovery stays 'single' (its
@@ -1299,6 +1299,11 @@ where tenant_id = '00000000-0000-4000-8000-000000000001' and type = 'other';
 -- exercised end to end. Two gives the type picker something real to show,
 -- and a service of its own to carry the one service-specific question
 -- below — see e2e/booking.spec.ts's "multi-service" tests.
+--
+-- Check-in call is the client-only counterpart of that same reasoning: a
+-- single-mode type flagged available_to_existing_clients, so a client's own
+-- private link (ClientBooking, .../client/[token]) has something bookable
+-- outright, not only a package to redeem from — see the demo client below.
 insert into event_types (
   tenant_id, slug, name, description, duration_minutes,
   buffer_before_minutes, buffer_after_minutes, sort_order,
@@ -1310,7 +1315,33 @@ insert into event_types (
   ('00000000-0000-4000-8000-000000000001', 'coaching', 'Coaching session',
    'A 60-minute working session', 60, 15, 15, 2, false, true, 'pack', 10),
   ('00000000-0000-4000-8000-000000000001', 'strategy', 'Strategy session',
-   'A focused 45-minute session on your next 90 days', 45, 15, 15, 3, true, false, 'single', null);
+   'A focused 45-minute session on your next 90 days', 45, 15, 15, 3, true, false, 'single', null),
+  ('00000000-0000-4000-8000-000000000001', 'check-in', 'Check-in call',
+   'A quick 20-minute progress check between sessions', 20, 0, 10, 4, false, true, 'single', null);
+
+-- A returning client — exercises both things their own private link can do
+-- (ClientBooking): redeem sessions from a package (Coaching, granted below),
+-- and book Check-in outright with no package needed. access_token is a fixed
+-- value rather than clients.access_token's usual generateManageToken() —
+-- e2e/booking.spec.ts needs a stable URL to visit, the same reason the
+-- tenant and event types above use fixed ids/slugs instead of random ones.
+insert into clients (id, tenant_id, name, email, access_token)
+values (
+  '00000000-0000-4000-8000-000000000002',
+  '00000000-0000-4000-8000-000000000001',
+  'Returning Client',
+  'returning-client@example.com',
+  'qFSo51bjmuFN9cGYsU3YpZDnVyrDkRjrG6yZ2JzM2DI'
+);
+
+insert into client_entitlements (tenant_id, client_id, event_type_id, total_sessions, used_sessions)
+values (
+  '00000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000002',
+  (select id from event_types
+   where tenant_id = '00000000-0000-4000-8000-000000000001' and slug = 'coaching'),
+  5, 1
+);
 
 -- Monday to Friday, 09:00-17:00.
 insert into availability_rules (tenant_id, weekday, start_time, end_time)
@@ -1374,11 +1405,12 @@ commit;
 
 -- =============================================================================
 -- Verification — expect: 18 tables, 18 rls enabled, 31 policies, 0 anon
--- policies, 18 tables granted to service_role, 1 tenant, 3 event types,
+-- policies, 18 tables granted to service_role, 1 tenant, 4 event types,
 -- 1 pack-mode event type, 4 questions, 5 availability rules, 2 outcome
 -- paths, 6 questionnaire responses (2 still in progress, 4 completed),
 -- 0 AI usage events (the seed never calls the AI feature), 4 email
--- templates (the trigger's own defaults — the seed doesn't customise any).
+-- templates (the trigger's own defaults — the seed doesn't customise any),
+-- 1 client, 1 client entitlement.
 -- =============================================================================
 select 'tables'            as check, count(*)::text as value from pg_tables where schemaname = 'public'
 union all select 'rls enabled',      count(*)::text from pg_tables t join pg_class c on c.relname = t.tablename
@@ -1398,4 +1430,6 @@ union all select 'outcome paths',    count(*)::text from outcome_paths
 union all select 'questionnaire responses', count(*)::text from qualification_responses
 union all select 'responses still in progress', count(*)::text from qualification_responses where completed_at is null
 union all select 'AI usage events',    count(*)::text from ai_usage_events
-union all select 'email templates',    count(*)::text from email_templates;
+union all select 'email templates',    count(*)::text from email_templates
+union all select 'clients',            count(*)::text from clients
+union all select 'client entitlements', count(*)::text from client_entitlements;

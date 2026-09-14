@@ -571,7 +571,7 @@ button {
   border-color: var(--accent);
 }
 
-/* The multi-select package flow (ClientPackageBooking): choosing several
+/* The multi-select package flow (ClientBooking): choosing several
    times at once is the brand's own "moment of alignment" — see globals.css's
    opening note on --emphasis — so it gets the ochre treatment the guide
    reserves for exactly that, rather than reusing the plain single-pick blue

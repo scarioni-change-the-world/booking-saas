@@ -357,8 +357,14 @@ hierarchy the way the Roadmap below is.
   templates per vertical — a blank questionnaire is a bad first run (§7.3).
 - Admin dashboard, including the day grid and a calendar health panel that
   actually calls the provider (§6.8).
-- Replace the unlisted client URL with a per-client token. Unlisted is not
-  authenticated, and today client-only session types rest on obscurity.
+- ~~Replace the unlisted client URL with a per-client token~~ — done. The
+  plain, token-less `/t/[slug]/client` door is gone; every existing-client
+  booking (a one-off session or redeeming a package) now goes through
+  `ClientBooking` (`/t/[slug]/client/[token]`), which resolves a real
+  `clients` row from the token before creating anything. Closed at the API
+  layer too, not just the page: `POST /api/t/[slug]/bookings` no longer
+  accepts a client-audience flag — see `src/lib/booking-service.ts` and
+  `src/app/api/t/[slug]/client/[token]/single-session/route.ts`.
 
 **Milestone 3 — commercial layer**
 - Stripe: checkout, webhooks, dunning, and wiring a real subscription into

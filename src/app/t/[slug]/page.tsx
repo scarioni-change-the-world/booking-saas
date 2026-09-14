@@ -12,5 +12,5 @@ export default async function ProspectBookingPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <BookingFlow slug={slug} audience="prospect" />;
+  return <BookingFlow slug={slug} />;
 }

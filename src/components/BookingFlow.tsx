@@ -5,8 +5,6 @@ import { accentStyle, initials } from './brand';
 import { useAutoResize } from './useAutoResize';
 import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from './types';
 
-type Audience = 'prospect' | 'client';
-
 type Step =
   | 'loading'
   | 'email'
@@ -19,7 +17,6 @@ type Step =
 
 interface Props {
   slug: string;
-  audience: Audience;
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -41,19 +38,22 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
 }
 
 /**
- * The booking flow, for both audiences.
+ * The booking flow, for prospects.
  *
- * Prospects pass through the qualification gate first; existing clients skip
- * it entirely and never see it (brief 2.1, 2.3). One component serves both
- * because everything after the gate is identical, and keeping two copies in
- * step is exactly the sort of drift that produced the "one flag instead of two"
- * bug in the reference implementation.
+ * Prospects pass through the qualification gate before any time is shown
+ * (brief 2.1). An existing client never goes through here at all — their own
+ * private, per-client link (ClientBooking, .../client/[token]) skips the
+ * gate and identifies who they are, which this component has no way to do
+ * for an anonymous visitor. This used to also serve that audience, gated on
+ * a plain prop, but nothing stopped a client-only session type resting on
+ * the URL being unlisted rather than on any real identity check — see
+ * .../api/t/[slug]/bookings for where that was actually closed.
  *
  * Built mobile-first: a prospect arrives from a link in Instagram or
  * WhatsApp, on a phone, usually one-handed. The wider viewport is the
  * exception this layout has to survive, not the one it is designed for.
  */
-export default function BookingFlow({ slug, audience }: Props) {
+export default function BookingFlow({ slug }: Props) {
   useAutoResize();
 
   const [step, setStep] = useState<Step>('loading');
@@ -100,7 +100,7 @@ export default function BookingFlow({ slug, audience }: Props) {
       try {
         const [cfg, types] = await Promise.all([
           getJson<PublicConfig>(`${base}/config`),
-          getJson<{ eventTypes: PublicEventType[] }>(`${base}/event-types?audience=${audience}`),
+          getJson<{ eventTypes: PublicEventType[] }>(`${base}/event-types?audience=prospect`),
         ]);
         if (cancelled) return;
 
@@ -117,7 +117,7 @@ export default function BookingFlow({ slug, audience }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [base, audience]);
+  }, [base]);
 
   /**
    * A service has been picked — explicitly, via the one-choice auto-skip
@@ -125,9 +125,8 @@ export default function BookingFlow({ slug, audience }: Props) {
    * first ("Choose a different session" at the pick-time step). Called
    * every time, deliberately: each service can have its own questions
    * (migration 0016), so switching services means re-checking what *this*
-   * one asks, not assuming the last service's gate still applies. Existing
-   * clients never see a gate at all (brief 2.1, 2.3); a prospect's gate is
-   * the tenant's shared questions plus this service's own
+   * one asks, not assuming the last service's gate still applies. The gate
+   * is the tenant's shared questions plus this service's own
    * (GET .../questions?eventTypeId=). A service with nothing to ask goes
    * straight to the calendar, same as a tenant with no questions at all did
    * before this existed. Answers already given for a still-shared question
@@ -137,12 +136,6 @@ export default function BookingFlow({ slug, audience }: Props) {
   const chooseEventType = useCallback(
     async (type: PublicEventType) => {
       setEventType(type);
-
-      if (audience !== 'prospect') {
-        setStep('pick-time');
-        return;
-      }
-
       setBusy(true);
       setError(null);
       try {
@@ -157,7 +150,7 @@ export default function BookingFlow({ slug, audience }: Props) {
         setBusy(false);
       }
     },
-    [audience, base],
+    [base],
   );
 
   // Auto-skip the type picker when there is only one choice (brief 2.3).
@@ -172,7 +165,7 @@ export default function BookingFlow({ slug, audience }: Props) {
       setBusy(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ eventTypeId: chosen.id, audience });
+        const params = new URLSearchParams({ eventTypeId: chosen.id, audience: 'prospect' });
         if (responseId) params.set('responseId', responseId);
         const result = await getJson<{ days: DaySlots[] }>(
           `${base}/availability?${params.toString()}`,
@@ -187,7 +180,7 @@ export default function BookingFlow({ slug, audience }: Props) {
         setBusy(false);
       }
     },
-    [base, audience, responseId],
+    [base, responseId],
   );
 
   useEffect(() => {
@@ -270,7 +263,6 @@ export default function BookingFlow({ slug, audience }: Props) {
         name,
         email,
         notes,
-        audience,
         responseId,
       });
       setConfirmed(result.booking);

@@ -213,6 +213,14 @@ export interface CreateBookingInput {
   email: string;
   notes?: string;
   qualificationResponseId?: string | null;
+  /** Set when a known, token-identified existing client is booking a
+   * one-off (booking_mode 'single') session — see
+   * /api/t/[slug]/client/[token]/single-session. Ties the booking to their
+   * clients row the same way createEntitlementBookings already does for
+   * package redemption, so their history and future package grants have
+   * something to key off. Left unset (null) for a prospect, who has no
+   * clients row at all. */
+  clientId?: string | null;
 }
 
 /**
@@ -259,6 +267,7 @@ export async function createBooking(
     email: input.email,
     notes: input.notes ?? null,
     qualification_response_id: input.qualificationResponseId ?? null,
+    client_id: input.clientId ?? null,
     sync_status: 'pending',
   });
 
@@ -687,6 +696,11 @@ export async function createEntitlementBookings(
 
     used += 1;
     const synced = await syncBookingToCalendar(tenant, scope, booking, eventType);
+    // Same as createBooking: after sync, not before, so meeting_url is only
+    // ever included once it actually exists (or has definitively failed to).
+    // Missing from here previously — a redeemed package session never sent
+    // a confirmation at all, unlike every other kind of booking.
+    await sendBookingConfirmedEmail(tenant, scope, synced);
     results.push({ startsAt, status: 'booked', booking: synced });
   }
 

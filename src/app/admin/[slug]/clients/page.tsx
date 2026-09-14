@@ -169,8 +169,9 @@ export default function ClientsPage() {
       </div>
 
       <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-6px 0 18px', maxWidth: 620 }}>
-        Someone who has bought a package of sessions. Add them, grant the package they paid for, and
-        share their private link — it lets them book several sessions from that package in one visit.
+        Someone you already know — a returning customer, not a fresh enquiry. Add them and share
+        their private link: it lets them book straight from your calendar with no questionnaire, and
+        redeem sessions from any package you've granted them.
       </p>
 
       {error && (
@@ -225,7 +226,7 @@ export default function ClientsPage() {
       {loading && <p className="status">Loading…</p>}
 
       {!loading && clients.length === 0 && !creating && (
-        <p className="notice notice-muted">No clients yet — add one once someone's bought a package.</p>
+        <p className="notice notice-muted">No clients yet — add one once you have a returning customer.</p>
       )}
 
       {!loading && eventTypes.length === 0 && (
