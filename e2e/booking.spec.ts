@@ -231,3 +231,31 @@ test.describe('existing-client flow', () => {
     await expect(page.getByRole('heading', { name: '1 of 1 booked' })).toBeVisible();
   });
 });
+
+test.describe('recovering a lost client link', () => {
+  // The path the old token-less door used to occupy — an old bookmark now
+  // lands on the one thing that can still help whoever followed it.
+  test('offers the form at the path the unlisted door used to live at', async ({ page }) => {
+    await page.goto(`/t/${TENANT}/client`);
+    await expect(page.getByRole('heading', { name: 'Find your booking link' })).toBeVisible();
+  });
+
+  test('says the same thing whether or not the address is on file', async ({ page }) => {
+    // A real client...
+    await page.goto(`/t/${TENANT}/client`);
+    await page.getByLabel('Email').fill('returning-client@example.com');
+    await page.getByRole('button', { name: 'Send my link' }).click();
+    await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible();
+    const known = await page.locator('.notice').first().textContent();
+
+    // ...and a complete stranger. Identical response, or this form becomes a
+    // way to ask a business who its customers are.
+    await page.goto(`/t/${TENANT}/client`);
+    await page.getByLabel('Email').fill('definitely-not-a-client@example.com');
+    await page.getByRole('button', { name: 'Send my link' }).click();
+    await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible();
+    const unknown = await page.locator('.notice').first().textContent();
+
+    expect(unknown).toBe(known);
+  });
+});

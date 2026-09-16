@@ -48,6 +48,27 @@ export const RATE_LIMITS = {
     windowSeconds: 3600,
     message: 'Too many attempts from here just now. Please try again in a little while.',
   },
+  /**
+   * Asking for a client's own booking link to be re-sent. Tighter than the
+   * other two because this one *sends mail to an address the caller chose*,
+   * which makes it the only endpoint here that can be pointed at a third
+   * party. Limited twice over — see the two entries — so that neither one
+   * caller nor one victim's inbox can be flooded through it.
+   */
+  clientLinkRequest: {
+    limit: 5,
+    windowSeconds: 3600,
+    message: 'Too many requests from here just now. Please try again in a little while.',
+  },
+  /** The same endpoint, counted per address asked about rather than per
+   * caller, so spreading the requests across IPs still can't mail-bomb one
+   * person. Its message is never actually shown for a real address — see
+   * the route, which answers identically either way. */
+  clientLinkAddress: {
+    limit: 3,
+    windowSeconds: 3600,
+    message: 'Too many requests for that address just now. Please try again in a little while.',
+  },
 } as const;
 
 export type RateLimitedAction = keyof typeof RATE_LIMITS;
@@ -92,17 +113,23 @@ export function clientIp(request: Request): string {
  * all because a counter table was briefly unavailable, which is a worse
  * outcome than the abuse this prevents.
  *
- * @param consume injectable for tests; production callers omit it — the
- *   same shape as tenantScope's own optional client.
+ * `subject` counts against something other than the caller's IP — an email
+ * address, for an endpoint that can be aimed at a third party. Two calls
+ * with different subjects are two independent limits, and an endpoint that
+ * needs both simply enforces both.
+ *
+ * @param options.consume injectable for tests; production callers omit it —
+ *   the same shape as tenantScope's own optional client.
  */
 export async function enforceRateLimit(
   request: Request,
   tenantId: string,
   action: RateLimitedAction,
-  consume: typeof consumeRateLimit = consumeRateLimit,
+  options: { subject?: string; consume?: typeof consumeRateLimit } = {},
 ): Promise<void> {
+  const { consume = consumeRateLimit, subject } = options;
   const { limit, windowSeconds, message } = RATE_LIMITS[action];
-  const key = `${action}:${tenantId}:${clientIp(request)}`;
+  const key = `${action}:${tenantId}:${subject ?? clientIp(request)}`;
 
   let allowed: boolean;
   try {

@@ -27,6 +27,7 @@ const TEMPLATE_KIND_LABEL: Record<EmailTemplateKind, string> = {
   booking_rescheduled: 'Booking rescheduled',
   booking_cancelled: 'Booking cancelled',
   owner_notification: 'New booking (sent to you)',
+  client_invite: 'Client booking link',
 };
 
 type CalendarStatus = 'active' | 'needs_reconnect' | 'revoked';

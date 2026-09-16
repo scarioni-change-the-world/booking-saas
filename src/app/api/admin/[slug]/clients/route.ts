@@ -1,5 +1,6 @@
-import { fail, handleError, ok, readJson, requireEmail, requireString } from '@/lib/api';
+import { fail, handleError, ok, optionalBoolean, readJson, requireEmail, requireString } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
+import { sendClientInviteEmail } from '@/lib/client-email';
 import { serializeClient } from '@/lib/admin-serializers';
 import { generateManageToken } from '@/lib/tokens';
 import type { ClientRow } from '@/lib/db/types';
@@ -54,15 +55,27 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
  * Add a client — their own private booking link (access_token) is generated
  * here, the same shape as a booking's manage token. No package yet; that's
  * granted separately once you know what they bought.
+ *
+ * This is the single path a client record is created through, whether it
+ * was typed on the Clients page or promoted from a booking on the Bookings
+ * page — the same reasoning the AI intake-draft route gives for sending
+ * accepted drafts back through the ordinary questions route. Promotion from
+ * a booking is that page prefilling this call, not a second way in.
+ *
+ * `sendInvite` decides whether they're emailed their link now. Its outcome
+ * comes back on the response rather than being swallowed: "saved, but we
+ * couldn't email them" is something an admin needs to see, since the link
+ * is useless to a client who never receives it.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await ctx.params;
-    const { scope } = await requireTenantAdmin(request, slug);
+    const { tenant, scope } = await requireTenantAdmin(request, slug);
     const body = await readJson(request);
 
     const name = requireString(body, 'name', { maxLength: 200 });
     const email = requireEmail(body, 'email');
+    const sendInvite = optionalBoolean(body, 'sendInvite') ?? false;
 
     const { data, error } = await scope.insert('clients', {
       name,
@@ -80,7 +93,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     }
 
     const row = (data as unknown as ClientRow[])[0]!;
-    return ok({ client: { ...serializeClient(row), entitlements: [] } }, 201);
+    const inviteStatus = sendInvite ? await sendClientInviteEmail(tenant, scope, row) : null;
+
+    return ok({ client: { ...serializeClient(row), entitlements: [] }, inviteStatus }, 201);
   } catch (error) {
     return handleError(error);
   }

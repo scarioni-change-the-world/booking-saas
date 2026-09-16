@@ -57,12 +57,42 @@ describe('renderTemplate', () => {
     expect(result.html).not.toContain('<a href');
   });
 
-  it('every declared template kind has at least the client-facing basics', () => {
-    for (const kind of Object.keys(TEMPLATE_TOKENS) as Array<keyof typeof TEMPLATE_TOKENS>) {
+  it('every kind that describes a booking can name that booking', () => {
+    // client_invite is the one kind no booking triggers — it carries a
+    // client's private link (migration 0020), and there is no service or
+    // time to name at the point it's sent. Excluded by name, rather than by
+    // loosening what every other kind is held to.
+    const bookingKinds = (Object.keys(TEMPLATE_TOKENS) as Array<keyof typeof TEMPLATE_TOKENS>).filter(
+      (kind) => kind !== 'client_invite',
+    );
+
+    expect(bookingKinds.length).toBeGreaterThan(0);
+    for (const kind of bookingKinds) {
       expect(TEMPLATE_TOKENS[kind]).toContain('clientName');
       expect(TEMPLATE_TOKENS[kind]).toContain('serviceName');
       expect(TEMPLATE_TOKENS[kind]).toContain('dateTime');
     }
+  });
+
+  it('addresses the client by name in every kind, booking or not', () => {
+    for (const kind of Object.keys(TEMPLATE_TOKENS) as Array<keyof typeof TEMPLATE_TOKENS>) {
+      expect(TEMPLATE_TOKENS[kind]).toContain('clientName');
+    }
+  });
+
+  // An invite's whole reason for existing is the link, so it arrives on the
+  // same always-appended line a manage link does — never as a {{token}} a
+  // tenant could delete while rewriting their copy.
+  it('carries a client invite’s booking link even when the tenant rewrote the body', () => {
+    const result = renderTemplate(
+      { subject: 'Your link', body: 'Hi {{clientName}}, welcome back.' },
+      { clientName: 'Ana', tenantName: 'Demo Coaching' },
+      { label: 'Book a session', url: 'https://example.com/t/demo/client/tok123' },
+    );
+
+    expect(result.text).toContain('Hi Ana, welcome back.');
+    expect(result.text).toContain('Book a session: https://example.com/t/demo/client/tok123');
+    expect(result.html).toContain('https://example.com/t/demo/client/tok123');
   });
 });
 

@@ -31,7 +31,25 @@ interface EventType {
   packSize: number | null;
 }
 
-const EMPTY_CLIENT_FORM = { name: '', email: '' };
+// sendInvite defaults on: a client record whose link never reaches the
+// client is the failure this whole flow exists to stop.
+const EMPTY_CLIENT_FORM = { name: '', email: '', sendInvite: true };
+
+type InviteStatus = 'sent' | 'failed' | 'not_configured';
+
+/**
+ * What actually happened to the invite, said plainly. 'not_configured' is
+ * its own case rather than a kind of failure: nothing is broken, email
+ * simply isn't set up yet, and the fix is in Settings — not a retry.
+ */
+function inviteMessage(name: string, status: InviteStatus | null): string | null {
+  if (status === null) return null;
+  if (status === 'sent') return `${name} has their booking link — it's on its way to them.`;
+  if (status === 'not_configured') {
+    return `${name} is saved, but no email was sent: email isn't set up yet. Copy their link below and send it yourself, or set up email in Settings.`;
+  }
+  return `${name} is saved, but their email didn't go out. Try "Send link" again, or copy the link below and send it yourself.`;
+}
 const EMPTY_GRANT_FORM = { eventTypeId: '', sessions: '10' };
 
 export default function ClientsPage() {
@@ -51,6 +69,8 @@ export default function ClientsPage() {
   const [grantForm, setGrantForm] = useState(EMPTY_GRANT_FORM);
   const [granting, setGranting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -78,12 +98,14 @@ export default function ClientsPage() {
     event.preventDefault();
     setSaving(true);
     setError(null);
+    setNotice(null);
     try {
-      await adminFetchJson(base, {
+      const result = await adminFetchJson<{ inviteStatus: InviteStatus | null }>(base, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(form),
       });
+      setNotice(inviteMessage(form.name, result.inviteStatus));
       setForm(EMPTY_CLIENT_FORM);
       setCreating(false);
       await load();
@@ -91,6 +113,26 @@ export default function ClientsPage() {
       setError((cause as Error).message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** Re-send an existing client their link — the everyday answer to "I've
+   * lost the email", and the reason the public /t/[slug]/client form is a
+   * fallback rather than the main path. */
+  async function sendLink(client: Client) {
+    setSendingId(client.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await adminFetchJson<{ inviteStatus: InviteStatus }>(
+        `${base}/${client.id}/invite`,
+        { method: 'POST' },
+      );
+      setNotice(inviteMessage(client.name, result.inviteStatus));
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSendingId(null);
     }
   }
 
@@ -180,6 +222,12 @@ export default function ClientsPage() {
         </div>
       )}
 
+      {notice && (
+        <div className="notice notice-muted" role="status">
+          {notice}
+        </div>
+      )}
+
       {creating && (
         <form className="card" onSubmit={submitCreate} style={{ marginBottom: 14 }}>
           <div className="admin-card-title">New client</div>
@@ -205,6 +253,25 @@ export default function ClientsPage() {
               />
             </div>
           </div>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: '0.9rem',
+              color: 'var(--muted)',
+              margin: '-4px 0 14px',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={form.sendInvite}
+              onChange={(e) => setForm({ ...form, sendInvite: e.target.checked })}
+            />
+            Email them their booking link now
+          </label>
+
           <div className="actions">
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving ? 'Adding…' : 'Add client'}
@@ -305,6 +372,14 @@ export default function ClientsPage() {
                       >
                         {bookingLink(client)}
                       </code>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={sendingId === client.id}
+                        onClick={() => sendLink(client)}
+                      >
+                        {sendingId === client.id ? 'Sending…' : 'Send link'}
+                      </button>
                       <button type="button" className="btn-secondary" onClick={() => copyLink(client)}>
                         {copiedId === client.id ? 'Copied' : 'Copy'}
                       </button>

@@ -30,20 +30,20 @@ describe('enforceRateLimit', () => {
   it('allows a request the counter says is within the limit', async () => {
     const consume = vi.fn().mockResolvedValue(true);
     await expect(
-      enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', consume),
+      enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', { consume }),
     ).resolves.toBeUndefined();
   });
 
   it('throws RateLimitError once the counter refuses', async () => {
     const consume = vi.fn().mockResolvedValue(false);
     await expect(
-      enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', consume),
+      enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', { consume }),
     ).rejects.toBeInstanceOf(RateLimitError);
   });
 
   it('counts against a key of action, tenant and caller — so none of the three share a bucket', async () => {
     const consume = vi.fn().mockResolvedValue(true);
-    await enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', consume);
+    await enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', { consume });
 
     expect(consume).toHaveBeenCalledWith(
       'booking:tenant-1:1.2.3.4',
@@ -54,12 +54,29 @@ describe('enforceRateLimit', () => {
 
   it('uses each action’s own limit', async () => {
     const consume = vi.fn().mockResolvedValue(true);
-    await enforceRateLimit(requestWith({}), 't1', 'qualification', consume);
+    await enforceRateLimit(requestWith({}), 't1', 'qualification', { consume });
 
     expect(consume).toHaveBeenCalledWith(
       'qualification:t1:unknown',
       RATE_LIMITS.qualification.limit,
       RATE_LIMITS.qualification.windowSeconds,
+    );
+  });
+
+  // What lets the client-link endpoint bound one *inbox* as well as one
+  // caller: the same action, counted against the address asked about, so
+  // spreading requests across IPs still can't mail-bomb a single person.
+  it('counts against a subject instead of the caller when one is given', async () => {
+    const consume = vi.fn().mockResolvedValue(true);
+    await enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 't1', 'clientLinkAddress', {
+      subject: 'someone@example.com',
+      consume,
+    });
+
+    expect(consume).toHaveBeenCalledWith(
+      'clientLinkAddress:t1:someone@example.com',
+      RATE_LIMITS.clientLinkAddress.limit,
+      RATE_LIMITS.clientLinkAddress.windowSeconds,
     );
   });
 
@@ -71,7 +88,7 @@ describe('enforceRateLimit', () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(
-      enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', consume),
+      enforceRateLimit(requestWith({ 'x-forwarded-for': '1.2.3.4' }), 'tenant-1', 'booking', { consume }),
     ).resolves.toBeUndefined();
     expect(logged).toHaveBeenCalled();
 

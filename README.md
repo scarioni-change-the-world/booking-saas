@@ -42,7 +42,9 @@ significantly since this line was last accurate — see the table below.
 | Google OAuth connect / disconnect | Built — routes only, no dashboard UI |
 | Encrypted token storage | Built — AES-256-GCM, 12 tests |
 | Email provider interface | Built — console fallback + real SMTP provider |
-| Transactional email + templates | Built — confirmed/rescheduled/cancelled/owner notification, tenant-editable, .ics attached, admin retry on failure |
+| Transactional email + templates | Built — confirmed/rescheduled/cancelled/owner notification/client invite, tenant-editable, .ics attached, admin retry on failure |
+| Returning clients: promotion + link delivery | Built — "Add as client" from a booking, invite email carrying their private link, admin re-send, and a self-serve "send me my link" form that reveals nothing about who is a client |
+| Rate limiting (public booking surface) | Built — per action/tenant/IP in Postgres, fails open — 10 tests |
 | Trial gate + free access | Built — 7-day no-card trial on signup, `/console`-editable trial date and permanent free-access override, enforced server-side (402) on both the dashboard and the public booking page — 6 tests |
 | Public self-serve signup, onboarding | Not built (§7.3, milestone 2) — businesses are onboarded by hand through `/console`, which already sets the 7-day trial |
 | Stripe checkout, webhooks, customer portal | Not built (§7.4, milestone 3) — the gate is deliberately structured to plug into Stripe later without changing its own logic |
@@ -365,6 +367,24 @@ hierarchy the way the Roadmap below is.
   layer too, not just the page: `POST /api/t/[slug]/bookings` no longer
   accepts a client-audience flag — see `src/lib/booking-service.ts` and
   `src/app/api/t/[slug]/client/[token]/single-session/route.ts`.
+- ~~How a returning customer stops being screened~~ — done, and worth
+  recording as a product decision rather than a feature. The token above is
+  what grants a client screening-free access; what was missing was anything
+  that *bridged* a prospect to it. The only way a client record existed was
+  an admin typing a name and email by hand, then copying the link into their
+  own mail client — a step easily forgotten, leaving no trace either way.
+  Now: **"Add as client"** on any booking (`isClient` on the bookings list
+  keeps the offer honest), an invite email carrying the link
+  (`src/lib/client-email.ts`, migration 0020's `client_invite` template),
+  admin re-send, and a self-serve `/t/[slug]/client` form for a client who
+  lost the email.
+  **Deliberately not automatic on booking.** The gate exists because a
+  tenant decides whose time is worth taking; someone who booked one free
+  discovery call has not established a relationship, and auto-promoting them
+  would hand a permanent screening bypass to exactly the people the gate is
+  there to filter. Promotion stays a decision — this only removes the
+  retyping. The one path that *is* automatic by construction: granting a
+  package already requires a client record, so a purchase implies one.
 - ~~Deep vulnerabilities search~~ — a first pass done, covering: dependency
   CVEs (`npm audit` — the safe fixes applied, the one remaining critical
   needs a Next.js 15→16 major bump the app doesn't otherwise need yet, and

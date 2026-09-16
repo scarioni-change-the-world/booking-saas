@@ -8,14 +8,18 @@ import type { EmailTemplateKind } from '../db/types';
  * HTML, so there's nothing in it that can break the layout or need an
  * html/text version kept in sync by hand.
  *
- * One thing is never left to the template: the manage link on a
- * confirmed/rescheduled booking is appended after the tenant's own words,
- * always, regardless of what they wrote. A tenant customising the tone of
- * their confirmation email is a feature; a tenant accidentally deleting the
- * only way a client can cancel is a support ticket. Everything else — the
- * client's name, the service, the time, the meeting link — is a
- * {{token}} the tenant places in their own prose, because losing one of
- * those is a cosmetic gap, not a broken feature.
+ * One thing is never left to the template: the link an email exists to
+ * carry is appended after the tenant's own words, always, regardless of
+ * what they wrote. A tenant customising the tone of their confirmation
+ * email is a feature; a tenant accidentally deleting the only way a client
+ * can cancel is a support ticket. Two kinds use this — a booking's manage
+ * link (confirmed/rescheduled), and a client's own private booking link
+ * (client_invite, migration 0020), where the argument is stronger still: a
+ * confirmation missing its manage link is still a confirmation, but an
+ * invite missing its link is nothing at all. Everything else — the client's
+ * name, the service, the time, the meeting link — is a {{token}} the tenant
+ * places in their own prose, because losing one of those is a cosmetic gap,
+ * not a broken feature.
  */
 
 export const TEMPLATE_TOKENS: Record<EmailTemplateKind, string[]> = {
@@ -23,6 +27,10 @@ export const TEMPLATE_TOKENS: Record<EmailTemplateKind, string[]> = {
   booking_rescheduled: ['clientName', 'serviceName', 'dateTime', 'tenantName'],
   booking_cancelled: ['clientName', 'serviceName', 'dateTime', 'tenantName'],
   owner_notification: ['clientName', 'clientEmail', 'serviceName', 'dateTime', 'tenantName'],
+  // No booking exists yet when this one is sent, so none of the tokens that
+  // describe one do either. The link itself is deliberately not a token —
+  // see the module comment above and renderTemplate's linkLine.
+  client_invite: ['clientName', 'tenantName'],
 };
 
 export type TemplateTokens = Record<string, string>;
@@ -67,14 +75,14 @@ export interface RenderedTemplate {
  * version, not markup. The plain-text version skips escaping entirely: it
  * has no markup to break, so escaping it would just show literal "&amp;"s.
  *
- * `manageLinkLine`, appended after the tenant's own body when given, is the
- * one piece of content this function adds on its own — see the module
- * comment above for why that specific line is never optional.
+ * `linkLine`, appended after the tenant's own body when given, is the one
+ * piece of content this function adds on its own — see the module comment
+ * above for why that line is never left to the template.
  */
 export function renderTemplate(
   template: { subject: string; body: string },
   tokens: TemplateTokens,
-  manageLinkLine?: { label: string; url: string },
+  linkLine?: { label: string; url: string },
 ): RenderedTemplate {
   const subject = substitute(template.subject, tokens);
 
@@ -85,10 +93,10 @@ export function renderTemplate(
   const htmlBody = substitute(escapedBody, escapedTokens).replace(/\n/g, '<br>\n');
   const textBody = substitute(template.body, tokens);
 
-  const htmlFooter = manageLinkLine
-    ? `<p style="margin-top:24px;"><a href="${escapeHtml(manageLinkLine.url)}">${escapeHtml(manageLinkLine.label)}</a></p>`
+  const htmlFooter = linkLine
+    ? `<p style="margin-top:24px;"><a href="${escapeHtml(linkLine.url)}">${escapeHtml(linkLine.label)}</a></p>`
     : '';
-  const textFooter = manageLinkLine ? `\n\n${manageLinkLine.label}: ${manageLinkLine.url}` : '';
+  const textFooter = linkLine ? `\n\n${linkLine.label}: ${linkLine.url}` : '';
 
   return {
     subject,

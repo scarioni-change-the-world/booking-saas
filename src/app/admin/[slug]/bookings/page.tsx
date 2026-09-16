@@ -34,6 +34,9 @@ interface Booking {
   emailError: string | null;
   qualification: { outcomePathType: 'meeting' | 'other'; answers: AnsweredQuestion[] } | null;
   createdAt: string;
+  /** Whether this person already has a client record, matched on their
+   * email — see the bookings route for why not on client_id. */
+  isClient: boolean;
 }
 
 const TABS: { view: View; label: string }[] = [
@@ -95,6 +98,8 @@ export default function BookingsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function load(v: View) {
     setLoading(true);
@@ -149,6 +154,57 @@ export default function BookingsPage() {
     }
   }
 
+  /**
+   * Promote someone who booked into a client with their own private link —
+   * the bridge that was missing between "passed the questions once" and
+   * "we know each other now, skip them".
+   *
+   * Deliberately a decision rather than something that happens by itself on
+   * every booking: the gate exists because a tenant chooses whose time is
+   * worth taking, and someone who booked one discovery call has not yet
+   * earned a permanent pass through it. This just removes the retyping.
+   *
+   * Goes through the ordinary POST /clients, prefilled — not a second way
+   * of creating a client.
+   */
+  async function addAsClient(booking: Booking) {
+    if (
+      !window.confirm(
+        `Add ${booking.name} as a client and email them their own booking link?\n\n` +
+          `From then on they book without answering your questions.`,
+      )
+    ) {
+      return;
+    }
+
+    setPromotingId(booking.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await adminFetchJson<{ inviteStatus: 'sent' | 'failed' | 'not_configured' | null }>(
+        `/api/admin/${slug}/clients`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: booking.name, email: booking.email, sendInvite: true }),
+        },
+      );
+
+      setNotice(
+        result.inviteStatus === 'sent'
+          ? `${booking.name} is now a client — their booking link is on its way to them.`
+          : `${booking.name} is now a client, but the email didn't go out${
+              result.inviteStatus === 'not_configured' ? ' (email isn’t set up yet)' : ''
+            }. Send them their link from the Clients page.`,
+      );
+      await load(view);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setPromotingId(null);
+    }
+  }
+
   return (
     <>
       <div className="admin-page-head">
@@ -174,6 +230,12 @@ export default function BookingsPage() {
       {error && (
         <div className="notice notice-error" role="alert">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="notice notice-muted" role="status">
+          {notice}
         </div>
       )}
 
@@ -293,6 +355,18 @@ export default function BookingsPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                {b.isClient ? (
+                  <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>Client</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-link"
+                    disabled={promotingId === b.id}
+                    onClick={() => addAsClient(b)}
+                  >
+                    {promotingId === b.id ? 'Adding…' : 'Add as client'}
+                  </button>
+                )}
                 {b.status === 'confirmed' && (
                   <button
                     type="button"

@@ -32,12 +32,17 @@ export type BookingMode = 'single' | 'pack';
 export type EmailStatus = 'pending' | 'sent' | 'failed' | 'not_configured';
 /** Which transactional email a template's content applies to — see
  * migration 0017 and src/lib/email/templates.ts for the {{token}} set each
- * kind renders with. */
+ * kind renders with. Text with a check constraint in the database rather
+ * than an enum as of migration 0020, which explains why — and why adding
+ * the next kind here now costs nothing. */
 export type EmailTemplateKind =
   | 'booking_confirmed'
   | 'booking_rescheduled'
   | 'booking_cancelled'
-  | 'owner_notification';
+  | 'owner_notification'
+  /** The one kind that is not part of a booking's lifecycle: it carries a
+   * client's own private booking link to them — see src/lib/client-email.ts. */
+  | 'client_invite';
 
 export interface TenantBranding {
   logoUrl?: string;

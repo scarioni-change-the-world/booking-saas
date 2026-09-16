@@ -36,8 +36,29 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
 
     if (error) throw error;
 
+    // Who already has a client record, so the list can offer "add as client"
+    // only where it means something. By email rather than bookings.client_id:
+    // that column is only set when the booking was *made* through a client's
+    // own link, so a prospect who booked first and was promoted afterwards
+    // would still read as a stranger. One small query for the whole page —
+    // emails only, deliberately not the client rows themselves, which carry
+    // the access tokens this page has no use for.
+    const clientsResult = await scope.select('clients', 'email');
+    if (clientsResult.error) throw clientsResult.error;
+
+    const clientEmails = new Set(
+      ((clientsResult.data ?? []) as unknown as Array<{ email: string }>).map((c) =>
+        c.email.toLowerCase(),
+      ),
+    );
+
     const rows = (data ?? []) as unknown as BookingWithJoins[];
-    return ok({ bookings: rows.map(serializeBooking) });
+    return ok({
+      bookings: rows.map((row) => ({
+        ...serializeBooking(row),
+        isClient: clientEmails.has(row.email.toLowerCase()),
+      })),
+    });
   } catch (error) {
     return handleError(error);
   }
