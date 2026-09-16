@@ -1,5 +1,6 @@
 import { handleError, isResponse, ok, readJson, requireEmail, requireString, requireTenant } from '@/lib/api';
 import { loadEventType } from '@/lib/booking-service';
+import { enforceRateLimit } from '@/lib/rate-limit';
 import { startResponse } from '@/lib/qualification-response-service';
 
 /**
@@ -26,6 +27,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const { slug } = await ctx.params;
     const resolved = await requireTenant(slug);
     if (isResponse(resolved)) return resolved;
+
+    // Every call here writes a row that lands in the tenant's own
+    // completion-rate numbers (migration 0012), so unbounded junk doesn't
+    // just fill a table — it distorts the one measure the gate is judged on.
+    await enforceRateLimit(request, resolved.tenant.id, 'qualification');
 
     const body = await readJson(request);
     const email = requireEmail(body, 'email');

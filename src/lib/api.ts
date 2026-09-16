@@ -6,6 +6,7 @@ import { tenantIsGated } from './billing-gate';
 import { BookingError } from './booking-service';
 import { CalendarUnavailableError } from './calendar';
 import { QualificationError } from './qualification';
+import { RateLimitError } from './rate-limit';
 import { resolveTenantBySlug, type ResolvedTenant } from './db';
 
 /** Standard JSON error body. */
@@ -58,6 +59,8 @@ export function handleError(error: unknown) {
   if (error instanceof AuthError) return fail(error.message, error.status);
   if (error instanceof BookingError) return fail(error.message, error.status);
   if (error instanceof QualificationError) return fail(error.message, 400);
+  // Written for the person on the other end to read — see RATE_LIMITS.
+  if (error instanceof RateLimitError) return fail(error.message, error.status);
 
   if (error instanceof CalendarUnavailableError) {
     console.error('[calendar] unavailable, refusing to serve slots:', error.message);

@@ -10,6 +10,7 @@ import {
   fail,
 } from '@/lib/api';
 import { createBooking } from '@/lib/booking-service';
+import { enforceRateLimit } from '@/lib/rate-limit';
 import type { QualificationResponseRow } from '@/lib/db/types';
 
 /**
@@ -34,6 +35,13 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     if (isResponse(resolved)) return resolved;
 
     const { tenant, scope } = resolved;
+
+    // Before the qualification check below, not after: a caller throwing
+    // invalid attempts at this endpoint is exactly who this is for, and
+    // they should spend their allowance doing it. Every booking here takes
+    // a real calendar slot and sends real mail (src/lib/booking-email.ts).
+    await enforceRateLimit(request, tenant.id, 'booking');
+
     const body = await readJson(request);
 
     const responseId = optionalString(body, 'responseId', { maxLength: 64 }) ?? null;

@@ -2,4 +2,5 @@
 // see the note in client.ts.
 export { TenantScope, tenantScope } from './scope';
 export { resolveTenantBySlug, resolveBookingByToken, type ResolvedTenant } from './tenants';
+export { consumeRateLimit } from './rate-limits';
 export * from './types';

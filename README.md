@@ -388,10 +388,22 @@ hierarchy the way the Roadmap below is.
   no clickjacking defence at all (only `/t/[slug]` did, deliberately, since
   that one has to be frameable) — now `X-Frame-Options: DENY` +
   `frame-ancestors 'none'`, verified not to collide with `/t/[slug]`'s own
-  per-tenant CSP header. Not yet done: a dedicated pass on rate-limiting /
-  booking-spam surfaces (noted, not fixed — a product decision on UX
-  trade-offs, not a quick patch) and the AI-provider integration beyond
+  per-tenant CSP header. Not yet done: the AI-provider integration beyond
   what src/lib/ai's existing error-non-leakage tests already cover.
+- ~~Rate limiting on the public booking surface~~ — done (migration 0019,
+  `src/lib/rate-limit.ts`). `POST .../bookings` and `POST .../qualify/start`
+  were the two endpoints where an anonymous caller could create rows and
+  spend real resources — a calendar slot and mail from the product's own
+  sending domain in one case, and rows that land in the tenant's own
+  completion-rate numbers in the other. Counted per (action, tenant, caller
+  IP) in Postgres rather than in memory, since serverless instances don't
+  share one; fixed window, fails open (a business that cannot take a booking
+  because a counter blinked is worse than an unthrottled window). Not an
+  authorization boundary — see `clientIp` on what a forwarded header is
+  worth. **Still open**: nothing yet defends against a distributed flood
+  from many IPs. A per-tenant ceiling would, but it would also let one
+  attacker lock a business out of its own booking page, so it wants a
+  real answer (a challenge on the way in) rather than a lower number.
 
 **Milestone 3 — commercial layer**
 - Stripe: checkout, webhooks, dunning, and wiring a real subscription into
