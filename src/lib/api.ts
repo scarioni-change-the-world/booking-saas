@@ -140,6 +140,39 @@ export function optionalNullableString(
   return value.trim();
 }
 
+/**
+ * Same shape as optionalNullableString, but for a value that ends up as an
+ * href a *different* person clicks — an outcome path's redirect_url is the
+ * only field like this today: it's tenant-authored, but the click happens in
+ * a disqualified prospect's browser, on this app's own origin (brief 2.2).
+ *
+ * Restricted to http:/https: for exactly the reason requireEmail rejects
+ * whitespace: a plain string field is otherwise a route straight to
+ * `javascript:` executing in that visitor's page, or any other scheme a
+ * browser is willing to act on (`data:`, `vbscript:`, ...). This is checked
+ * here rather than left to the browser to refuse — by the time it would,
+ * the value is already live on a tenant's booking page.
+ */
+export function optionalNullableUrl(
+  body: Record<string, unknown>,
+  key: string,
+  { maxLength = 2000 }: { maxLength?: number } = {},
+): string | null | undefined {
+  const value = optionalNullableString(body, key, { maxLength });
+  if (!value) return value;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new BookingError(`"${key}" must be a valid web address`, 400);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new BookingError(`"${key}" must start with http:// or https://`, 400);
+  }
+  return value;
+}
+
 /** A whole number within an inclusive range, e.g. a duration in minutes. */
 export function requireInt(
   body: Record<string, unknown>,

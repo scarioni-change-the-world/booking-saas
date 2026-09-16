@@ -365,16 +365,33 @@ hierarchy the way the Roadmap below is.
   layer too, not just the page: `POST /api/t/[slug]/bookings` no longer
   accepts a client-audience flag — see `src/lib/booking-service.ts` and
   `src/app/api/t/[slug]/client/[token]/single-session/route.ts`.
-- **Deep vulnerabilities search.** A dedicated security pass across the
-  whole app, not just the pending-diff reviews each feature already gets:
-  auth and session handling, RLS policy coverage (every table, not just the
-  ones touched recently), the token-is-the-credential surfaces (manage,
-  client, OAuth state) for anything weaker than the CSPRNG/HMAC baseline
-  already set, injection and input-validation gaps, secrets handling
-  (`APP_SECRET`, service-role key, SMTP/Anthropic credentials), dependency
-  vulnerabilities, and anything client-only-obscurity in the same shape the
-  unlisted client URL just turned out to be. Worth doing before real
-  customer data is on this beyond the single demo tenant.
+- ~~Deep vulnerabilities search~~ — a first pass done, covering: dependency
+  CVEs (`npm audit` — the safe fixes applied, the one remaining critical
+  needs a Next.js 15→16 major bump the app doesn't otherwise need yet, and
+  is low real-world risk here since nothing runs postcss over untrusted
+  input at request time); RLS coverage (all 18 tables enabled+forced,
+  though `service_role` — the only key this app ever uses server-side —
+  bypasses RLS by design, so the real boundary is `TenantScope`, confirmed
+  as the *only* way any route reaches the database — `.from(` never appears
+  outside `src/lib/db`); every admin/console/public route's auth chokepoint
+  (no gaps found); token/crypto (AES-256-GCM, HMAC-signed+TTL-bound OAuth
+  state, all already solid); mass assignment (every write is an explicit
+  field-by-field patch, never `...body`); secrets (nothing leaked into git
+  history or client bundles). Found and fixed three real gaps: a tenant's
+  `outcome_paths.redirect_url` accepted any scheme, including `javascript:`,
+  and rendered as an href in a disqualified *prospect's* browser
+  (`optionalNullableUrl` in `src/lib/api.ts` now restricts it to
+  http/https); `src/lib/ics.ts` escaped `\n` but not a bare `\r`, which a
+  lenient calendar client can read as its own line break — a way to splice
+  a fabricated property into a booking's own confirmation invite from a
+  prospect's submitted name; and `/admin/*`, `/console/*`, `/manage/*` had
+  no clickjacking defence at all (only `/t/[slug]` did, deliberately, since
+  that one has to be frameable) — now `X-Frame-Options: DENY` +
+  `frame-ancestors 'none'`, verified not to collide with `/t/[slug]`'s own
+  per-tenant CSP header. Not yet done: a dedicated pass on rate-limiting /
+  booking-spam surfaces (noted, not fixed — a product decision on UX
+  trade-offs, not a quick patch) and the AI-provider integration beyond
+  what src/lib/ai's existing error-non-leakage tests already cover.
 
 **Milestone 3 — commercial layer**
 - Stripe: checkout, webhooks, dunning, and wiring a real subscription into

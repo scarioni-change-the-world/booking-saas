@@ -34,9 +34,20 @@ function toIcsUtc(iso: string): string {
  * escaped, and a literal newline becomes the two-character sequence \n —
  * without this, a description containing either breaks the file for every
  * calendar client, not just some.
+ *
+ * Line endings are normalised to \n *first*, before that newline escaping —
+ * a bare \r (no paired \n) previously survived untouched into the output.
+ * RFC 5545 content lines are CRLF-terminated, and several real-world
+ * calendar parsers are lenient enough to treat a stray, unescaped \r as a
+ * line break on its own. Every text field here ultimately reaches a
+ * calendar client (SUMMARY, DESCRIPTION, and both CN parameters — one of
+ * which, ATTENDEE, is a prospect's own submitted name), so an unescaped \r
+ * was a way to inject a fabricated content line — a fake ATTENDEE or
+ * ORGANIZER, say — into a booking's own confirmation invite.
  */
 function escapeIcsText(value: string): string {
   return value
+    .replace(/\r\n|\r/g, '\n')
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')

@@ -75,6 +75,34 @@ describe('buildIcs', () => {
     expect(ics).toContain('DESCRIPTION:Line one\\nLine two');
   });
 
+  it('escapes a bare \\r the same as \\n, rather than leaving it able to break out of the content line', () => {
+    // No \n here — a lone \r survived unescaped before this was fixed,
+    // which some calendar clients are lenient enough to read as its own
+    // line break, e.g. splicing a fabricated ATTENDEE/ORGANIZER property
+    // into the file from a value that was only ever meant to be one
+    // person's name.
+    const ics = buildIcs({
+      uid: 'b1',
+      summary: 'X',
+      startsAt: '2027-01-15T09:00:00.000Z',
+      endsAt: '2027-01-15T09:30:00.000Z',
+      attendee: { name: 'Evil\rInjected', email: 'ana@example.com' },
+    });
+    expect(ics).not.toMatch(/\r(?!\n)/); // no CR anywhere except as part of \r\n
+    expect(ics).toContain('ATTENDEE;CN=Evil\\nInjected;ROLE=REQ-PARTICIPANT:mailto:ana@example.com');
+  });
+
+  it('treats a Windows-style \\r\\n the same as a plain \\n', () => {
+    const ics = buildIcs({
+      uid: 'b1',
+      summary: 'X',
+      description: 'Line one\r\nLine two',
+      startsAt: '2027-01-15T09:00:00.000Z',
+      endsAt: '2027-01-15T09:30:00.000Z',
+    });
+    expect(ics).toContain('DESCRIPTION:Line one\\nLine two');
+  });
+
   it('folds a line longer than 75 octets, with a leading space on the continuation', () => {
     const longSummary = 'S'.repeat(100);
     const ics = buildIcs({

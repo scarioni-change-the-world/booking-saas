@@ -1,4 +1,4 @@
-import { fail, handleError, ok, optionalNullableString, readJson } from '@/lib/api';
+import { fail, handleError, ok, optionalNullableString, optionalNullableUrl, readJson } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeOutcomePath } from '@/lib/admin-serializers';
 import type { OutcomePathRow } from '@/lib/db/types';
@@ -25,7 +25,9 @@ export async function PATCH(
     const message = optionalNullableString(body, 'message', { maxLength: 2000 });
     if (message !== undefined) patch.message = message ?? '';
 
-    const redirectUrl = optionalNullableString(body, 'redirectUrl', { maxLength: 2000 });
+    // http:/https: only — see optionalNullableUrl: this is a tenant-authored
+    // value, but it's rendered as an href in a *prospect's* browser.
+    const redirectUrl = optionalNullableUrl(body, 'redirectUrl', { maxLength: 2000 });
     if (redirectUrl !== undefined) patch.redirect_url = redirectUrl;
 
     const redirectLabel = optionalNullableString(body, 'redirectLabel', { maxLength: 200 });
