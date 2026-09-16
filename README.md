@@ -135,7 +135,7 @@ src/
 │   ├── manage/[token]/       # reschedule / cancel
 │   └── api/...
 ├── components/
-└── middleware.ts             # per-tenant frame-ancestors (§7.2)
+└── proxy.ts                  # per-tenant frame-ancestors (§7.2) — was middleware.ts before Next 16
 
 supabase/migrations/          # 0001 tenancy … 0005 RLS, 0007 grants
 tests/                        # Vitest — pure logic, no database
@@ -386,10 +386,10 @@ hierarchy the way the Roadmap below is.
   retyping. The one path that *is* automatic by construction: granting a
   package already requires a client record, so a purchase implies one.
 - ~~Deep vulnerabilities search~~ — a first pass done, covering: dependency
-  CVEs (`npm audit` — the safe fixes applied, the one remaining critical
-  needs a Next.js 15→16 major bump the app doesn't otherwise need yet, and
-  is low real-world risk here since nothing runs postcss over untrusted
-  input at request time); RLS coverage (all 18 tables enabled+forced,
+  CVEs (`npm audit` — all production CVEs now cleared; see the Next 16
+  upgrade below. What `npm audit` still reports is vitest/vite/esbuild,
+  which are devDependencies and never ship); RLS coverage (all 18 tables
+  enabled+forced,
   though `service_role` — the only key this app ever uses server-side —
   bypasses RLS by design, so the real boundary is `TenantScope`, confirmed
   as the *only* way any route reaches the database — `.from(` never appears
@@ -410,6 +410,34 @@ hierarchy the way the Roadmap below is.
   `frame-ancestors 'none'`, verified not to collide with `/t/[slug]`'s own
   per-tenant CSP header. Not yet done: the AI-provider integration beyond
   what src/lib/ai's existing error-non-leakage tests already cover.
+- ~~Next.js 15 → 16~~ — done, and the reason was security, not features:
+  `npm audit --omit=dev` went from 2 production vulnerabilities (1 high, 1
+  moderate, both a postcss chain bundled inside Next) to **0**. Everything
+  `npm audit` still reports is vitest/vite/esbuild — devDependencies that
+  never ship, and which want a separate vitest 5 bump.
+  The whole migration cost for this app was one rename: `middleware.ts` →
+  `proxy.ts`, plus the exported `middleware` function → `proxy` (Next 16
+  renamed the convention; identical behaviour). Nothing else moved, because
+  the app was already clear of 16's real breaking change — every `params`
+  was already awaited, and it never used `cookies()`/`headers()`/
+  `draftMode()`. Turbopack is now the bundler for `build` too, not just
+  `dev`, so `--turbopack` came off the dev script; compile time roughly
+  halved. `next lint` no longer exists as a CLI command, so that script
+  went — it had never worked anyway (there is still no ESLint config in
+  this repo; `typecheck` and `next build` are what actually check things).
+  **The one real consequence, and it is a deliberate trade**: `proxy` runs
+  on the `nodejs` runtime and, per Next's own upgrade guide, that "cannot be
+  configured" — the `edge` runtime is not supported there, and keeping it
+  would have meant staying on the deprecated `middleware` filename. So on
+  Vercel the per-tenant CSP lookup moves from an edge function to a
+  serverless one. Plausibly a wash or better here (the 60s in-process cache
+  survives longer in a warm lambda, and nothing in that file needed Edge),
+  but it is the one thing to measure if `/t/[slug]` ever feels slower to
+  first byte.
+  Useful discovery while doing this: Next ships its own version-accurate
+  docs inside the package, at `node_modules/next/dist/docs/` — including
+  the upgrade guide. Worth reading from there rather than the web, since
+  it always matches the installed version.
 - ~~Rate limiting on the public booking surface~~ — done (migration 0019,
   `src/lib/rate-limit.ts`). `POST .../bookings` and `POST .../qualify/start`
   were the two endpoints where an anonymous caller could create rows and

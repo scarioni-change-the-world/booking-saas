@@ -5,8 +5,12 @@ import { NextResponse, type NextRequest } from 'next/server';
  *
  * The reference implementation carried a hard-coded allowlist in vercel.json,
  * which cannot work once any number of tenants embed the widget on their own
- * sites. Each tenant registers its embed domains, and this middleware turns
- * those into the CSP for that tenant's pages.
+ * sites. Each tenant registers its embed domains, and this file turns those
+ * into the CSP for that tenant's pages.
+ *
+ * This was src/middleware.ts until Next.js 16, which renamed the convention
+ * to `proxy` — same request-interception hook, same job here, new name.
+ * Nothing about the policy below changed with it.
  *
  * A tenant with no registered domains gets `frame-ancestors 'none'` — the
  * widget still works when opened directly, but cannot be framed. Defaulting to
@@ -48,7 +52,7 @@ async function embedDomains(slug: string): Promise<string[]> {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const match = /^\/t\/([^/]+)/.exec(request.nextUrl.pathname);
   const response = NextResponse.next();
 

@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   reactStrictMode: true,
-  // Per-tenant frame-ancestors is applied in middleware.ts, driven by each
+  // Per-tenant frame-ancestors is applied in proxy.ts, driven by each
   // tenant's registered embed domains (brief 7.2). No global allowlist here.
   async headers() {
     return [
@@ -23,7 +23,7 @@ const config: NextConfig = {
       // /console, platform staff with cross-tenant reach) can still be
       // tricked into clicking a disguised control inside an invisible iframe
       // of their own real dashboard. Deliberately excludes /t/:path* — this
-      // matcher and that route's own middleware header must never overlap,
+      // matcher and that route's own proxy.ts header must never overlap,
       // since a browser intersects multiple Content-Security-Policy headers
       // rather than letting one override the other, and 'none' intersected
       // with anything is still 'none'.

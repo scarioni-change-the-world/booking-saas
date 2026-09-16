@@ -106,7 +106,7 @@ export function clientIp(request: Request): string {
  *
  * Fails **open**: if the counter itself is unreachable, the request is
  * allowed and the failure is logged loudly. This is the opposite of the
- * posture middleware.ts takes for frame-ancestors, and the difference is
+ * posture proxy.ts takes for frame-ancestors, and the difference is
  * what each failure costs. There, failing open leaves a real hole standing
  * for as long as the outage lasts. Here, it costs only throttling — while
  * failing closed would mean a business stops being able to take bookings at
