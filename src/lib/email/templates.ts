@@ -75,14 +75,22 @@ export interface RenderedTemplate {
  * version, not markup. The plain-text version skips escaping entirely: it
  * has no markup to break, so escaping it would just show literal "&amp;"s.
  *
- * `linkLine`, appended after the tenant's own body when given, is the one
- * piece of content this function adds on its own — see the module comment
- * above for why that line is never left to the template.
+ * `links`, appended after the tenant's own body when given, is the one piece
+ * of content this function adds on its own — see the module comment above for
+ * why those lines are never left to the template. It is a list rather than a
+ * single line because a confirmed booking can carry two: the video call to
+ * join, and the page to change or cancel on. They render in the order given,
+ * so the caller decides which matters more.
  */
+export interface TemplateLink {
+  label: string;
+  url: string;
+}
+
 export function renderTemplate(
   template: { subject: string; body: string },
   tokens: TemplateTokens,
-  linkLine?: { label: string; url: string },
+  links?: TemplateLink | TemplateLink[],
 ): RenderedTemplate {
   const subject = substitute(template.subject, tokens);
 
@@ -93,10 +101,17 @@ export function renderTemplate(
   const htmlBody = substitute(escapedBody, escapedTokens).replace(/\n/g, '<br>\n');
   const textBody = substitute(template.body, tokens);
 
-  const htmlFooter = linkLine
-    ? `<p style="margin-top:24px;"><a href="${escapeHtml(linkLine.url)}">${escapeHtml(linkLine.label)}</a></p>`
-    : '';
-  const textFooter = linkLine ? `\n\n${linkLine.label}: ${linkLine.url}` : '';
+  // A bare object is still accepted, because most callers have exactly one
+  // link and wrapping it would be noise at every call site.
+  const lines = links ? (Array.isArray(links) ? links : [links]) : [];
+
+  const htmlFooter = lines
+    .map(
+      (line) =>
+        `<p style="margin-top:24px;"><a href="${escapeHtml(line.url)}">${escapeHtml(line.label)}</a></p>`,
+    )
+    .join('');
+  const textFooter = lines.map((line) => `\n\n${line.label}: ${line.url}`).join('');
 
   return {
     subject,

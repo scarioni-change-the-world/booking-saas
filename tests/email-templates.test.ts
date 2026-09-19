@@ -40,6 +40,50 @@ describe('renderTemplate', () => {
     expect(result.text).toBe('Line one\nLine two');
   });
 
+  it('appends several links in the order given, so the video call leads', () => {
+    const result = renderTemplate({ subject: 'x', body: 'Body text' }, {}, [
+      { label: 'Join the video call', url: 'https://meet.example.com/abc' },
+      { label: 'Change or cancel', url: 'https://example.com/manage/xyz' },
+    ]);
+    expect(result.text).toContain('Join the video call: https://meet.example.com/abc');
+    expect(result.text).toContain('Change or cancel: https://example.com/manage/xyz');
+    expect(result.text.indexOf('Join the video call')).toBeLessThan(
+      result.text.indexOf('Change or cancel'),
+    );
+    expect(result.html.indexOf('meet.example.com')).toBeLessThan(
+      result.html.indexOf('example.com/manage'),
+    );
+  });
+
+  // A single link is still accepted unwrapped — most callers have exactly
+  // one, and making every one of them build an array would be noise.
+  it('accepts a bare link object as well as a list', () => {
+    const one = renderTemplate({ subject: 'x', body: 'b' }, {}, {
+      label: 'Only link',
+      url: 'https://example.com/a',
+    });
+    const listed = renderTemplate({ subject: 'x', body: 'b' }, {}, [
+      { label: 'Only link', url: 'https://example.com/a' },
+    ]);
+    expect(one.text).toBe(listed.text);
+    expect(one.html).toBe(listed.html);
+  });
+
+  it('appends nothing at all when the list is empty', () => {
+    const result = renderTemplate({ subject: 'x', body: 'Body text' }, {}, []);
+    expect(result.text).toBe('Body text');
+    expect(result.html).not.toContain('<a href');
+  });
+
+  it('escapes a link url and label, so neither can break out of the markup', () => {
+    const result = renderTemplate({ subject: 'x', body: 'b' }, {}, [
+      { label: '<b>Join</b>', url: 'https://example.com/?a="><script>' },
+    ]);
+    expect(result.html).not.toContain('<script>');
+    expect(result.html).not.toContain('<b>Join</b>');
+    expect(result.html).toContain('&lt;b&gt;Join&lt;/b&gt;');
+  });
+
   it('appends the manage link after the body when given, in both html and text', () => {
     const result = renderTemplate(
       { subject: 'x', body: 'Body text' },

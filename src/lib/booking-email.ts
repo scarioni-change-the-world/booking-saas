@@ -2,7 +2,7 @@ import { DateTime } from 'luxon';
 import { baseUrl } from './base-url';
 import { buildIcs } from './ics';
 import { emailProvider } from './email';
-import { renderTemplate, type TemplateTokens } from './email/templates';
+import { renderTemplate, type TemplateTokens, type TemplateLink } from './email/templates';
 import type { TenantScope } from './db';
 import type {
   BookingRow,
@@ -107,14 +107,26 @@ async function sendClientEmail(
     tenantName: tenant.name,
   };
 
+  // The video link is appended rather than left to the template for the same
+  // reason the manage link is: it only sometimes exists. A booking has one
+  // when the calendar provisioned a Meet room, and none when the tenant has
+  // no calendar connected or the session is in person — so a {{meetingLink}}
+  // sitting in the body renders as a dangling "Join here: " on every booking
+  // that has no room. Appending it means it appears exactly when there is
+  // something to join.
+  //
+  // Unless the tenant placed the token themselves, in which case they have
+  // decided where it goes and repeating it underneath would be noise.
+  const links: TemplateLink[] = [];
+  if (booking.meeting_url && !template.body.includes('{{meetingLink}}')) {
+    links.push({ label: 'Join the video call', url: booking.meeting_url });
+  }
+  if (options.includeManageLink) {
+    links.push({ label: 'Change or cancel your booking', url: manageUrl(booking.manage_token) });
+  }
+
   try {
-    const rendered = renderTemplate(
-      template,
-      tokens,
-      options.includeManageLink
-        ? { label: 'Change or cancel your booking', url: manageUrl(booking.manage_token) }
-        : undefined,
-    );
+    const rendered = renderTemplate(template, tokens, links);
 
     const attachments = options.includeIcs
       ? [

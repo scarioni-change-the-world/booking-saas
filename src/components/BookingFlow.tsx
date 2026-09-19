@@ -617,12 +617,23 @@ export default function BookingFlow({ slug }: Props) {
             </a>
           )}
 
+          {/* Said plainly, because the next thing anyone does after booking is
+              wonder whether they are supposed to write the time down. The
+              email carries the same details, a calendar invitation, the video
+              link when there is one, and the manage link — so naming it here
+              is a promise the confirmation email actually keeps. */}
+          <p style={{ marginTop: 18 }}>
+            We&apos;ve sent a confirmation to <strong>{email}</strong> with everything you
+            need{confirmed.meetingUrl ? ', including the video call link' : ''} — plus a
+            calendar invitation you can add in one tap.
+          </p>
+
           <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
-            Keep this link to reschedule or cancel:{' '}
+            Nothing arrived? Check your spam folder. You can also{' '}
             <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
-              manage your booking
-            </a>
-            .
+              reschedule or cancel
+            </a>{' '}
+            here — worth keeping this link.
           </p>
         </>
       )}
