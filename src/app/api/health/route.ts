@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveTenantBySlug } from '@/lib/db';
+import { schemaState, type SchemaState } from '@/lib/db/migrations';
 
 /**
  * Is this deployment configured, and can it reach its database?
@@ -100,12 +101,43 @@ export async function GET() {
     database = { reachable: false, error: (cause as Error).message.slice(0, 200) };
   }
 
+  // Is the database as far along as this code expects? There is no migration
+  // runner here — the SQL in supabase/migrations is applied by hand — so a
+  // deploy can land needing a migration nobody has run. The symptom is a
+  // generic 500 from whatever calls the missing thing, which says nothing;
+  // this names the files.
+  let schema: SchemaState;
+  if (database.reachable) {
+    try {
+      schema = await schemaState();
+    } catch (cause) {
+      console.error('[health] could not read schema state:', cause);
+      schema = {
+        applied: 0,
+        expected: 0,
+        pending: [],
+        error: (cause as Error).message.slice(0, 200),
+      };
+    }
+  } else {
+    // Asking would only produce a second copy of the same connection error.
+    schema = { applied: 0, expected: 0, pending: [], error: 'database unreachable' };
+  }
+
   const ready =
     config.supabaseUrl &&
     config.supabaseServiceRoleKey &&
     config.publicSupabaseUrl &&
     config.publicSupabaseAnonKey &&
-    database.reachable;
+    database.reachable &&
+    // A deployment running ahead of its database is not ready, even though
+    // most of it works. Most of it working is exactly what makes this kind of
+    // gap take an afternoon to find.
+    schema.pending.length === 0 &&
+    schema.error === null;
 
-  return NextResponse.json({ ready, deployment, config, database }, { status: ready ? 200 : 503 });
+  return NextResponse.json(
+    { ready, deployment, config, database, schema },
+    { status: ready ? 200 : 503 },
+  );
 }

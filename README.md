@@ -111,6 +111,49 @@ The seed creates a `demo-coaching` tenant at `/t/demo-coaching`, with a
 disqualifying "I can't afford this right now" option so both branches of the
 gate are reachable by hand.
 
+### Migrations are applied by hand, and the app knows it
+
+There is no migration runner in the deploy. The host builds and ships the
+application; the SQL in `supabase/migrations` is run separately, in order,
+against the database — in Supabase's editor, or with the CLI:
+
+```bash
+supabase db push
+```
+
+Nothing enforces that the two stay in step, so the application checks instead
+of trusting. From migration 0022 there is a `schema_migrations` table, and
+`/api/health` compares it against `EXPECTED_MIGRATIONS` in
+`src/lib/db/migrations.ts`:
+
+```json
+"schema": { "applied": 21, "expected": 22, "pending": ["0022_schema_migrations"] }
+```
+
+A deployment with anything pending reports `"ready": false` and answers 503 —
+because the failure it prevents is the quiet one. Code that calls something
+the database doesn't have raises an error `handleError` turns into the
+deliberately uninformative "Something went wrong", so the surface of the app
+looks fine and the cause is nowhere near the symptom. That cost an afternoon
+once, on 0021's `auth_user_id_by_email`.
+
+Two rules follow, both enforced by `tests/migrations.test.ts` rather than by
+memory:
+
+- **Every new migration ends by recording itself.**
+
+  ```sql
+  insert into schema_migrations (version) values ('0023_your_migration')
+  on conflict (version) do nothing;
+  ```
+
+  A file that skips this leaves health reporting a permanent false alarm,
+  which is worse than no alarm — a warning light nobody believes.
+
+- **Every new migration is added to `EXPECTED_MIGRATIONS`.** The list is
+  hand-maintained because a serverless bundle cannot read this directory at
+  runtime; the test reads it and fails on any drift.
+
 ---
 
 ## Layout
