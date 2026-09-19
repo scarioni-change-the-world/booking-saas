@@ -650,69 +650,68 @@ function QuestionRow({
     );
   }
 
+  /* A row rather than a card — see DataRow.tsx. Each question used to be a
+     bordered box whose height came from a vertical stack of three actions on
+     the right, so one line of content produced an almost empty rectangle and
+     a real questionnaire produced a page of them. */
   return (
-    <div className="card admin-row">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div className="data-row">
+      <div className="data-row-handle">
         <button
           type="button"
-          className="btn-link"
+          className="row-move"
           disabled={isFirst}
-          style={{ opacity: isFirst ? 0.3 : 1 }}
           onClick={() => onMove(q.id, 'up')}
-          aria-label="Move up"
+          aria-label={`Move "${q.prompt}" up`}
         >
           ↑
         </button>
         <button
           type="button"
-          className="btn-link"
+          className="row-move"
           disabled={isLast}
-          style={{ opacity: isLast ? 0.3 : 1 }}
           onClick={() => onMove(q.id, 'down')}
-          aria-label="Move down"
+          aria-label={`Move "${q.prompt}" down`}
         >
           ↓
         </button>
       </div>
 
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '1.05rem' }}>{q.prompt}</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>
-            {KIND_LABEL[q.kind]}
-            {q.required ? ' · required' : ''}
-          </span>
-        </div>
-
+      <div className="data-row-body">
+        <span className="data-row-title">{q.prompt}</span>
+        <span className="data-row-meta">
+          {KIND_LABEL[q.kind]}
+          {q.required ? ' · required' : ' · optional'}
+        </span>
         {q.options.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+          <span className="answer-chips">
             {q.options.map((opt) => (
+              /* Where each answer leads, said on the answer itself. The two
+                 tints are the only place a path shows as colour, and each
+                 carries a word as well — "opens the calendar" is legible to
+                 someone who cannot tell the tints apart. */
               <span
                 key={opt.label}
-                className="notice"
-                style={{
-                  padding: '4px 11px',
-                  margin: 0,
-                  background:
-                    opt.outcomePathType === 'meeting' ? 'var(--status-live-tint)' : 'var(--accent-tint)',
-                  color: opt.outcomePathType === 'meeting' ? 'var(--status-live-ink)' : 'var(--accent-ink)',
-                }}
+                className={`answer-chip${opt.outcomePathType === 'meeting' ? ' to-calendar' : ' to-resource'}`}
               >
                 {opt.label}
+                <span className="answer-chip-path">
+                  {opt.outcomePathType === 'meeting' ? 'opens the calendar' : 'another next step'}
+                </span>
               </span>
             ))}
-          </div>
+          </span>
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+      <div className="data-row-actions">
         <button type="button" className="btn-secondary" onClick={() => onEdit(q)}>
           Edit
         </button>
-        <button type="button" className="btn-link" onClick={() => onToggleRequired(q)}>
+        <button type="button" className="text-action" onClick={() => onToggleRequired(q)}>
           {q.required ? 'Make optional' : 'Make required'}
         </button>
-        <button type="button" className="btn-link" onClick={() => onRemove(q.id)}>
+        <button type="button" className="btn-destructive" onClick={() => onRemove(q.id)}>
           Remove
         </button>
       </div>
@@ -969,7 +968,7 @@ export default function ScreeningQuestionsPage() {
               </p>
             )}
 
-            <div className="admin-list" style={{ marginBottom: eventTypes.length > 1 ? 26 : 0 }}>
+            <div className="surface surface-flush" style={{ marginBottom: eventTypes.length > 1 ? 26 : 0 }}>
               {globalQuestions.map((q, i) => (
                 <QuestionRow
                   key={q.id}
@@ -1051,7 +1050,7 @@ export default function ScreeningQuestionsPage() {
                       </p>
                     )}
 
-                    <div className="admin-list">
+                    <div className="surface surface-flush">
                       {serviceQuestions.map((q, i) => (
                         <QuestionRow
                           key={q.id}

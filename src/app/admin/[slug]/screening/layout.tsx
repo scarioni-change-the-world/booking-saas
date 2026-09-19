@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import StepTabs from '@/components/admin/StepTabs';
+import { PageHeader } from '@/components/ui';
 
 const TABS = [
   { href: '', label: 'Questions' },
@@ -21,12 +22,16 @@ export default function ScreeningLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      <div className="admin-page-head" style={{ marginBottom: 14 }}>
-        <div>
-          <div className="admin-eyebrow">Intake</div>
-          <h1>How a stranger becomes a meeting</h1>
-        </div>
-      </div>
+      {/* "How a stranger becomes a meeting" was a good line in the wrong
+          room. A landing page gets to make an argument; a screen someone
+          opens on a Tuesday to add a question should say what it is. The
+          brief rules out marketing headlines inside routine workflows, and
+          the eyebrow now matches the sidebar, which says Enquiries. */}
+      <PageHeader
+        eyebrow="Enquiries"
+        title="What people answer before booking"
+        description="Write the questions, decide where each answer leads, and read what came back."
+      />
       <StepTabs base={`/admin/${slug}/screening`} tabs={TABS} />
       {children}
     </>
