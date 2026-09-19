@@ -1806,7 +1806,7 @@ button {
    hero. Same typeface, deliberately not the same voice — a workspace title
    names the screen, it does not make an argument. */
 .page-header h1 {
-  font-size: clamp(1.75rem, 2.6vw, 2.2rem);
+  font-size: clamp(2rem, 2.6vw, 2.4rem);
   line-height: 1.12;
   margin: 2px 0 0;
 }
@@ -2239,4 +2239,30 @@ button.text-action {
   .row-move {
     transition: none;
   }
+}
+
+/* A single line of context under a page header — the one fact the header
+   does not already carry. Not a second description. */
+.section-note {
+  margin: 0 0 16px;
+  max-width: 62ch;
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+
+/* Actions that belong to a section rather than to the page, kept on one
+   line so they read as a pair of choices rather than a stack of steps. */
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+/* The drafting assistant expands into a form in place. On one line it is a
+   button beside a link; opened, it is the section's subject and takes the
+   full width rather than sitting in a column beside a stray link. */
+.section-actions > form {
+  flex: 1 1 100%;
+  margin-bottom: 0;
 }

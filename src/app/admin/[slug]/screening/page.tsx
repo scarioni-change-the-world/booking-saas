@@ -379,7 +379,7 @@ function AiSetupCard({
 
   if (!open) {
     return (
-      <button type="button" className="btn-secondary" style={{ marginBottom: 18 }} onClick={() => setOpen(true)}>
+      <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>
         AI-assisted setup
       </button>
     );
@@ -895,18 +895,18 @@ export default function ScreeningQuestionsPage() {
   return (
     <div className="builder-split">
       <div>
-        <div className="admin-card-title" style={{ marginBottom: 6 }}>
-          Question builder
-        </div>
-        <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '0 0 6px', maxWidth: 560 }}>
-          Everyone answers the shared questions on one page before any times are shown. Which
-          answers send someone down a different path is set on the next step.
+        {/* The "Question builder" heading and its paragraph both went when the
+            page gained a header: the title says what the screen is and the
+            description says what you do here, so repeating it two inches
+            lower was the page explaining itself twice before showing you
+            anything. What survives is the one fact neither says — that
+            everyone sees these questions on one page, before any times — and
+            the two actions, grouped rather than stacked. */}
+        <p className="section-note">
+          Everyone answers these on one page, before any times are shown.
         </p>
-        <a href={`/admin/${slug}/sessions`} className="btn-link" style={{ display: 'inline-block', marginBottom: 18 }}>
-          See what's bookable →
-        </a>
 
-        <div>
+        <div className="section-actions">
           <AiSetupCard
             slug={slug}
             eventTypes={eventTypes}
@@ -915,6 +915,12 @@ export default function ScreeningQuestionsPage() {
               if (eventTypeId) setViewServiceId(eventTypeId);
             }}
           />
+          <a href={`/admin/${slug}/sessions`} className="text-action">
+            See what&apos;s bookable
+            <span aria-hidden="true" className="text-action-arrow">
+              →
+            </span>
+          </a>
         </div>
 
         {error && (
