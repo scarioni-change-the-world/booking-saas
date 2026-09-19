@@ -110,9 +110,33 @@
   --text: var(--ink);
   --danger: var(--status-broken-ink);
 
-  --radius-sm: 8px;
-  --radius: 11px;
-  --radius-lg: 14px;
+  /* Square, because the marketing site is square.
+   *
+   * The site the customer reads before they ever sign in has no rounded
+   * rectangle anywhere on it: buttons, cards, menus and image frames all
+   * meet at right angles, which is most of what makes it read as
+   * architectural rather than as another SaaS dashboard. Corner radius was
+   * the single largest thing making the app feel like a different product
+   * — the palette and both typefaces were already identical.
+   *
+   * Kept as three tokens rather than deleted so the decision stays in one
+   * place and is reversible. Genuine circles (the status dots, the toggle
+   * knob) and the switch track keep their own radii: those are shapes, not
+   * rounded rectangles, and squaring them would just look broken. */
+  --radius-sm: 0;
+  --radius: 0;
+  --radius-lg: 0;
+
+  /* The site's one elevation value. Wide, soft and barely there — the
+     brand's own instruction is flat or nearly flat surfaces. */
+  --shadow: 0 14px 40px rgba(32, 34, 33, 0.06);
+
+  /* The marketing site's one material: a limestone grain, almost entirely
+     washed out by a Soft White veil over it, so it reads as paper stock
+     rather than as a photograph. Used there on a single band; used here on
+     the sign-in screens only — see .signin-ground. */
+  --limestone: linear-gradient(rgba(252, 251, 248, 0.68), rgba(252, 251, 248, 0.68)),
+    url('/images/limestone-texture.webp');
 
   /* Per the brand guide's §7 Typography, the wordmark and the general
      headline system are deliberately two different weights of the same
@@ -320,13 +344,23 @@ textarea {
   color: inherit;
   background: var(--surface);
 }
+/* The marketing site's focus ring: Muted Ochre, 3px, held 4px clear of the
+   element. Deliberately the loudest thing on the page when it appears.
+ *
+ * Ochre rather than Mineral matters for a reason beyond matching. --accent
+ * is the one token a tenant may override, so a focus ring drawn in it could
+ * end up as whatever colour a business picked for their booking page —
+ * including one that vanishes against their own background. --emphasis is
+ * never tenant-owned, so this ring looks the same, and stays visible, on
+ * every tenant's page. */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 button:focus-visible,
+summary:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--emphasis);
+  outline-offset: 4px;
 }
 textarea {
   min-height: 92px;
@@ -376,8 +410,18 @@ textarea {
 /* Buttons                                                                  */
 /* ---------------------------------------------------------------------- */
 
+/* The site's button: a 48px slab with a real edge.
+ *
+ * Two changes carry most of the resemblance. The border is drawn rather
+ * than transparent — on the marketing site every button has a visible 1px
+ * edge in its own colour, which is what stops a dark button reading as a
+ * floating blob and ties it to the hairline rules elsewhere. And the label
+ * is 600 at .9rem rather than 500 at inherited size: smaller and firmer,
+ * so a button reads as a control rather than as a sentence. */
 button {
   font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   border-radius: var(--radius);
   border: 1px solid transparent;
@@ -392,16 +436,23 @@ button {
    filter this used before there was a real hover colour to swap to. */
 .btn-primary {
   background: var(--ink);
+  border-color: var(--ink);
   color: var(--accent-contrast);
-  font-weight: 500;
-  transition: background 0.15s;
+  /* The site's own timing — slow enough to read as a material change
+     rather than a flicker — and its one-pixel lift on hover. */
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 .btn-primary:hover {
   background: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 @media (prefers-reduced-motion: reduce) {
   .btn-primary {
     transition: none;
+  }
+  .btn-primary:hover {
+    transform: none;
   }
 }
 .btn-primary:disabled {
@@ -421,6 +472,38 @@ button {
   min-height: 0;
   color: var(--muted);
   text-decoration: underline;
+}
+
+/* The eyebrow: a short uppercase line in Mineral above a heading.
+ *
+ * The marketing site leans on this constantly — it is how a section says
+ * what it is without spending a headline on it. The app had the class name
+ * in a couple of places (the booking confirmation's date line) but never a
+ * shared definition, so every use invented its own size and spacing. This
+ * is the site's exact treatment. */
+/* The sign-in ground.
+ *
+ * Deliberately its own class rather than a rule on .widget: the public
+ * booking flow uses .widget too, and that surface belongs to whichever
+ * business a visitor is booking with — it carries their accent colour, and
+ * putting intro's own material under it would be this product talking over
+ * its customer. Signing in is the one moment the person is dealing with
+ * intro directly, and it is the screen they arrive at from the marketing
+ * site, so it is the one place the two should feel continuous. */
+.signin-ground {
+  min-height: 100svh;
+  background-color: var(--canvas);
+  background-image: var(--limestone);
+  background-size: auto, 760px auto;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .actions {
@@ -657,6 +740,10 @@ button {
   margin-bottom: 14px;
 }
 .hero .eyebrow {
+  /* Explicitly inherited: this eyebrow sits on the filled status surface
+     above, so it takes that panel's pale ink rather than the Mineral the
+     base .eyebrow rule sets for eyebrows on the page background. */
+  color: inherit;
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1211,7 +1298,7 @@ button {
 .logic-chip {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 100px;
+  border-radius: var(--radius);
   font-size: 0.78rem;
   margin: 2px 4px 2px 0;
 }
@@ -1238,7 +1325,7 @@ button {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
-  border-radius: 100px;
+  border-radius: var(--radius);
   padding: 6px 14px;
   font-size: 0.82rem;
   cursor: pointer;
@@ -1264,7 +1351,7 @@ button {
 }
 .response-status-pill {
   padding: 3px 11px;
-  border-radius: 100px;
+  border-radius: var(--radius);
   font-size: 0.78rem;
   font-weight: 600;
   white-space: nowrap;

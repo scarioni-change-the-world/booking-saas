@@ -47,46 +47,52 @@ export default function ConsoleLoginPage() {
   }
 
   return (
-    <main className="widget" style={{ paddingTop: 60 }}>
-      <div className="brand-row" style={{ justifyContent: 'center' }}>
-        <span className="admin-brand" style={{ fontSize: 28 }}>
-          intro <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
-        </span>
-      </div>
+    /* Same textured ground as the tenant sign-in — see globals.css. */
+    <div className="signin-ground">
+      <main className="widget" style={{ paddingTop: 88 }}>
+        <div className="brand-row" style={{ justifyContent: 'center' }}>
+          <span className="admin-brand" style={{ fontSize: 28 }}>
+            intro <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
+          </span>
+        </div>
+        <p className="eyebrow" style={{ textAlign: 'center', marginBottom: 26 }}>
+          Staff access
+        </p>
 
-      {error && (
-        <div className="notice notice-error" role="alert">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="notice notice-error" role="alert">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="btn-primary btn-full" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-    </main>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="btn-primary btn-full" disabled={busy}>
+            {busy ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+      </main>
+    </div>
   );
 }
