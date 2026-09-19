@@ -62,10 +62,13 @@ export async function GET() {
     appSecretLongEnough: (process.env.APP_SECRET ?? '').length >= 32,
     // Optional. Absent means a documented fallback, not a fault: no SMTP
     // logs mail to the console instead of sending, no Google means calendar
-    // sync is simply off, and no base URL falls back to the host's own.
+    // sync is simply off, no Anthropic key means the Questions tab's drafting
+    // assistant says so rather than offering an empty draft, and no base URL
+    // falls back to the host's own.
     publicBaseUrl: isSet(process.env.PUBLIC_BASE_URL),
     smtp: isSet(process.env.SMTP_HOST),
     google: isSet(process.env.GOOGLE_CLIENT_ID) && isSet(process.env.GOOGLE_CLIENT_SECRET),
+    anthropic: isSet(process.env.ANTHROPIC_API_KEY),
   };
 
   let database: { reachable: boolean; error: string | null };
