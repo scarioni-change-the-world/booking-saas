@@ -21,7 +21,13 @@ const STATUS_TONE: Record<Tenant['status'], { label: string; bg: string; fg: str
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-const EMPTY_FORM = { slug: '', name: '', timezone: 'America/New_York', ownerEmail: '' };
+/**
+ * Time zone starts empty rather than guessing New York. The real default is
+ * whatever zone this browser is in, which is only knowable on the client —
+ * filled in by the effect below, so the value here is never what anybody
+ * actually submits.
+ */
+const EMPTY_FORM = { slug: '', name: '', timezone: '', ownerEmail: '' };
 
 export default function ConsolePage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -31,6 +37,36 @@ export default function ConsolePage() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  // Every zone this browser knows, which is the same list the server
+  // validates against (requireTimezone in api.ts calls the identical
+  // Intl.supportedValuesOf). Reading it here rather than shipping a hardcoded
+  // list means the two can't drift apart, and it makes an invalid choice
+  // unreachable rather than merely rejected afterwards.
+  //
+  // Populated in an effect, not at module scope, for two reasons: this page
+  // is prerendered, so module scope would run in Node and bake the server's
+  // answer into the HTML; and the local zone differs between server and
+  // browser, which is a hydration mismatch. Empty until mounted, which the
+  // render below falls back to a plain text field for.
+  const [zones, setZones] = useState<string[]>([]);
+  const [localZone, setLocalZone] = useState('');
+
+  useEffect(() => {
+    let supported: string[] = [];
+    try {
+      supported = Intl.supportedValuesOf('timeZone');
+    } catch {
+      // Ancient browser. The text field still works, and the server still
+      // checks — worse to type in, impossible to get wrong silently.
+    }
+    setZones(supported);
+
+    const here = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+    setLocalZone(here);
+    // Only as a default: never overwrite something already typed.
+    setForm((current) => (current.timezone ? current : { ...current, timezone: here }));
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -59,7 +95,7 @@ export default function ConsolePage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(form),
       });
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM, timezone: localZone });
       setCreating(false);
       await load();
     } catch (cause) {
@@ -93,8 +129,9 @@ export default function ConsolePage() {
         <form className="card" onSubmit={submitCreate} style={{ marginBottom: 14 }}>
           <div className="admin-card-title">New business</div>
           <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-4px 0 16px' }}>
-            The owner gets an email from Supabase to set their password and sign in — nothing to send
-            yourself.
+            An owner who already has a login is added straight to this business. One who
+            doesn&apos;t gets an email from Supabase to set a password — either way, nothing
+            to send yourself.
           </p>
 
           <div className="field">
@@ -122,14 +159,33 @@ export default function ConsolePage() {
             </div>
             <div className="field">
               <label htmlFor="new-timezone">Time zone</label>
-              <input
-                id="new-timezone"
-                type="text"
-                required
-                placeholder="America/New_York"
-                value={form.timezone}
-                onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              />
+              {zones.length > 0 ? (
+                <select
+                  id="new-timezone"
+                  required
+                  value={form.timezone}
+                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                >
+                  {zones.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="new-timezone"
+                  type="text"
+                  required
+                  placeholder="Europe/Madrid"
+                  value={form.timezone}
+                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                />
+              )}
+              <p className="tz">
+                Every working hour and booking time is read in this zone.
+                {localZone && form.timezone === localZone ? " Yours, by default." : ''}
+              </p>
             </div>
           </div>
 
@@ -146,14 +202,14 @@ export default function ConsolePage() {
 
           <div className="actions">
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Creating…' : 'Create and invite owner'}
+              {saving ? 'Creating…' : 'Create business'}
             </button>
             <button
               type="button"
               className="btn-link"
               onClick={() => {
                 setCreating(false);
-                setForm(EMPTY_FORM);
+                setForm({ ...EMPTY_FORM, timezone: localZone });
               }}
             >
               Cancel
