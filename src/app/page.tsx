@@ -18,6 +18,11 @@
  *
  * So: no auth, no redirect, and copy that states plainly what the app does and
  * what it does with calendar data.
+ *
+ * The privacy-policy link at the bottom is part of that, not decoration:
+ * verification requires a policy reachable from the homepage, on this same
+ * domain. See src/app/privacy/page.tsx — which still has placeholders to
+ * fill in before any of this is submitted.
  */
 export default function HomePage() {
   return (
@@ -65,8 +70,9 @@ export default function HomePage() {
       </div>
 
       <p className="tz">
-        Questions about how your data is handled? Contact the address published
-        in the privacy policy.
+        Questions about how your data is handled? See the{' '}
+        <a href="/privacy">privacy policy</a>, which names the address to
+        write to.
       </p>
     </main>
   );

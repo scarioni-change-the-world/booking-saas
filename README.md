@@ -39,7 +39,7 @@ significantly since this line was last accurate — see the table below.
 | Booking write path, reschedule, cancel | Built |
 | Calendar provider interface | Built |
 | Google Calendar (busy, events, Meet, health) | Built — 20 tests, unverified against the live API |
-| Google OAuth connect / disconnect | Built — routes only, no dashboard UI |
+| Google OAuth connect / disconnect | Built — routes plus the Settings UI (connect, disconnect, live health status) |
 | Encrypted token storage | Built — AES-256-GCM, 12 tests |
 | Email provider interface | Built — console fallback + real SMTP provider |
 | Transactional email + templates | Built — confirmed/rescheduled/cancelled/owner notification/client invite, tenant-editable, .ics attached, admin retry on failure |
@@ -357,8 +357,19 @@ hierarchy the way the Roadmap below is.
   **Not done**: a public self-serve signup page — today a business is
   provisioned by hand — and the onboarding wizard, with questionnaire starter
   templates per vertical — a blank questionnaire is a bad first run (§7.3).
-- Admin dashboard, including the day grid and a calendar health panel that
-  actually calls the provider (§6.8).
+- Admin dashboard: the **day grid** is what's left here. The calendar health
+  panel this line used to pair it with is built — Settings shows connection
+  status from a live `freeBusy` call and surfaces the error text when a grant
+  has died (§6.8).
+- ~~A privacy policy~~ — done (`/privacy`, linked from the homepage). Written
+  from what the code actually does rather than from a template: the three
+  Google scopes and what each is for, the Limited Use disclosure verification
+  requires, the controller/processor split between us and a business using
+  intro, every subprocessor, and the fact that no client data ever reaches
+  the AI feature. **It still has placeholders** — legal entity, address,
+  contact address, jurisdiction, in the `OPERATOR` block at the top of the
+  file — and they render visibly on the page until filled in, deliberately.
+  Not a substitute for someone qualified reading it.
 - ~~Replace the unlisted client URL with a per-client token~~ — done. The
   plain, token-less `/t/[slug]/client` door is gone; every existing-client
   booking (a one-off session or redeeming a package) now goes through
