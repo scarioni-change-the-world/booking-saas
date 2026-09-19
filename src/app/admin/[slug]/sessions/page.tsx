@@ -234,6 +234,23 @@ export default function SessionsPage() {
                           Archived
                         </span>
                       )}
+                      {/* Both audience toggles start off, so a session created
+                          and saved without touching them is live, valid, and
+                          bookable by nobody — the public page just says there
+                          is nothing available, which reads as a fault in the
+                          page rather than a setting in here. Archived already
+                          earns a badge for the same outcome; this deserves one
+                          too. */}
+                      {type.active &&
+                        !type.availableToProspects &&
+                        !type.availableToExistingClients && (
+                          <span
+                            className="notice notice-error"
+                            style={{ padding: '2px 9px', marginLeft: 10 }}
+                          >
+                            Not offered to anyone
+                          </span>
+                        )}
                     </span>
                     <span className="service-row-meta">
                       {type.durationMinutes} min
