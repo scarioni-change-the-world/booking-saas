@@ -80,11 +80,16 @@ them.
 
 ## Getting started
 
+Node 22.12 or newer to develop — that is vitest 5's floor, and it is higher
+than the app's own. The `engines` field stays at the runtime floor (>=20.9,
+what Next 16 needs) because that is what a host reads to pick a Node version
+for the deployed app; only the test runner wants the newer one.
+
 ```bash
 npm install
 cp .env.example .env.local        # Supabase URL + service role key, and APP_SECRET
 openssl rand -base64 32           # -> APP_SECRET (required; encrypts stored tokens)
-npm run test                      # 86 unit tests, no database or network required
+npm run test                      # 192 unit tests, no database or network required
 npm run dev                       # Turbopack; first compile is seconds, not minutes
 ```
 
@@ -397,10 +402,9 @@ hierarchy the way the Roadmap below is.
   retyping. The one path that *is* automatic by construction: granting a
   package already requires a client record, so a purchase implies one.
 - ~~Deep vulnerabilities search~~ — a first pass done, covering: dependency
-  CVEs (`npm audit` — all production CVEs now cleared; see the Next 16
-  upgrade below. What `npm audit` still reports is vitest/vite/esbuild,
-  which are devDependencies and never ship); RLS coverage (all 18 tables
-  enabled+forced,
+  CVEs (`npm audit` now reports **zero**, production and dev alike — see the
+  Next 16 and vitest 5 entries below for how each half was cleared); RLS
+  coverage (all 18 tables enabled+forced,
   though `service_role` — the only key this app ever uses server-side —
   bypasses RLS by design, so the real boundary is `TenantScope`, confirmed
   as the *only* way any route reaches the database — `.from(` never appears
@@ -424,8 +428,9 @@ hierarchy the way the Roadmap below is.
 - ~~Next.js 15 → 16~~ — done, and the reason was security, not features:
   `npm audit --omit=dev` went from 2 production vulnerabilities (1 high, 1
   moderate, both a postcss chain bundled inside Next) to **0**. Everything
-  `npm audit` still reports is vitest/vite/esbuild — devDependencies that
-  never ship, and which want a separate vitest 5 bump.
+  `npm audit` still reported after that was vitest/vite/esbuild —
+  devDependencies that never ship, cleared separately by the vitest 5 bump
+  below.
   The whole migration cost for this app was one rename: `middleware.ts` →
   `proxy.ts`, plus the exported `middleware` function → `proxy` (Next 16
   renamed the convention; identical behaviour). Nothing else moved, because
@@ -449,6 +454,23 @@ hierarchy the way the Roadmap below is.
   docs inside the package, at `node_modules/next/dist/docs/` — including
   the upgrade guide. Worth reading from there rather than the web, since
   it always matches the installed version.
+- ~~vitest 2 → 5~~ — done, and it cost nothing: zero code changes, zero
+  config changes, the same 192 tests passing. That is the payoff for tests
+  that import `{ describe, it, expect, vi }` explicitly instead of relying
+  on globals, and for a `vitest.config.ts` that never grew beyond an
+  environment, an include glob and a path alias. `npm audit` now reports
+  zero vulnerabilities across the whole tree for the first time.
+  Two things to know. npm could not resolve the bump in place — vitest 5
+  peers on vite 6/7/8 while vitest 2 had pinned vite 5 — so it needs an
+  uninstall and a clean install rather than `--force`, which would have
+  accepted a broken tree. And vitest 5 requires Node >=22.12, which is
+  higher than the app's own >=20.9 runtime floor; `engines` deliberately
+  still states the runtime floor, since that is what a host reads to pick
+  a Node version for the deployed app. See Getting started.
+  Declined: vitest's own suggestion to set `isolate: false` for ~0.6s on a
+  7s suite. Several test files mock module-level state (nodemailer, global
+  `fetch`), and sharing workers across files trades a reliable suite for
+  half a second.
 - ~~Rate limiting on the public booking surface~~ — done (migration 0019,
   `src/lib/rate-limit.ts`). `POST .../bookings` and `POST .../qualify/start`
   were the two endpoints where an anonymous caller could create rows and
