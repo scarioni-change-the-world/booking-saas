@@ -1771,3 +1771,388 @@ button {
 .admin-field-row > .field {
   flex: 1;
 }
+
+/* ===========================================================================
+   Application component vocabulary
+   ---------------------------------------------------------------------------
+   The styles behind src/components/ui. Kept together at the end of this file
+   rather than scattered among the older page-specific rules, so the shared
+   layer is readable as one thing and the difference between "a primitive"
+   and "one screen's exception" stays visible.
+   ========================================================================= */
+
+/* --- Page and section identity ------------------------------------------ */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.page-header-identity {
+  min-width: 0;
+}
+/* The brief's application scale: 32-40px, against the marketing site's 72px
+   hero. Same typeface, deliberately not the same voice — a workspace title
+   names the screen, it does not make an argument. */
+.page-header h1 {
+  font-size: clamp(1.75rem, 2.6vw, 2.2rem);
+  line-height: 1.12;
+  margin: 2px 0 0;
+}
+.page-header-description {
+  margin: 10px 0 0;
+  max-width: 62ch;
+  color: var(--faint);
+  font-size: 0.95rem;
+}
+.page-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.section-header-title {
+  font-size: 1.35rem;
+  line-height: 1.2;
+  margin: 0;
+}
+.section-header-description {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+.section-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.surface-flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* --- Rows ---------------------------------------------------------------- */
+
+/* A row, not a card: divided rather than bordered, as tall as its content,
+   actions inline. See DataRow.tsx for the failure this replaces. */
+.data-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--soft-border);
+}
+.data-row:first-child {
+  border-top: none;
+}
+.data-row-handle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.data-row-lead {
+  flex: 0 0 auto;
+}
+.data-row-body {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.data-row-title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.data-row-meta {
+  color: var(--faint);
+  font-size: 0.88rem;
+}
+.data-row-trailing {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: 0.88rem;
+}
+.data-row-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  /* Stacked, but the actions stay on their own line rather than wrapping
+     mid-group — a table becoming a list, per the brief. */
+  .data-row {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
+  .data-row-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+.initials-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--pale-mineral);
+  color: var(--accent-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.answer-pair {
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 13px 16px;
+}
+.answer-pair + .answer-pair {
+  margin-top: 8px;
+}
+.answer-pair-question {
+  margin: 0 0 4px;
+  color: var(--faint);
+  font-size: 0.82rem;
+}
+.answer-pair-answer {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* --- Form -------------------------------------------------------------- */
+
+.field-description {
+  margin: 0 0 8px;
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+.field-error {
+  margin: 7px 0 0;
+  color: var(--status-broken-ink);
+  font-size: 0.85rem;
+}
+.field-input-error {
+  border-color: var(--status-broken);
+}
+
+/* The marketing site's live-demo control, to the pixel. Selection shows in
+   the border, the background and the input's own mark — never colour alone. */
+.choice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 54px;
+  padding: 13px 16px;
+  border: 1px solid #b7c2b9;
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.choice-card + .choice-card {
+  margin-top: 8px;
+}
+.choice-card.selected {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+}
+.choice-card.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.choice-card input {
+  margin: 2px 0 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex: 0 0 auto;
+}
+.choice-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.choice-card-label {
+  font-weight: 500;
+  color: var(--ink);
+}
+.choice-card-hint {
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice-card {
+    transition: none;
+  }
+}
+
+/* --- Status, statistics, emptiness -------------------------------------- */
+
+.status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.status-label-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.status-label-live .status-label-dot {
+  background: var(--status-live);
+}
+.status-label-attention .status-label-dot {
+  background: var(--status-attention);
+}
+.status-label-broken .status-label-dot {
+  background: var(--status-broken);
+}
+.status-label-info .status-label-dot {
+  background: var(--status-info);
+}
+.status-label-neutral .status-label-dot {
+  background: var(--ghost);
+}
+
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+.stat-block-value {
+  font-family: var(--font-heading);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.stat-block-label {
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+/* The one place Muted Ochre appears in a statistic — a single meaningful
+   comparison, not a second data series. */
+.stat-block-note {
+  margin-top: 4px;
+  color: var(--emphasis-ink);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.empty-state {
+  padding: 40px 24px;
+  text-align: center;
+}
+.empty-state-title {
+  font-size: 1.15rem;
+  margin: 0 0 8px;
+}
+.empty-state-description {
+  margin: 0 auto;
+  max-width: 46ch;
+  color: var(--faint);
+  font-size: 0.93rem;
+}
+.empty-state-action {
+  margin-top: 20px;
+}
+
+/* --- Text actions ------------------------------------------------------- */
+
+.text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent-ink);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  /* 44px of target without 44px of ink, so a text action in a row does not
+     push the row taller than its content needs. */
+  padding-block: 11px;
+}
+.text-action:hover {
+  color: var(--ink);
+}
+.text-action-arrow {
+  transition: transform 0.2s ease;
+}
+.text-action:hover .text-action-arrow {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-action-arrow {
+    transition: none;
+  }
+  .text-action:hover .text-action-arrow {
+    transform: none;
+  }
+}
+
+/* Destructive: a text action, never a filled slab beside the primary one.
+ *
+ * Graphite at rest and red on hover or focus, which is a deliberate choice
+ * and worth defending. Red at rest looked right on one row and wrong on a
+ * list of ten: every row shouting its most dangerous action turns the
+ * colour into wallpaper, and by the tenth "Remove" the reader has stopped
+ * seeing red at all. That is the failure mode the brief's "only when
+ * appropriate" is guarding against — a warning colour that appears
+ * constantly stops being a warning.
+ *
+ * It reddens the moment a pointer or keyboard lands on it, which is when
+ * the warning is actually needed. Anything genuinely irreversible should
+ * not be relying on colour for safety anyway: it wants a confirmation step,
+ * which is a different mechanism entirely. */
+.btn-destructive {
+  background: none;
+  border: none;
+  padding: 11px 0;
+  min-height: 0;
+  color: var(--faint);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+}
+.btn-destructive:hover,
+.btn-destructive:focus-visible {
+  color: var(--status-broken-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-destructive {
+    transition: none;
+  }
+}
