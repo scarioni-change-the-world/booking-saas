@@ -1,3 +1,4 @@
+import { baseUrl } from './base-url';
 import { emailProvider } from './email';
 import { renderTemplate } from './email/templates';
 import type { TenantScope } from './db';
@@ -19,7 +20,7 @@ import type { ClientRow, EmailStatus, TenantRow } from './db/types';
 
 /** The link itself — the whole point of the email. */
 export function clientBookingUrl(tenantSlug: string, accessToken: string): string {
-  const base = process.env.PUBLIC_BASE_URL ?? '';
+  const base = baseUrl();
   return `${base}/t/${encodeURIComponent(tenantSlug)}/client/${encodeURIComponent(accessToken)}`;
 }
 

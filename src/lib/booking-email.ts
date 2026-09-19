@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { baseUrl } from './base-url';
 import { buildIcs } from './ics';
 import { emailProvider } from './email';
 import { renderTemplate, type TemplateTokens } from './email/templates';
@@ -54,7 +55,7 @@ function formatDateTime(iso: string, zone: string): string {
 }
 
 function manageUrl(manageToken: string): string {
-  return `${process.env.PUBLIC_BASE_URL ?? ''}/manage/${manageToken}`;
+  return `${baseUrl()}/manage/${manageToken}`;
 }
 
 async function recordEmailStatus(

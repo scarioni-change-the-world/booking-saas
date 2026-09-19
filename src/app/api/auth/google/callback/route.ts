@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { exchangeCodeForTokens, fetchAccountEmail, GOOGLE_SCOPES } from '@/lib/calendar';
+import { baseUrl } from '@/lib/base-url';
 import { encryptSecret, verifyState } from '@/lib/crypto';
 import { tenantScope } from '@/lib/db';
 import type { CalendarConnectionRow } from '@/lib/db/types';
@@ -15,7 +16,7 @@ import type { CalendarConnectionRow } from '@/lib/db/types';
  */
 
 function settingsUrl(slug: string | null, params: Record<string, string>): string {
-  const base = process.env.PUBLIC_BASE_URL ?? '';
+  const base = baseUrl();
   const path = slug ? `/admin/${slug}/settings` : '/';
   const url = new URL(path, base || 'http://localhost:3000');
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
