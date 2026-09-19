@@ -1124,48 +1124,7 @@ button {
 /* Admin content pieces                                                    */
 /* ---------------------------------------------------------------------- */
 
-/* Overview's stat tiles. A UX pass on the sidebar carried through here:
-   the number is the whole point of a tile, so it gets the same headline
-   treatment as a page h1 — heading font, real weight, real size — instead
-   of reading as barely-bolder body text. tone-live/tone-attention add a
-   soft status tint on top of that for the two tiles that are a judgement
-   ("aligned" vs "other path"), not just a count — Upcoming/This week/
-   Completion rate stay neutral, because tinting all five would read as
-   alert soup instead of a bold moment. */
-.admin-tile-value {
-  font-family: var(--font-heading);
-  /* 700 (Bold), not heavier — Arial's real distinct faces are Regular and
-     Bold; anything past that has no matching face to render and either
-     fakes-bold or silently clamps back to 700 depending on the browser.
-     Arial Black is a genuinely different family (--font-wordmark), kept for
-     the wordmark alone per the brand guide. */
-  font-weight: 700;
-  font-size: 2.5rem;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-.admin-tile-label {
-  font-size: 11.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--faint);
-  margin-top: 9px;
-}
-.admin-tile.tone-live {
-  background: var(--status-live-tint);
-  border-color: color-mix(in srgb, var(--status-live) 30%, var(--border));
-}
-.admin-tile.tone-live .admin-tile-value {
-  color: var(--status-live-ink);
-}
-.admin-tile.tone-attention {
-  background: var(--status-attention-tint);
-  border-color: color-mix(in srgb, var(--status-attention) 40%, var(--border));
-}
-.admin-tile.tone-attention .admin-tile-value {
-  color: var(--status-attention-ink);
-}
+
 
 /* The next-up list's lead item — the actual answer to "what's next", so it
    gets one real headline moment; the rest of the list stays quiet under
@@ -2265,4 +2224,41 @@ button.text-action {
 .section-actions > form {
   flex: 1 1 100%;
   margin-bottom: 0;
+}
+
+/* --- Overview ------------------------------------------------------------ */
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+/* The period a figure covers, under its label rather than inside it, so the
+   label reads as a phrase instead of a phrase with a footnote attached. */
+.stat-block-period {
+  margin-top: 3px;
+  color: var(--ghost);
+  font-size: 0.75rem;
+}
+
+.calendar-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 30px;
+}
+
+/* Day over time, right-aligned, so a column of appointments lines up on the
+   part that differs rather than on the part that repeats. */
+.booking-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+.booking-when-time {
+  color: var(--ink);
+  font-weight: 600;
 }

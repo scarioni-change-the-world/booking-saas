@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import {
+  DataRow,
+  EmptyState,
+  InitialsMark,
+  SectionHeader,
+  StatusLabel,
+} from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 
 interface NextUpBooking {
@@ -42,22 +49,28 @@ const dayFormat = new Intl.DateTimeFormat(undefined, {
 });
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
-/** A count on its own is chrome; "aligned" vs "other path" is a judgement,
- * so only those two get a tone (a soft status tint) — see the CSS comment
- * on .admin-tile for why the other three tiles stay neutral. */
-function Tile({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  tone?: 'live' | 'attention';
-}) {
+/* Every figure now looks the same, which is the point.
+ *
+ * Two of these used to be filled tints — a green one for people who reached
+ * the calendar and an amber one for people who did not. It read as a score
+ * with a pass and a fail, and amber is this product's warning colour, so a
+ * business whose questions were working exactly as intended got a caution
+ * tile every time they opened the app. With nobody yet sent down the other
+ * path it was worse still: a warning about the number zero.
+ *
+ * Neither number is good or bad. Someone who found a more useful next step
+ * than a meeting is a success for everyone involved — that is the whole
+ * argument the product makes — and colouring it as a shortfall contradicts
+ * the screen it sits above.
+ *
+ * So: Mineral numeral, Graphite label, thin border, white. The brief's
+ * statistic exactly, and the judgement goes back to the person reading it. */
+function Stat({ label, value, note }: { label: string; value: number | string; note?: string }) {
   return (
-    <div className={`card admin-tile${tone ? ` tone-${tone}` : ''}`} style={{ flex: '1 1 140px' }}>
-      <div className="admin-tile-value">{value}</div>
-      <div className="admin-tile-label">{label}</div>
+    <div className="stat-block" style={{ flex: '1 1 150px' }}>
+      <span className="stat-block-value">{value}</span>
+      <span className="stat-block-label">{label}</span>
+      {note && <span className="stat-block-period">{note}</span>}
     </div>
   );
 }
@@ -116,72 +129,71 @@ export default function OverviewPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-            <Tile label="Upcoming" value={data.upcomingCount} />
-            <Tile label="This week" value={data.thisWeekCount} />
-            <Tile
-              label="Completion rate · 30 days"
+          {/* Labels in the words a person would use. "Completion rate" and
+              "aligned" are report vocabulary; what they mean is how many
+              people finished the questions and where those answers sent
+              them. The period moves out of the label into its own line, so
+              the label is a phrase rather than a phrase with a footnote
+              stapled on. */}
+          <div className="stat-row">
+            <Stat label="Upcoming" value={data.upcomingCount} />
+            <Stat label="This week" value={data.thisWeekCount} />
+            <Stat
+              label="Finished the questions"
               value={completionRate(data.last30Days.started, data.last30Days.completed)}
+              note="Last 30 days"
             />
-            <Tile label="Aligned · 30 days" value={data.last30Days.meeting} tone="live" />
-            <Tile label="Other path · 30 days" value={data.last30Days.other} tone="attention" />
+            <Stat label="Went on to book" value={data.last30Days.meeting} note="Last 30 days" />
+            <Stat label="Sent somewhere else" value={data.last30Days.other} note="Last 30 days" />
           </div>
 
-          <div className="card" style={{ marginBottom: 14 }}>
-            <div className="admin-card-title">Google Calendar</div>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
+          {/* One sentence does not need a panel with a heading repeating the
+              first two words of it. A status line with a dot says the same
+              thing in a ninth of the height, and links to the place that
+              fixes it rather than naming it. */}
+          <p className="calendar-status">
+            <StatusLabel tone={data.calendarStatus === 'active' ? 'live' : 'attention'}>
               {CALENDAR_COPY[data.calendarStatus]}
-              {data.calendarStatus !== 'active' && ' — manage this from Settings.'}
-            </p>
-          </div>
+            </StatusLabel>
+            {data.calendarStatus !== 'active' && (
+              <>
+                {' '}
+                <a className="text-action" href={`/admin/${slug}/settings`}>
+                  Connect it in Settings
+                </a>
+              </>
+            )}
+          </p>
 
-          <div className="card">
-            <div className="admin-card-title">Next up</div>
+          <SectionHeader title="Next up" />
+          <section className="surface surface-flush">
             {data.nextUp.length === 0 && (
-              <p className="notice notice-muted" style={{ margin: 0 }}>
-                Nothing on the calendar yet.
-              </p>
+              <EmptyState
+                title="Nothing booked yet"
+                description="Appointments appear here as soon as someone picks a time."
+              />
             )}
-            {data.nextUp.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {data.nextUp.map((b, i) => {
-                  const lead = i === 0;
-                  return (
-                    <div
-                      key={b.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'baseline',
-                        gap: 12,
-                        paddingBottom: i === data.nextUp.length - 1 ? 0 : 12,
-                        borderBottom: i === data.nextUp.length - 1 ? 'none' : '1px solid var(--border)',
-                      }}
-                    >
-                      <div>
-                        <div className={lead ? 'admin-next-up-lead-name' : undefined} style={lead ? undefined : { fontSize: '0.95rem' }}>
-                          {b.name}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>{b.eventTypeName}</div>
-                      </div>
-                      {lead ? (
-                        <div className="admin-next-up-time-chip">
-                          <span>{dayFormat.format(new Date(b.startsAt))}</span>
-                          <span>{timeFormat.format(new Date(b.startsAt))}</span>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--muted)', textAlign: 'right' }}>
-                          {dayFormat.format(new Date(b.startsAt))}
-                          <br />
-                          {timeFormat.format(new Date(b.startsAt))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+            {data.nextUp.map((b) => (
+              /* Every appointment reads the same. The first one used to be
+                 bigger, with its time in a filled chip, which made a quiet
+                 week look like a page with one important thing and some
+                 leftovers. The order already says which is next. */
+              <DataRow
+                key={b.id}
+                lead={<InitialsMark name={b.name} />}
+                title={b.name}
+                meta={b.eventTypeName}
+                trailing={
+                  <span className="booking-when">
+                    <span>{dayFormat.format(new Date(b.startsAt))}</span>
+                    <span className="booking-when-time">
+                      {timeFormat.format(new Date(b.startsAt))}
+                    </span>
+                  </span>
+                }
+              />
+            ))}
+          </section>
         </>
       )}
     </>

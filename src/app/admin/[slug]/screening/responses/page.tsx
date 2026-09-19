@@ -125,22 +125,27 @@ export default function ResponsesPage() {
 
       {!loading && funnel && (
         <>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
-            <div className="card admin-tile" style={{ flex: '1 1 130px' }}>
-              <div className="admin-tile-value">{funnel.started}</div>
-              <div className="admin-tile-label">Started</div>
+          {/* Same four figures, told plainly and without a verdict attached.
+              "Aligned" in a green tile and "Other path" in an amber one
+              framed one outcome as the good one and the other as a problem,
+              which is the opposite of what this product argues: a person
+              who found a better next step than a meeting was helped. */}
+          <div className="stat-row">
+            <div className="stat-block" style={{ flex: '1 1 140px' }}>
+              <span className="stat-block-value">{funnel.started}</span>
+              <span className="stat-block-label">Started answering</span>
             </div>
-            <div className="card admin-tile tone-live" style={{ flex: '1 1 130px' }}>
-              <div className="admin-tile-value">{funnel.meeting}</div>
-              <div className="admin-tile-label">Aligned</div>
+            <div className="stat-block" style={{ flex: '1 1 140px' }}>
+              <span className="stat-block-value">{funnel.meeting}</span>
+              <span className="stat-block-label">Went on to book</span>
             </div>
-            <div className="card admin-tile tone-attention" style={{ flex: '1 1 130px' }}>
-              <div className="admin-tile-value">{funnel.other}</div>
-              <div className="admin-tile-label">Other path</div>
+            <div className="stat-block" style={{ flex: '1 1 140px' }}>
+              <span className="stat-block-value">{funnel.other}</span>
+              <span className="stat-block-label">Sent somewhere else</span>
             </div>
-            <div className="card admin-tile" style={{ flex: '1 1 130px' }}>
-              <div className="admin-tile-value">{inProgress}</div>
-              <div className="admin-tile-label">In progress</div>
+            <div className="stat-block" style={{ flex: '1 1 140px' }}>
+              <span className="stat-block-value">{inProgress}</span>
+              <span className="stat-block-label">Still answering</span>
             </div>
           </div>
 
