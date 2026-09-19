@@ -101,6 +101,17 @@
   --status-broken-tint: color-mix(in srgb, var(--status-broken) 20%, var(--surface));
   --status-broken-ink: color-mix(in srgb, var(--status-broken) 80%, black);
 
+  /* Working-surface tokens from the redesign brief. The palette above is
+     the brand kit; these are the shades the product needs on top of it —
+     the canvas a workspace sits on, the tint a selected thing takes, and
+     two border weights, since "the edge of a panel" and "the edge of a row
+     inside it" should not be the same line. */
+  --app-canvas: #f7f6f2; /* between Warm Chalk and Soft White */
+  --pale-mineral: #e5ebe6; /* icon holders, client initials, active nav */
+  --selected-mineral: #edf1ed; /* a chosen answer or option */
+  --strong-border: #bfc8c1; /* the edge of a primary product surface */
+  --soft-border: #d2d6d1; /* the edge of a row or field inside one */
+
   --status-info: #2f6fae; /* Info, per the brand guide */
   --status-info-tint: color-mix(in srgb, var(--status-info) 20%, var(--surface));
   --status-info-ink: color-mix(in srgb, var(--status-info) 78%, black);
@@ -110,26 +121,31 @@
   --text: var(--ink);
   --danger: var(--status-broken-ink);
 
-  /* Square, because the marketing site is square.
+  /* Radius follows the product, not the marketing frame.
    *
-   * The site the customer reads before they ever sign in has no rounded
-   * rectangle anywhere on it: buttons, cards, menus and image frames all
-   * meet at right angles, which is most of what makes it read as
-   * architectural rather than as another SaaS dashboard. Corner radius was
-   * the single largest thing making the app feel like a different product
-   * — the palette and both typefaces were already identical.
+   * These were briefly zero, matching the marketing site's own chrome,
+   * which has no rounded rectangle anywhere on it. The redesign brief
+   * corrects that: the reference is not the site's chrome but the product
+   * shown *inside* its dashboard slides and live demo, and that product is
+   * rounded. The distinction is real and worth keeping straight — an
+   * editorial page and a workspace someone uses for an hour a day are
+   * allowed to differ, and the slides are the closest thing to a picture of
+   * what this app is supposed to be.
    *
-   * Kept as three tokens rather than deleted so the decision stays in one
-   * place and is reversible. Genuine circles (the status dots, the toggle
-   * knob) and the switch track keep their own radii: those are shapes, not
-   * rounded rectangles, and squaring them would just look broken. */
-  --radius-sm: 0;
-  --radius: 0;
-  --radius-lg: 0;
+   * 12px is a primary product surface: a panel that sits on the canvas.
+   * 7px is everything inside one — rows, answers, fields, choices, stats.
+   * Circles and the toggle track keep their own radii. */
+  --radius-sm: 7px;
+  --radius: 7px;
+  --radius-lg: 12px;
+  --radius-surface: 12px;
 
   /* The site's one elevation value. Wide, soft and barely there — the
      brand's own instruction is flat or nearly flat surfaces. */
   --shadow: 0 14px 40px rgba(32, 34, 33, 0.06);
+  /* A primary product surface barely lifts off the canvas — enough to read
+     as a distinct plane, never enough to read as a floating card. */
+  --shadow-surface: 0 12px 34px rgba(32, 34, 33, 0.06);
 
   /* The marketing site's one material: a limestone grain, almost entirely
      washed out by a Soft White veil over it, so it reads as paper stock
@@ -434,25 +450,32 @@ button {
    header). Hover swaps to Soft Mineral outright, per the kit's own hover
    spec (background/border-color: #566B68), rather than the brightness
    filter this used before there was a real hover colour to swap to. */
+/* Mineral at rest, Ink on hover.
+ *
+ * This is the reverse of what it was, and the reversal is deliberate: the
+ * comment that used to sit here cited the brand kit's "Primary dark button"
+ * — Ink filled, Mineral on hover — and the redesign brief specifies the
+ * opposite. The brief wins because it is describing this product rather
+ * than the marketing page: in a workspace, Soft Mineral is the functional
+ * colour that carries navigation, selection and action, so the button a
+ * user reaches for should be in it. Ink on hover then reads as the control
+ * committing rather than as a different colour arriving.
+ *
+ * Worth knowing the kit says otherwise, if that ever needs settling. */
 .btn-primary {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--accent-contrast);
-  /* The site's own timing — slow enough to read as a material change
-     rather than a flicker — and its one-pixel lift on hover. */
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
-}
-.btn-primary:hover {
   background: var(--accent);
   border-color: var(--accent);
-  transform: translateY(-1px);
+  color: var(--accent-contrast);
+  padding: 12px 22px;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.btn-primary:hover {
+  background: var(--ink);
+  border-color: var(--ink);
 }
 @media (prefers-reduced-motion: reduce) {
   .btn-primary {
     transition: none;
-  }
-  .btn-primary:hover {
-    transform: none;
   }
 }
 .btn-primary:disabled {
@@ -462,8 +485,18 @@ button {
 }
 .btn-secondary {
   background: var(--surface);
-  border-color: var(--border);
+  border-color: var(--soft-border);
   color: var(--ink);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-secondary {
+    transition: none;
+  }
 }
 .btn-link {
   background: none;
@@ -720,8 +753,23 @@ button {
 /* Cards, hero, type picker, notices                                       */
 /* ---------------------------------------------------------------------- */
 
+/* A primary product surface: a panel sitting on the canvas.
+ *
+ * Heavier border, larger radius and the one shadow in the system — barely
+ * enough to read as a separate plane. Reach for this for the thing a page
+ * is about, not for every piece of information on it. */
+.surface {
+  border: 1px solid var(--strong-border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  box-shadow: var(--shadow-surface);
+  padding: 22px;
+}
+/* Everything inside a surface: rows, answers, fields, stats, choices.
+ * Lighter border, smaller radius, no shadow — so a card inside a panel
+ * reads as part of it rather than as a second floating thing. */
 .card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--soft-border);
   border-radius: var(--radius);
   padding: 18px;
   background: var(--surface);
@@ -859,10 +907,14 @@ button {
   min-height: 100vh;
 }
 
+/* Warm Chalk column, Mist divider, lighter canvas beside it — the brief's
+   shell exactly. The sidebar used to be a deeper beige carrying the
+   boundary by weight; now the boundary is the divider's job, which is what
+   lets the chrome recede. */
 .admin-side {
   width: 236px;
   flex: 0 0 auto;
-  background: var(--side);
+  background: var(--canvas);
   border-right: 1px solid var(--border);
   padding: 26px 18px;
   display: flex;
@@ -937,29 +989,31 @@ button {
   color: var(--ink);
   background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
-/* A solid fill, not just a lighter square — the sidebar is the one place in
-   the whole admin chrome that's visible on every single screen, so "where
-   you are" earns a real, bold accent moment rather than staying entirely
-   neutral the way the guide asks routine screens to (brief 10's "quieter
-   than the marketing brand" is about not flooding every page with colour,
-   not about having none at all). This is the same move .hero already makes
-   on the booking-confirmation screen — brand colour fills one deliberate
-   surface, not the whole canvas — applied to persistent nav instead of a
-   one-off moment. Declared after :hover so equal-specificity ties resolve
-   in the active item's favour when it's also being hovered. */
+/* Where you are, said quietly.
+ *
+ * This was a solid Mineral block with a white label and an Ochre badge —
+ * the loudest element on every screen in the app, on a surface the user
+ * looks past rather than at. The redesign brief rules that out directly
+ * ("do not use large coloured navigation blocks") and it is right: a
+ * workspace should put its emphasis on the work, and a filled block in the
+ * chrome competes with the panel the person actually came to read.
+ *
+ * Pale Mineral tint, Ink label, Mineral badge. Still unambiguous — it is
+ * the only tinted row in the column — without being the brightest thing in
+ * the window. Declared after :hover so a tie resolves in its favour when
+ * the active item is also hovered.
+ *
+ * Weight rather than colour carries the state as well, which is what keeps
+ * it legible for anyone who cannot rely on the tint. */
 .admin-nav-item.active {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-family: var(--font-heading);
-  font-size: 14.5px;
-  font-weight: 700;
+  background: var(--pale-mineral);
+  color: var(--ink);
+  font-weight: 600;
 }
 .admin-nav-item.active .admin-nav-badge {
-  width: 24px;
-  height: 24px;
-  background: var(--emphasis);
-  border-color: var(--emphasis);
-  color: var(--emphasis-contrast);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-nav-item,
@@ -976,10 +1030,19 @@ button {
   line-height: 1.6;
 }
 
+/* The working canvas: warm, but a step lighter than the sidebar beside it,
+   so the column reads as chrome and this reads as the page. Padding is the
+   brief's 32-48px desktop band, on an 8px grid. */
 .admin-main {
   flex: 1;
   min-width: 0;
-  padding: 34px 40px 60px;
+  background: var(--app-canvas);
+  padding: 40px 40px 64px;
+}
+@media (max-width: 860px) {
+  .admin-main {
+    padding: 24px 20px 48px;
+  }
 }
 .admin-page-head {
   display: flex;

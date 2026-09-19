@@ -34,13 +34,28 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  * solid on the active one, a stronger "where am I" job than a tinted icon
  * ever did.
  */
+/* Labels follow the redesign brief's vocabulary — the words a service
+ * professional would use, not the ones the schema happens to use. Routes are
+ * untouched; only what the person reads changed.
+ *
+ *   Meetings -> Bookings   the brief's word for the thing itself
+ *   Intake   -> Enquiries  "intake" is a form someone fills in at a clinic
+ *   Sessions -> Services   what a business sells, not what the table is called
+ *
+ * Two of the brief's suggested destinations are deliberately absent.
+ * "Messages" has no page behind it — email templates live inside Settings,
+ * and inventing a nav item for a place that does not exist is the one thing
+ * the brief tells us not to do. And "Calendar" stays "Availability", because
+ * that page sets which hours a business works; it is not a calendar view,
+ * and calling it one would send people there looking for their week. The
+ * brief's own preferred-word list has "availability" in it. */
 const NAV = [
   { href: 'overview', label: 'Overview' },
-  { href: 'bookings', label: 'Meetings' },
+  { href: 'bookings', label: 'Bookings' },
   { href: 'clients', label: 'Clients' },
   { href: 'availability', label: 'Availability' },
-  { href: 'screening', label: 'Intake' },
-  { href: 'sessions', label: 'Sessions', divider: true },
+  { href: 'screening', label: 'Enquiries' },
+  { href: 'sessions', label: 'Services', divider: true },
   { href: 'settings', label: 'Settings' },
 ];
 
