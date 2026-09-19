@@ -9,12 +9,58 @@ import type { OutcomePathType, QuestionKind } from '../db/types';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
-/** A structured-output task, not a conversation — the current general-
- * purpose model is the right size for it. Kept as a named constant so
- * moving to a newer model id is a one-line change, same spirit as this
- * codebase's other provider-config constants. */
-const MODEL = 'claude-sonnet-5';
-const MAX_TOKENS = 2000;
+
+/**
+ * The questions this drafts are the product. Everything else here — the
+ * calendar, the emails, the dashboard — exists in a dozen other booking
+ * tools; the screening in front of the calendar is the reason this one is
+ * worth using. So this is the one call in the codebase where the stronger
+ * model earns its price, and it is judgment work rather than transcription:
+ * deciding what is actually worth asking a stranger on a phone, in what
+ * order, to learn whether a meeting helps them.
+ *
+ * Per draft that is roughly 6-10 cents against Sonnet's 2, bounded by the
+ * 20-per-month ceiling in usage.ts — a couple of pounds a month per tenant
+ * at the absolute cap, for the part of the product nothing else replaces.
+ */
+const MODEL = 'claude-opus-5';
+
+/**
+ * Covers the model's reasoning *and* the draft it returns — one budget for
+ * both, not just the answer.
+ *
+ * This matters more than the number looks. Opus 5 thinks by default (unlike
+ * the model this replaced, where omitting the thinking parameter meant no
+ * thinking at all), and those tokens come out of the same allowance. The
+ * 2000 that comfortably held a Sonnet draft would be spent reasoning before
+ * a single question was written, and the reply would arrive truncated — with
+ * no tool_use block in it, which this code reports as "did not return a
+ * usable draft". A confusing way to discover a budget.
+ *
+ * Generous rather than tight on purpose: it is a ceiling, not a target, and
+ * nothing is billed for the headroom. A draft that finishes in 3000 tokens
+ * costs the same whether this says 4000 or 8000.
+ */
+const MAX_TOKENS = 8000;
+
+/**
+ * Opus 5's safety classifiers can decline a request outright. That arrives
+ * as a perfectly ordinary HTTP 200 carrying stop_reason 'refusal' — not an
+ * error status — so nothing below would have caught it except by noticing
+ * the draft was missing.
+ *
+ * 'default' lets Anthropic re-run a declined request on a suitable model
+ * server-side, chosen by why it was declined, rather than handing back the
+ * refusal. Preferred over naming a substitute ourselves: the right one
+ * depends on the refusal's category, and pinning a model means owning a
+ * migration when that model is eventually retired.
+ *
+ * A tenant describing their own business is not likely to trip a classifier.
+ * But the failure it prevents is one an admin cannot act on — the assistant
+ * simply declines to help, for reasons the interface cannot explain — and
+ * the cost of carrying it is one header.
+ */
+const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
 /**
  * The philosophy this prompt has to hold onto, straight from
@@ -192,13 +238,21 @@ export class AnthropicAiProvider implements AiProvider {
           'content-type': 'application/json',
           'x-api-key': this.apiKey,
           'anthropic-version': API_VERSION,
+          'anthropic-beta': FALLBACK_BETA,
         },
         body: JSON.stringify({
           model: MODEL,
           max_tokens: MAX_TOKENS,
+          fallbacks: 'default',
           system: SYSTEM_PROMPT,
           messages: [{ role: 'user', content: `${contextLine}${input.description}` }],
           tools: [DRAFT_TOOL],
+          // Thinking is left at the model's own default rather than turned
+          // off. Disabling it is the documented way to get a tool call
+          // written into the visible text instead of a tool_use block — the
+          // request succeeds, the draft is nowhere, and the code below
+          // reports it as unusable. The reasoning is also the thing being
+          // paid for here.
           tool_choice: { type: 'tool', name: DRAFT_TOOL.name },
         }),
       });
@@ -222,11 +276,32 @@ export class AnthropicAiProvider implements AiProvider {
 
     const data = (await response.json()) as {
       content?: Array<{ type: string; name?: string; input?: unknown }>;
+      stop_reason?: string;
     };
+
+    // Checked before the content is read, because a refusal is a 200 with no
+    // draft in it — indistinguishable, from here, from any other empty reply.
+    // Only reachable if the fallback above also declined; worth saying so
+    // plainly rather than blaming the assistant for returning nothing.
+    if (data.stop_reason === 'refusal') {
+      throw new AiUnavailableError(
+        'The AI assistant declined to draft questions for this description. ' +
+          'Rephrasing it usually helps — or write the questions yourself; ' +
+          'nothing here depends on the assistant.',
+        422,
+      );
+    }
+
     const toolUse = (data.content ?? []).find(
       (block) => block.type === 'tool_use' && block.name === DRAFT_TOOL.name,
     );
     if (!toolUse) {
+      // The other way to land here is a draft cut off mid-flight: a reply
+      // that hit MAX_TOKENS before the tool call was complete carries no
+      // usable block either. See the note on MAX_TOKENS above.
+      if (data.stop_reason === 'max_tokens') {
+        console.error('[ai:anthropic] draft truncated — MAX_TOKENS reached before a tool call');
+      }
       throw new AiUnavailableError('The AI assistant did not return a usable draft.', 502);
     }
 

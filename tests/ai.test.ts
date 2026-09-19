@@ -6,13 +6,13 @@ import { AiUnavailableError } from '@/lib/ai/provider';
  * request recorded, so a test can both drive the provider and assert on
  * what it actually sent. */
 function mockFetch(responses: Array<{ status?: number; json?: unknown; text?: string }>) {
-  const calls: Array<{ url: string; body: unknown }> = [];
+  const calls: Array<{ url: string; body: unknown; headers: Record<string, string> }> = [];
   let index = 0;
 
   const impl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
     const body = init?.body ? JSON.parse(init.body as string) : undefined;
-    calls.push({ url, body });
+    calls.push({ url, body, headers: (init?.headers ?? {}) as Record<string, string> });
 
     const next = responses[Math.min(index, responses.length - 1)];
     index += 1;
@@ -150,6 +150,52 @@ describe('AnthropicAiProvider', () => {
       expect((error as AiUnavailableError).status).toBe(429);
       expect((error as Error).message).not.toContain('sk-abc123');
     }
+  });
+
+  /**
+   * A refusal is an HTTP 200 with no draft in it, so nothing distinguishes it
+   * from any other empty reply except stop_reason. Reading content first and
+   * finding nothing would blame the assistant for returning nothing useful,
+   * when in fact it declined — which an admin can act on, by rewording.
+   */
+  it('reports a refusal as a refusal, not as an unusable draft', async () => {
+    mockFetch([{ json: { stop_reason: 'refusal', content: [] } }]);
+
+    await expect(
+      new AnthropicAiProvider('key').draftIntake({ description: 'anything' }),
+    ).rejects.toThrow(/declined/i);
+  });
+
+  it('asks for a server-side fallback, so a refusal is retried before it reaches us', async () => {
+    const calls = mockFetch([{ json: toolUseResponse({ questions: [], otherPathMessage: 'x' }) }]);
+
+    await new AnthropicAiProvider('key')
+      .draftIntake({ description: 'a coaching business' })
+      .catch(() => undefined);
+
+    const { headers, body } = calls[0]!;
+    expect(headers['anthropic-beta']).toBe('server-side-fallback-2026-07-01');
+    expect((body as { fallbacks: string }).fallbacks).toBe('default');
+  });
+
+  /**
+   * The model reasons before it answers and both come out of max_tokens, so
+   * a budget sized around the draft alone truncates before the draft exists.
+   * Not a number to tune casually.
+   */
+  it('leaves room for the model to think as well as answer', async () => {
+    const calls = mockFetch([{ json: toolUseResponse({ questions: [], otherPathMessage: 'x' }) }]);
+
+    await new AnthropicAiProvider('key')
+      .draftIntake({ description: 'a coaching business' })
+      .catch(() => undefined);
+
+    const body = calls[0]!.body as { model: string; max_tokens: number; thinking?: unknown };
+    expect(body.model).toBe('claude-opus-5');
+    expect(body.max_tokens).toBeGreaterThanOrEqual(8000);
+    // Turning thinking off is how a tool call ends up in visible text
+    // instead of a tool_use block — see the note in anthropic.ts.
+    expect(body.thinking).toBeUndefined();
   });
 
   it('throws AiUnavailableError when the response has no tool_use block', async () => {
