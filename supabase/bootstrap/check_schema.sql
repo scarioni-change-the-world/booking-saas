@@ -127,24 +127,64 @@ select * from (
 
   -- 7. Can the app's own role actually read? A missing GRANT looks exactly
   --    like a policy bug from the application side — see migration 0007.
+  --    Guarded the same way as the counts below: on a database that has not
+  --    been built yet, this should report that fact, not error.
   select
     7,
     'service_role can read tenants',
-    case when has_table_privilege('service_role', 'tenants', 'select')
-         then 'OK' else 'NO GRANT — apply migration 0007' end
+    case
+      when to_regclass('public.tenants') is null then 'tenants table missing'
+      when not exists (select 1 from pg_roles where rolname = 'service_role')
+        then 'service_role role does not exist — is this a Supabase project?'
+      when has_table_privilege('service_role', 'tenants', 'select') then 'OK'
+      else 'NO GRANT — apply migration 0007'
+    end
 
   union all
 
   -- 8. What is actually in here.
-  select 8, 'data: tenants',        (select count(*)::text from tenants)
+  --
+  --    Counted the awkward way on purpose. A plain "select count(*) from
+  --    tenants" is resolved when the query is planned, not when it runs, so
+  --    on a database where that table does not exist yet it takes the whole
+  --    report down with it — and "the tables are missing" is precisely the
+  --    situation this script exists to describe rather than crash on.
+  --    query_to_xml takes its query as text, so it is only touched at run
+  --    time, and the to_regclass guard means it is not touched at all when
+  --    the table is absent.
+  select 8, 'data: tenants', safe_count.value from (
+    select case when to_regclass('public.tenants') is null then 'table missing'
+      else (xpath('/row/c/text()', query_to_xml(
+        'select count(*) as c from public.tenants', false, true, '')))[1]::text
+    end as value
+  ) safe_count
+
   union all
-  select 8, 'data: platform staff (you need >=1 to use /console)',
-            (select count(*)::text from platform_staff)
+
+  select 8, 'data: platform staff (you need >=1 to use /console)', safe_count.value from (
+    select case when to_regclass('public.platform_staff') is null then 'table missing'
+      else (xpath('/row/c/text()', query_to_xml(
+        'select count(*) as c from public.platform_staff', false, true, '')))[1]::text
+    end as value
+  ) safe_count
+
   union all
-  select 8, 'data: bookings',       (select count(*)::text from bookings)
+
+  select 8, 'data: bookings', safe_count.value from (
+    select case when to_regclass('public.bookings') is null then 'table missing'
+      else (xpath('/row/c/text()', query_to_xml(
+        'select count(*) as c from public.bookings', false, true, '')))[1]::text
+    end as value
+  ) safe_count
+
   union all
-  select 8, 'data: email templates (5 per tenant once 0020 is applied)',
-            (select count(*)::text from email_templates)
+
+  select 8, 'data: email templates (5 per tenant once 0020 is applied)', safe_count.value from (
+    select case when to_regclass('public.email_templates') is null then 'table missing'
+      else (xpath('/row/c/text()', query_to_xml(
+        'select count(*) as c from public.email_templates', false, true, '')))[1]::text
+    end as value
+  ) safe_count
 
 ) report
 order by sort, item;
