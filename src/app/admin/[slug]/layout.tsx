@@ -10,6 +10,7 @@ type Check =
   | { state: 'checking' }
   | { state: 'denied' }
   | { state: 'gated' }
+  | { state: 'misconfigured'; detail: string }
   | { state: 'ok'; tenantName: string };
 
 /**
@@ -32,8 +33,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     let cancelled = false;
 
     (async () => {
-      const { data } = await supabaseBrowser().auth.getSession();
-      if (!data.session) {
+      // Same reasoning as the console layout: supabaseBrowser() throws when
+      // the NEXT_PUBLIC_ variables never made it into the build, and an
+      // uncaught throw here leaves the page on "Checking access…" for ever
+      // rather than saying what is wrong.
+      let session;
+      try {
+        ({ data: session } = await supabaseBrowser().auth.getSession());
+      } catch (cause) {
+        setCheck({ state: 'misconfigured', detail: (cause as Error).message });
+        return;
+      }
+
+      if (!session.session) {
         router.replace('/admin/login');
         return;
       }
@@ -67,6 +79,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       cancelled = true;
     };
   }, [slug, router]);
+
+  if (check.state === 'misconfigured') {
+    return (
+      <main className="widget" style={{ paddingTop: 60 }}>
+        <h1>Not configured</h1>
+        <p className="notice notice-error" role="alert">
+          {check.detail}
+        </p>
+        <p className="tz">
+          The <code>NEXT_PUBLIC_</code> variables are baked in at build time,
+          so setting them is not enough on its own — redeploy afterwards.{' '}
+          <a href="/api/health">/api/health</a> reports what is configured.
+        </p>
+      </main>
+    );
+  }
 
   if (check.state === 'checking' || check.state === 'denied') {
     return (
