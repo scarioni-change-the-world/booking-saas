@@ -28,6 +28,27 @@ function isSet(value: string | undefined): boolean {
 }
 
 export async function GET() {
+  // Which deployment is actually answering. All of it is non-sensitive and
+  // set by the host itself, and it settles the question that configuration
+  // booleans alone cannot: whether the variables are missing, or whether
+  // the thing serving this request is not the deployment you are editing.
+  //
+  // vercelEnv present while everything below is false is the tell — it
+  // proves the host is injecting an environment, just not one containing
+  // your variables. That means wrong project, or variables scoped to an
+  // environment this deployment is not in.
+  //
+  // commit is the other half: it says exactly which build is live, so
+  // "did my redeploy actually happen" stops being a guess.
+  const deployment = {
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7) || null,
+    branch: process.env.VERCEL_GIT_COMMIT_REF ?? null,
+    // A count, never the names: proves whether this process has an
+    // environment at all without listing what is in it.
+    environmentVariablesVisible: Object.keys(process.env).length,
+  };
+
   const config = {
     supabaseUrl: isSet(process.env.SUPABASE_URL),
     supabaseServiceRoleKey: isSet(process.env.SUPABASE_SERVICE_ROLE_KEY),
@@ -71,5 +92,5 @@ export async function GET() {
     config.publicSupabaseAnonKey &&
     database.reachable;
 
-  return NextResponse.json({ ready, config, database }, { status: ready ? 200 : 503 });
+  return NextResponse.json({ ready, deployment, config, database }, { status: ready ? 200 : 503 });
 }
