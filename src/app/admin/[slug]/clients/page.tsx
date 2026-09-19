@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { InitialsMark, PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 
 interface Entitlement {
@@ -198,19 +199,19 @@ export default function ClientsPage() {
 
   return (
     <>
-      <div className="admin-page-head">
-        <div>
-          <div className="admin-eyebrow">Clients</div>
-          <h1>People who keep coming back</h1>
-        </div>
-        {!creating && (
-          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-            Add client
-          </button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Clients"
+        title="People who already know you"
+        actions={
+          !creating ? (
+            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+              Add client
+            </button>
+          ) : undefined
+        }
+      />
 
-      <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-6px 0 18px', maxWidth: 620 }}>
+      <p className="section-note" style={{ maxWidth: '62ch' }}>
         Someone you already know — a returning customer, not a fresh enquiry. Add them and share
         their private link: it lets them book straight from your calendar with no questionnaire, and
         redeem sessions from any package you've granted them.
@@ -309,10 +310,11 @@ export default function ClientsPage() {
           return (
             <div key={client.id} className="card">
               <div className="admin-row" style={{ padding: 0 }}>
-                <div style={{ flex: 1 }}>
+                <InitialsMark name={client.name} />
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
-                    <h2 style={{ fontSize: '1.05rem' }}>{client.name}</h2>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>{client.email}</span>
+                    <span className="data-row-title">{client.name}</span>
+                    <span className="data-row-meta">{client.email}</span>
                   </div>
 
                   {client.entitlements.length > 0 && (
@@ -320,15 +322,14 @@ export default function ClientsPage() {
                       {client.entitlements.map((e) => (
                         <span
                           key={e.id}
-                          className="notice"
-                          style={{
-                            padding: '4px 11px',
-                            margin: 0,
-                            background: e.remaining > 0 ? 'var(--status-live-tint)' : 'var(--side)',
-                            color: e.remaining > 0 ? 'var(--status-live-ink)' : 'var(--faint)',
-                          }}
+                          className={`package-chip${e.remaining > 0 ? '' : ' spent'}`}
                         >
-                          {e.eventTypeName}: {e.remaining}/{e.totalSessions} left
+                          {e.eventTypeName}
+                          <span className="package-chip-count">
+                            {e.remaining > 0
+                              ? `${e.remaining} of ${e.totalSessions} left`
+                              : 'all used'}
+                          </span>
                         </span>
                       ))}
                     </div>

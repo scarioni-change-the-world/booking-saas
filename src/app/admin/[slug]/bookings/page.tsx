@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { InitialsMark, PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 
 type View = 'upcoming' | 'past' | 'cancelled';
@@ -207,19 +208,24 @@ export default function BookingsPage() {
 
   return (
     <>
-      <div className="admin-page-head">
-        <div>
-          <div className="admin-eyebrow">Meetings</div>
-          <h1>Everyone who came through</h1>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Bookings"
+        title="Everyone who booked"
+        description="Appointments, what each person answered first, and whether their confirmation and calendar event went out."
+      />
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      {/* Filters, not actions. These were a filled primary button beside two
+          secondaries, which put the loudest control on the page on "which
+          list am I looking at" — and made three views look like one
+          recommended choice and two alternatives. Pills are what the brief
+          reserves for exactly this. */}
+      <div className="filter-chip-row" role="group" aria-label="Which bookings to show">
         {TABS.map((tab) => (
           <button
             key={tab.view}
             type="button"
-            className={view === tab.view ? 'btn-primary' : 'btn-secondary'}
+            className={`filter-chip${view === tab.view ? ' active' : ''}`}
+            aria-pressed={view === tab.view}
             onClick={() => setView(tab.view)}
           >
             {tab.label}
@@ -256,10 +262,11 @@ export default function BookingsPage() {
           const email = emailBadge(b.emailStatus);
           return (
             <div key={b.id} className="card admin-row" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
+              <InitialsMark name={b.name} />
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
-                  <h2 style={{ fontSize: '1.05rem' }}>{b.name}</h2>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>{b.eventTypeName}</span>
+                  <span className="data-row-title">{b.name}</span>
+                  <span className="data-row-meta">{b.eventTypeName}</span>
                 </div>
 
                 <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>
@@ -273,7 +280,7 @@ export default function BookingsPage() {
                       className="notice"
                       style={{ padding: '4px 11px', margin: 0, ...toneStyle('attention') }}
                     >
-                      Sent down the other path
+                      Led to another next step
                     </span>
                   )}
                   {sync && (
@@ -326,17 +333,16 @@ export default function BookingsPage() {
                     }}
                   >
                     {b.qualification.answers.map((a) => (
-                      <div key={a.questionId}>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--faint)' }}>{a.prompt}</div>
-                        <div
-                          style={{
-                            fontSize: '0.92rem',
-                            color:
-                              a.outcomePathType === 'other' ? 'var(--status-attention-ink)' : 'var(--ink)',
-                          }}
-                        >
-                          {a.answer}
-                        </div>
+                      /* An answer that led somewhere other than the calendar
+                         used to render in the warning colour, which marked
+                         the person's own words as a fault. It is noted
+                         underneath instead, as a fact about where it led. */
+                      <div key={a.questionId} className="answer-pair">
+                        <p className="answer-pair-question">{a.prompt}</p>
+                        <p className="answer-pair-answer">{a.answer}</p>
+                        {a.outcomePathType === 'other' && (
+                          <p className="answer-pair-path">Led to another next step</p>
+                        )}
                       </div>
                     ))}
                   </div>

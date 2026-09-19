@@ -2262,3 +2262,42 @@ button.text-action {
   color: var(--ink);
   font-weight: 600;
 }
+
+/* --- Bookings and clients ------------------------------------------------ */
+
+/* Where an answer led, noted under the answer itself. It used to be carried
+   by colouring the answer in the warning tone, which marked a person's own
+   words as a fault rather than recording where they went. */
+.answer-pair-path {
+  margin: 6px 0 0;
+  color: var(--faint);
+  font-size: 0.78rem;
+}
+
+/* A package a client holds. Was tinted green while sessions remained and
+   the sidebar's beige once spent — a surface colour standing in for a
+   state, so "used up" and "navigation" shared a hue. Both states are the
+   same shape now and the count says which is which. */
+.package-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 11px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.package-chip-count {
+  color: var(--accent-ink);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+.package-chip.spent {
+  color: var(--faint);
+}
+.package-chip.spent .package-chip-count {
+  color: var(--faint);
+}

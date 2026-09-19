@@ -17,7 +17,7 @@ export default function StepTabs({ base, tabs }: { base: string; tabs: StepTabDe
   const pathname = usePathname();
 
   return (
-    <nav className="step-tabs" aria-label="Intake setup steps">
+    <nav className="step-tabs" aria-label="Enquiry setup steps">
       {tabs.map((tab, i) => {
         const href = tab.href ? `${base}/${tab.href}` : base;
         const active = pathname === href;

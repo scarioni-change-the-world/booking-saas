@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { TEMPLATE_TOKENS } from '@/lib/email/templates';
 import type { EmailTemplateKind } from '@/lib/db/types';
@@ -233,12 +234,11 @@ export default function SettingsPage() {
 
   return (
     <>
-      <div className="admin-page-head">
-        <div>
-          <div className="admin-eyebrow">Settings</div>
-          <h1>How booking works</h1>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Settings"
+        title="How booking works"
+        description="Notice period, how far ahead people can book, the emails they receive and your calendar connection."
+      />
 
       {error && (
         <div className="notice notice-error" role="alert">

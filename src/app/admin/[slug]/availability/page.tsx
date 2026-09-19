@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import DaySchedule from '@/components/admin/DaySchedule';
 
@@ -97,12 +98,11 @@ export default function AvailabilityPage() {
 
   return (
     <>
-      <div className="admin-page-head">
-        <div>
-          <div className="admin-eyebrow">Availability</div>
-          <h1>When you are free</h1>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Availability"
+        title="When you are free"
+        description="The hours you work each week, plus any days that differ. Times shown to clients are worked out from these."
+      />
 
       {error && (
         <div className="notice notice-error" role="alert">

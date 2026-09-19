@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
 import type { SerializedEventType } from '@/lib/admin-serializers';
@@ -192,12 +193,11 @@ export default function SessionsPage() {
 
   return (
     <>
-      <div className="admin-page-head">
-        <div>
-          <div className="admin-eyebrow">Sessions</div>
-          <h1>What people can book</h1>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Services"
+        title="What you offer"
+        description="Each service has its own duration, booking rules and — if you want — its own questions."
+      />
 
       {error && (
         <div className="notice notice-error" role="alert">
@@ -460,7 +460,7 @@ export default function SessionsPage() {
         <div>
           <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6 }}>
             The two toggles are independent. A session can be offered to both new enquiries and
-            existing clients, either one, or neither — new enquiries answer your screening
+            existing clients, either one, or neither — new enquiries answer your
             questions first; existing clients book straight from their own private link.
           </p>
           <a
@@ -468,7 +468,7 @@ export default function SessionsPage() {
             className="btn-link"
             style={{ display: 'inline-block', marginTop: 10 }}
           >
-            Manage your intake questions →
+            Manage your questions →
           </a>
         </div>
       </div>
