@@ -86,7 +86,7 @@ async function sendClientEmail(
   booking: BookingRow,
   kind: EmailTemplateKind,
   options: ClientEmailOptions,
-): Promise<void> {
+): Promise<EmailStatus> {
   const [serviceName, template, settings] = await Promise.all([
     loadEventTypeName(scope, booking.event_type_id),
     loadTemplate(scope, kind),
@@ -95,7 +95,7 @@ async function sendClientEmail(
 
   if (!template) {
     await recordEmailStatus(scope, booking.id, 'not_configured');
-    return;
+    return 'not_configured';
   }
 
   const dateTime = formatDateTime(booking.starts_at, tenant.timezone);
@@ -163,10 +163,13 @@ async function sendClientEmail(
     // a bare "did send() throw" check alone would record 'sent' for
     // something that never actually left the building. Its id is what
     // distinguishes a real send from the console fallback.
-    await recordEmailStatus(scope, booking.id, provider.id === 'console' ? 'not_configured' : 'sent');
+    const status: EmailStatus = provider.id === 'console' ? 'not_configured' : 'sent';
+    await recordEmailStatus(scope, booking.id, status);
+    return status;
   } catch (cause) {
     console.error(`[booking-email] ${kind} send failed:`, cause);
     await recordEmailStatus(scope, booking.id, 'failed', (cause as Error).message);
+    return 'failed';
   }
 }
 
@@ -215,8 +218,17 @@ export async function sendBookingConfirmedEmail(
   tenant: TenantRow,
   scope: TenantScope,
   booking: BookingRow,
-): Promise<void> {
-  await sendClientEmail(tenant, scope, booking, 'booking_confirmed', {
+): Promise<EmailStatus> {
+  // Returned so the caller can tell the person who just booked the truth.
+  // The confirmation screen used to state that an email was on its way
+  // regardless, which is right in production and a lie on any deployment
+  // without a mail server — and a lie of exactly the wrong kind, since
+  // someone who trusts it does not write the time down.
+  //
+  // The owner notification below deliberately does not affect this. It is a
+  // different recipient with a different failure: a tenant who misses one
+  // still sees the booking in their dashboard.
+  const status = await sendClientEmail(tenant, scope, booking, 'booking_confirmed', {
     includeIcs: true,
     includeManageLink: true,
   });
@@ -227,6 +239,8 @@ export async function sendBookingConfirmedEmail(
     const dateTime = formatDateTime(booking.starts_at, tenant.timezone);
     await sendOwnerNotification(tenant, scope, booking, serviceName, dateTime, settings.notification_email);
   }
+
+  return status;
 }
 
 export async function sendBookingRescheduledEmail(

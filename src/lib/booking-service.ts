@@ -287,9 +287,13 @@ export async function createBooking(
   // once the calendar side of it actually exists (or has definitively
   // failed to) means the email a client receives never shows a stale
   // "no meeting link yet" for a booking that was synced a moment later.
-  await sendBookingConfirmedEmail(tenant, scope, synced);
+  const emailStatus = await sendBookingConfirmedEmail(tenant, scope, synced);
 
-  return synced;
+  // The row in the database now carries this, written by the send itself —
+  // but `synced` was read before that update, so it still holds 'pending'.
+  // Returning the real outcome saves the caller a re-read, and is what lets
+  // the confirmation screen say whether an email is actually coming.
+  return { ...synced, email_status: emailStatus };
 }
 
 /** Create the calendar event and record the outcome — success or failure. */
@@ -700,8 +704,8 @@ export async function createEntitlementBookings(
     // ever included once it actually exists (or has definitively failed to).
     // Missing from here previously — a redeemed package session never sent
     // a confirmation at all, unlike every other kind of booking.
-    await sendBookingConfirmedEmail(tenant, scope, synced);
-    results.push({ startsAt, status: 'booked', booking: synced });
+    const emailStatus = await sendBookingConfirmedEmail(tenant, scope, synced);
+    results.push({ startsAt, status: 'booked', booking: { ...synced, email_status: emailStatus } });
   }
 
   return { results, remaining: entitlement.total_sessions - used };

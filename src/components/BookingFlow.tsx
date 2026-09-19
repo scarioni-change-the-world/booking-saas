@@ -83,6 +83,7 @@ export default function BookingFlow({ slug }: Props) {
     startsAt: string;
     manageToken: string;
     meetingUrl: string | null;
+    confirmationEmailSent: boolean;
   } | null>(null);
 
   const base = `/api/t/${encodeURIComponent(slug)}`;
@@ -256,7 +257,12 @@ export default function BookingFlow({ slug }: Props) {
     setError(null);
     try {
       const result = await postJson<{
-        booking: { startsAt: string; manageToken: string; meetingUrl: string | null };
+        booking: {
+          startsAt: string;
+          manageToken: string;
+          meetingUrl: string | null;
+          confirmationEmailSent: boolean;
+        };
       }>(`${base}/bookings`, {
         eventTypeId: eventType.id,
         startsAt: slot,
@@ -618,23 +624,45 @@ export default function BookingFlow({ slug }: Props) {
           )}
 
           {/* Said plainly, because the next thing anyone does after booking is
-              wonder whether they are supposed to write the time down. The
-              email carries the same details, a calendar invitation, the video
-              link when there is one, and the manage link — so naming it here
-              is a promise the confirmation email actually keeps. */}
-          <p style={{ marginTop: 18 }}>
-            We&apos;ve sent a confirmation to <strong>{email}</strong> with everything you
-            need{confirmed.meetingUrl ? ', including the video call link' : ''} — plus a
-            calendar invitation you can add in one tap.
-          </p>
+              wonder whether they are supposed to write the time down.
 
-          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
-            Nothing arrived? Check your spam folder. You can also{' '}
-            <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
-              reschedule or cancel
-            </a>{' '}
-            here — worth keeping this link.
-          </p>
+              Which of these two shows is decided by whether an email really
+              went out, not by whether one was meant to. Promising a
+              confirmation that never left the building is the worst version
+              of this screen: it is the person who believes it who arrives at
+              no appointment, because they trusted the email instead of
+              noting the time. */}
+          {confirmed.confirmationEmailSent ? (
+            <>
+              <p style={{ marginTop: 18 }}>
+                We&apos;ve sent a confirmation to <strong>{email}</strong> with everything
+                you need{confirmed.meetingUrl ? ', including the video call link' : ''} —
+                plus a calendar invitation you can add in one tap.
+              </p>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
+                Nothing arrived? Check your spam folder. You can also{' '}
+                <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
+                  reschedule or cancel
+                </a>{' '}
+                here — worth keeping this link.
+              </p>
+            </>
+          ) : (
+            /* No email is coming, so this page is the only record. Said
+               without alarm — a visitor cannot act on a mail server being
+               down, and telling them it is would only make a booking that
+               worked feel broken. What they can act on is keeping the link,
+               so that is what this asks for. */
+            <p style={{ marginTop: 18 }}>
+              Your booking is confirmed. <strong>Save this link</strong> — it&apos;s how
+              you&apos;ll find, change or cancel it:{' '}
+              <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
+                manage your booking
+              </a>
+              .
+            </p>
+          )}
         </>
       )}
 

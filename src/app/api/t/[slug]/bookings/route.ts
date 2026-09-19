@@ -79,6 +79,13 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
           endsAt: booking.ends_at,
           manageToken: booking.manage_token,
           meetingUrl: booking.meeting_url,
+          // A boolean, not the email_status enum, because a stranger needs
+          // to know whether to expect an email and nothing else. 'failed'
+          // and 'not_configured' differ only to the operator — who sees
+          // both, with the reason, on the booking in their dashboard — and
+          // telling a visitor which one would describe the state of a mail
+          // server to someone with no business knowing it.
+          confirmationEmailSent: booking.email_status === 'sent',
         },
       },
       201,
