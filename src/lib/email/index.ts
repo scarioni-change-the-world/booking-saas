@@ -22,13 +22,41 @@ export function emailProvider(): EmailProvider {
   const host = process.env.SMTP_HOST;
   if (!host) return new ConsoleEmailProvider();
 
+  // Setting SMTP_HOST switches this from logging to really sending, so the
+  // other three stop being optional at that moment. A missing one used to be
+  // papered over: EMAIL_FROM_ADDRESS fell back to no-reply@example.com, a
+  // domain nobody deploying this owns, which a receiving server either
+  // rejects for failing SPF or — worse — delivers, as a confirmation the
+  // client cannot reply to and the operator never sees bounce.
+  //
+  // Refusing to send is the better failure. It is loud in the log, it is
+  // visible on /api/health, and it keeps the existing promise that email is
+  // never what breaks a booking: the console provider still prints the
+  // message that would have gone out.
+  const fromAddress = process.env.EMAIL_FROM_ADDRESS?.trim();
+  const user = process.env.SMTP_USER?.trim();
+  const password = process.env.SMTP_PASSWORD;
+
+  if (!fromAddress || !user || !password) {
+    const missing = [
+      !fromAddress && 'EMAIL_FROM_ADDRESS',
+      !user && 'SMTP_USER',
+      !password && 'SMTP_PASSWORD',
+    ].filter(Boolean);
+    console.error(
+      `[email] SMTP_HOST is set but ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not — ` +
+        'logging mail instead of sending it. See /api/health.',
+    );
+    return new ConsoleEmailProvider();
+  }
+
   const port = Number(process.env.SMTP_PORT ?? '587');
   return new SmtpEmailProvider({
     host,
     port,
     secure: port === 465,
-    user: process.env.SMTP_USER ?? '',
-    password: process.env.SMTP_PASSWORD ?? '',
-    fromAddress: process.env.EMAIL_FROM_ADDRESS ?? 'no-reply@example.com',
+    user,
+    password,
+    fromAddress,
   });
 }

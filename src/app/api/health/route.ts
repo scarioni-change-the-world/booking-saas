@@ -66,7 +66,19 @@ export async function GET() {
     // assistant says so rather than offering an empty draft, and no base URL
     // falls back to the host's own.
     publicBaseUrl: isSet(process.env.PUBLIC_BASE_URL),
+    // Split, because SMTP_HOST alone is what flips the app from logging mail
+    // to really sending it — while the other three are what decide whether
+    // that send can succeed. One boolean covering all four would have read
+    // true with three of them missing.
     smtp: isSet(process.env.SMTP_HOST),
+    smtpReadyToSend:
+      isSet(process.env.SMTP_HOST) &&
+      isSet(process.env.SMTP_USER) &&
+      isSet(process.env.SMTP_PASSWORD) &&
+      isSet(process.env.EMAIL_FROM_ADDRESS) &&
+      // The placeholder from .env.example. Present but unchanged is the same
+      // as absent, and harder to notice.
+      !/@example\.com$/i.test(process.env.EMAIL_FROM_ADDRESS!.trim()),
     google: isSet(process.env.GOOGLE_CLIENT_ID) && isSet(process.env.GOOGLE_CLIENT_SECRET),
     anthropic: isSet(process.env.ANTHROPIC_API_KEY),
   };

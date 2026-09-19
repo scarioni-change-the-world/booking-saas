@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SmtpEmailProvider } from '@/lib/email/smtp';
 import { EmailUnavailableError } from '@/lib/email/provider';
 import type { Transporter } from 'nodemailer';
@@ -94,5 +94,60 @@ describe('SmtpEmailProvider', () => {
       expect((error as Error).message).not.toContain(CONFIG.password);
       expect((error as Error).message).not.toContain(CONFIG.user);
     }
+  });
+});
+
+/**
+ * Which provider the app picks, given what is and isn't configured.
+ *
+ * Worth testing on its own because the failure it guards against is silent:
+ * a half-configured mail server used to send real messages from
+ * no-reply@example.com, a domain nobody deploying this owns, and the only
+ * sign was a bounce arriving somewhere nobody was watching.
+ */
+describe('emailProvider', () => {
+  const FULL = {
+    SMTP_HOST: 'smtp.example.com',
+    SMTP_PORT: '587',
+    SMTP_USER: 'demo@intro.app',
+    SMTP_PASSWORD: 'super-secret-password',
+    EMAIL_FROM_ADDRESS: 'no-reply@intro.app',
+  };
+
+  function stub(overrides: Partial<Record<keyof typeof FULL, string>>) {
+    for (const [key, value] of Object.entries({ ...FULL, ...overrides })) {
+      vi.stubEnv(key, value);
+    }
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('sends for real once every piece is present', async () => {
+    stub({});
+    const { emailProvider } = await import('@/lib/email');
+    expect(emailProvider().id).toBe('smtp');
+  });
+
+  it('logs instead of sending when no mail server is configured at all', async () => {
+    stub({ SMTP_HOST: '' });
+    const { emailProvider } = await import('@/lib/email');
+    expect(emailProvider().id).not.toBe('smtp');
+  });
+
+  // Each of these three used to be papered over rather than noticed.
+  for (const missing of ['SMTP_USER', 'SMTP_PASSWORD', 'EMAIL_FROM_ADDRESS'] as const) {
+    it(`refuses to send when ${missing} is missing, rather than sending badly`, async () => {
+      stub({ [missing]: '' });
+      const { emailProvider } = await import('@/lib/email');
+      expect(emailProvider().id).not.toBe('smtp');
+    });
+  }
+
+  it('treats whitespace as missing', async () => {
+    stub({ SMTP_USER: '   ' });
+    const { emailProvider } = await import('@/lib/email');
+    expect(emailProvider().id).not.toBe('smtp');
   });
 });
