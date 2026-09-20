@@ -22,11 +22,14 @@ import type { BookingRow } from './types';
  * against CRON_SECRET and does nothing else, and each booking is then
  * handled through its own tenant's scope.
  *
- * The window has a floor as well as a ceiling. Without one, a booking made
- * two hours before its slot would trigger a "reminder" moments after the
- * confirmation, which reads as a mistake rather than a service. Without the
- * ceiling, the first run after this ships would remind everyone about
- * everything.
+ * The window is bounded by its caller, and the ceiling is the half that
+ * matters: without one, the first run after this ships would remind
+ * everyone about everything. There is deliberately no floor. An earlier
+ * version held reminders back until a booking was a couple of hours out, on
+ * the reasoning that a reminder arriving moments after the confirmation
+ * reads as a mistake. On a once-a-day schedule that floor silently drops
+ * bookings made after a run for early the next morning, which is the worse
+ * failure of the two — see the window constants in the cron route.
  *
  * Cancelled bookings are excluded by status. A reminder about an
  * appointment somebody already cancelled is worse than no reminder: it
