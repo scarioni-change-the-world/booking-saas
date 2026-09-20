@@ -3,4 +3,5 @@
 export { TenantScope, tenantScope } from './scope';
 export { resolveTenantBySlug, resolveBookingByToken, type ResolvedTenant } from './tenants';
 export { consumeRateLimit } from './rate-limits';
+export { bookingsDueAReminder, claimReminder } from './bookings';
 export * from './types';

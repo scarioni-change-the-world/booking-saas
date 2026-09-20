@@ -254,6 +254,26 @@ export async function sendBookingRescheduledEmail(
   });
 }
 
+/**
+ * The reminder, the day before.
+ *
+ * No .ics — they already have one from the confirmation, and a second
+ * attachment for the same appointment invites a duplicate in their
+ * calendar. The manage link is included, because "I need to move this" is
+ * the most likely reason a reminder gets read at all, and making that easy
+ * is worth more to the business than the reminder itself.
+ */
+export async function sendBookingReminderEmail(
+  tenant: TenantRow,
+  scope: TenantScope,
+  booking: BookingRow,
+): Promise<EmailStatus> {
+  return sendClientEmail(tenant, scope, booking, 'booking_reminder', {
+    includeIcs: false,
+    includeManageLink: true,
+  });
+}
+
 export async function sendBookingCancelledEmail(
   tenant: TenantRow,
   scope: TenantScope,

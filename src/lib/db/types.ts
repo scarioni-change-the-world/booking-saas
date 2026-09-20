@@ -42,7 +42,8 @@ export type EmailTemplateKind =
   | 'owner_notification'
   /** The one kind that is not part of a booking's lifecycle: it carries a
    * client's own private booking link to them — see src/lib/client-email.ts. */
-  | 'client_invite';
+  | 'client_invite'
+  | 'booking_reminder';
 
 export interface TenantBranding {
   logoUrl?: string;

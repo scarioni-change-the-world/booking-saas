@@ -26,6 +26,10 @@ export const TEMPLATE_TOKENS: Record<EmailTemplateKind, string[]> = {
   booking_confirmed: ['clientName', 'serviceName', 'dateTime', 'meetingLink', 'tenantName'],
   booking_rescheduled: ['clientName', 'serviceName', 'dateTime', 'tenantName'],
   booking_cancelled: ['clientName', 'serviceName', 'dateTime', 'tenantName'],
+  /* No meetingLink token, deliberately: a reminder carries the video link
+     appended rather than placed, the same way a confirmation does, so a
+     tenant who never edits this template still gets one in it. */
+  booking_reminder: ['clientName', 'serviceName', 'dateTime', 'tenantName'],
   owner_notification: ['clientName', 'clientEmail', 'serviceName', 'dateTime', 'tenantName'],
   // No booking exists yet when this one is sent, so none of the tokens that
   // describe one do either. The link itself is deliberately not a token —
