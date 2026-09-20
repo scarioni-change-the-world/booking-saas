@@ -27,7 +27,19 @@ import { __unsafeServiceClient } from '@/lib/db/client';
  * header works for a manual run with curl, which is how this gets tested.
  */
 
-const WINDOW_START_HOURS = 2;
+/**
+ * The window runs from now to a little over a day out, which is what makes a
+ * once-a-day schedule safe: today's 08:00 run reaches to 10:00 tomorrow, and
+ * tomorrow's run starts from 08:00 tomorrow. Consecutive runs overlap rather
+ * than leave a gap, so no booking can fall between two runs — and
+ * `claimReminder` means the overlap never sends the same one twice.
+ *
+ * The window starts at now rather than a few hours out on purpose. A booking
+ * made after today's run, for early tomorrow, would sit under any floor we
+ * set and get no reminder at all. A reminder that arrives an hour ahead is
+ * worth more than a promised reminder that silently never comes.
+ */
+const WINDOW_START_HOURS = 0;
 const WINDOW_END_HOURS = 26;
 const MAX_PER_RUN = 200;
 
