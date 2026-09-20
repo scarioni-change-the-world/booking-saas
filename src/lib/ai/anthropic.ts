@@ -90,7 +90,9 @@ Rules:
 - Keep every question and option short enough to read comfortably on a phone screen.
 - A "yes_no" question's two options are always labelled exactly "Yes" and "No".
 - A "single_choice" question needs at least two options, each with a short, concrete label (e.g. "Within 3 months", not "Soon").
-- Most options should route to "meeting" — reserve "other" for the answers that genuinely indicate a meeting isn't the right next step yet (budget, timing, scope mismatches the professional described).`;
+- Most options should route to "meeting" — reserve "other" for the answers that genuinely indicate a meeting isn't the right next step yet (budget, timing, scope mismatches the professional described).
+- Routing compounds, so be sparing with it. Each question carrying an "other" answer is a separate gate a person has to get past, and they must pass every one of them to reach the calendar: three such questions can leave well under half of genuine enquiries never seeing a time. Aim for one or two questions that route, covering the constraints the professional stated most firmly, and make the rest "text" or multiple choice where every answer continues. A question worth asking but not worth turning someone away over is a question that should not route — it is still recorded, and the professional reads it before the meeting.
+- Do not write a question that asks about health conditions, treatment, medication, disability, ethnicity, religion, sexuality, or political views unless the professional's own description makes it unavoidable for deciding whether they can help — a physiotherapist asking whether an injury has been diagnosed, say. These answers are stored and read by a small business that has probably not thought about handling them. When one is genuinely necessary, keep it to what the decision needs, and never make it a free-text invitation to describe a condition.`;
 
 const DRAFT_TOOL = {
   name: 'draft_intake',

@@ -59,6 +59,26 @@ function LogicPreview({
   const { continues, other } = groupOptions(questions);
   const hasRouting = continues.length > 0 || other.length > 0;
 
+  /* How many separate questions can send someone away, and how many
+   * questions there are in total.
+   *
+   * The two cards below list every routing answer, which tells you what each
+   * one does but not what they do together — and together is the part that
+   * matters. Each question with an "other" answer is an independent gate,
+   * and a visitor has to get past all of them. Three questions that each
+   * send a third of people elsewhere leave you with under a third of your
+   * enquiries reaching the calendar, and nothing on this screen said so:
+   * you would see three sensible questions and wonder where everyone went.
+   *
+   * A count is not advice. It does not say a number is too high — that is
+   * the professional's judgement, and a physiotherapist with three real
+   * clinical constraints should keep all three. It just makes the thing
+   * visible that was previously only discoverable by watching enquiries
+   * dry up over a couple of months. */
+  const gateCount = questions.filter((q) =>
+    q.options.some((opt) => opt.outcomePathType === 'other'),
+  ).length;
+
   return (
     <div>
       {!hasRouting ? (
@@ -68,6 +88,24 @@ function LogicPreview({
         </p>
       ) : (
         <>
+          {gateCount > 0 && (
+            <p className="routing-summary">
+              {gateCount === 1 ? (
+                <>
+                  One of your {questions.length} question
+                  {questions.length === 1 ? '' : 's'} can send someone to another next step.
+                </>
+              ) : (
+                <>
+                  <strong>
+                    {gateCount} of your {questions.length} questions
+                  </strong>{' '}
+                  can send someone to another next step. Someone has to get past all {gateCount} to
+                  reach your calendar.
+                </>
+              )}
+            </p>
+          )}
           <div className="logic-card continues">
             <div className="logic-card-bar" />
             <div>

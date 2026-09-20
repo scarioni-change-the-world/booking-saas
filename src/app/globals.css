@@ -2301,3 +2301,21 @@ button.text-action {
 .package-chip.spent .package-chip-count {
   color: var(--faint);
 }
+
+/* How many of a questionnaire's questions can route someone away. Stated
+   above the two logic cards because it is the one thing they cannot show:
+   each card lists answers, and this is about how the questions compound. */
+.routing-summary {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.routing-summary strong {
+  color: var(--ink);
+  font-weight: 600;
+}
