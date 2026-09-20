@@ -82,6 +82,12 @@ export async function GET() {
       !/@example\.com$/i.test(process.env.EMAIL_FROM_ADDRESS!.trim()),
     google: isSet(process.env.GOOGLE_CLIENT_ID) && isSet(process.env.GOOGLE_CLIENT_SECRET),
     anthropic: isSet(process.env.ANTHROPIC_API_KEY),
+    // Without this the reminder endpoint disables itself and answers 503,
+    // which is the correct failure but a silent one from the outside: no
+    // reminders go out and nothing says why. Reported here so "is the
+    // scheduler going to work" is one request rather than a wait and a
+    // guess.
+    cronSecret: isSet(process.env.CRON_SECRET),
   };
 
   let database: { reachable: boolean; error: string | null };
