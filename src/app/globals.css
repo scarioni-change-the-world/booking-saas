@@ -2379,3 +2379,20 @@ button.text-action {
   white-space: nowrap;
   border: 0;
 }
+
+/* The embed snippet, shown as code because it is code someone will paste
+   into their own site. Wraps rather than scrolls: a horizontal scrollbar in
+   a settings panel hides half of what you are meant to copy. */
+.embed-snippet {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--app-canvas);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

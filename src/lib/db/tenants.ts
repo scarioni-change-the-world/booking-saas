@@ -58,3 +58,43 @@ export async function resolveBookingByToken(
   const { tenants, ...booking } = data as BookingRow & { tenants: TenantRow };
   return { booking: booking as BookingRow, tenant: tenants, scope: tenantScope(tenants.id) };
 }
+
+/**
+ * Replace which sites may frame this tenant's booking widget.
+ *
+ * By tenant id rather than through TenantScope, because the scope filters
+ * every query on a `tenant_id` column and `tenants` is keyed by `id` — a
+ * scoped update against this table would filter on a column that does not
+ * exist. The safety here comes from the caller instead: the only route that
+ * reaches this has already passed requireTenantAdmin for this exact slug.
+ *
+ * The values are validated in src/lib/embed.ts before they arrive. They end
+ * up in a CSP header, so that validation is load-bearing rather than
+ * cosmetic, and this function deliberately does not re-interpret them.
+ */
+export async function replaceTenantEmbedDomains(
+  tenantId: string,
+  domains: readonly string[],
+): Promise<string[]> {
+  const { data, error } = await __unsafeServiceClient()
+    .from('tenants')
+    .update({ embed_domains: domains })
+    .eq('id', tenantId)
+    .select('embed_domains')
+    .single();
+
+  if (error) throw error;
+  return (data as { embed_domains: string[] }).embed_domains ?? [];
+}
+
+/** Which sites may frame this tenant's widget right now. */
+export async function tenantEmbedDomains(tenantId: string): Promise<string[]> {
+  const { data, error } = await __unsafeServiceClient()
+    .from('tenants')
+    .select('embed_domains')
+    .eq('id', tenantId)
+    .single();
+
+  if (error) throw error;
+  return (data as { embed_domains: string[] }).embed_domains ?? [];
+}

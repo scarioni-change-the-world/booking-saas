@@ -154,6 +154,36 @@ export default function BookingFlow({ slug }: Props) {
     [base],
   );
 
+  /* Tell a host page how tall this needs to be.
+   *
+   * Only when actually framed, and only ever the height — the message
+   * carries nothing else, so a site embedding this learns its size and
+   * nothing about the person using it. public/embed.js is the other half.
+   *
+   * ResizeObserver rather than firing on step changes: the height moves for
+   * reasons a step change does not capture — a validation message appearing,
+   * a long question wrapping onto another line, a slot list loading — and
+   * watching the element itself catches all of them without anybody having
+   * to remember to announce a new one.
+   *
+   * The wildcard target origin is deliberate and safe here: we do not know
+   * which customer's site has embedded this, the payload is a number, and
+   * the receiving script verifies both the origin and the frame identity
+   * before acting on it. */
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+
+    const post = () => {
+      const height = document.documentElement.scrollHeight;
+      window.parent.postMessage({ type: 'intro:height', height }, '*');
+    };
+
+    post();
+    const observer = new ResizeObserver(post);
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, []);
+
   // Auto-skip the type picker when there is only one choice (brief 2.3).
   useEffect(() => {
     if (step === 'pick-type' && eventTypes.length === 1) {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { frameAncestors } from '@/lib/embed';
 
 /**
  * Per-tenant frame-ancestors (brief 7.2).
@@ -59,9 +60,11 @@ export async function proxy(request: NextRequest) {
   if (!match) return response;
 
   const domains = await embedDomains(decodeURIComponent(match[1]!));
-  const ancestors = domains.length > 0 ? domains.join(' ') : "'none'";
 
-  response.headers.set('Content-Security-Policy', `frame-ancestors ${ancestors}`);
+  // Built by the same function the admin API validates against, so the
+  // header can never be assembled from a shape that was never allowed to be
+  // stored. See src/lib/embed.ts on why this is a header-injection surface.
+  response.headers.set('Content-Security-Policy', `frame-ancestors ${frameAncestors(domains)}`);
   return response;
 }
 
