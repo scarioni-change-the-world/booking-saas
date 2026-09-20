@@ -11,6 +11,7 @@ import {
 } from '@/lib/api';
 import { createBooking } from '@/lib/booking-service';
 import { enforceRateLimit } from '@/lib/rate-limit';
+import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
 import type { QualificationResponseRow } from '@/lib/db/types';
 
 /**
@@ -44,22 +45,35 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
 
     const body = await readJson(request);
 
+    const eventTypeId = requireString(body, 'eventTypeId', { maxLength: 64 });
     const responseId = optionalString(body, 'responseId', { maxLength: 64 }) ?? null;
-    if (!responseId) return fail('Complete the questions first', 403);
 
-    const { data, error } = await scope
-      .select('qualification_responses')
-      .eq('id', responseId)
-      .maybeSingle();
-    if (error) throw error;
+    // The same rule the calendar applies: a completed questionnaire on the
+    // meeting path is required whenever there is a questionnaire. A service
+    // that asks nothing has nothing to withhold, and demanding a response id
+    // for it made a business with no screening unable to take any booking at
+    // all — see serviceAsksProspectAnything.
+    //
+    // Checked against the database, never against the request: a caller
+    // simply omitting responseId must not be able to talk its way past the
+    // gate on a service that does ask.
+    let onMeetingPath = false;
+    if (responseId) {
+      const { data, error } = await scope
+        .select('qualification_responses')
+        .eq('id', responseId)
+        .maybeSingle();
+      if (error) throw error;
+      const response = data as unknown as QualificationResponseRow | null;
+      onMeetingPath = response?.outcome_path_type === 'meeting';
+    }
 
-    const response = data as unknown as QualificationResponseRow | null;
-    if (response?.outcome_path_type !== 'meeting') {
+    if (!onMeetingPath && (await serviceAsksProspectAnything(scope, eventTypeId))) {
       return fail('Complete the questions first', 403);
     }
 
     const booking = await createBooking(tenant, scope, {
-      eventTypeId: requireString(body, 'eventTypeId', { maxLength: 64 }),
+      eventTypeId,
       startsAt: requireString(body, 'startsAt', { maxLength: 40 }),
       name: requireString(body, 'name', { maxLength: 200 }),
       email: requireEmail(body, 'email'),

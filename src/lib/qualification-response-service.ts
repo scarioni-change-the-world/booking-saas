@@ -156,3 +156,47 @@ export async function listRecentResponses(
     answers: r.answers,
   }));
 }
+
+/**
+ * Does this service ask a prospect anything at all?
+ *
+ * Both public entry points — the calendar and booking creation — refuse a
+ * prospect who has no completed questionnaire on the meeting path. That is
+ * right when there are questions. It was catastrophic when there were none:
+ * BookingFlow sends a visitor straight to the calendar for a service with
+ * nothing to ask (see chooseEventType), and the calendar then refused to
+ * load because they had not completed questions that do not exist. The
+ * visitor saw "Complete the questions first" above an empty calendar, with
+ * no questions anywhere to complete.
+ *
+ * Which means a business with no screening could not take a single booking
+ * — and that is every business on its first day, before anyone has written
+ * a question. The most common possible state of a new tenant was the one
+ * that did not work.
+ *
+ * Asked here rather than trusted from the request: a caller claiming "there
+ * was nothing to answer" would otherwise walk straight past the gate.
+ *
+ * Scoped exactly as the public questions endpoint scopes it — the tenant's
+ * shared questions plus this one service's own — so "has questions" and
+ * "was asked questions" can never disagree.
+ */
+export async function serviceAsksProspectAnything(
+  scope: TenantScope,
+  eventTypeId: string | null,
+): Promise<boolean> {
+  const scoped = async (id: string | null) => {
+    let query = scope.select('qualification_questions', 'id');
+    query = id ? query.eq('event_type_id', id) : query.is('event_type_id', null);
+    const { data, error } = await query.limit(1);
+    if (error) throw error;
+    return (data ?? []).length > 0;
+  };
+
+  const [shared, specific] = await Promise.all([
+    scoped(null),
+    eventTypeId ? scoped(eventTypeId) : Promise.resolve(false),
+  ]);
+
+  return shared || specific;
+}

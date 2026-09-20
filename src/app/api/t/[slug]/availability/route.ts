@@ -3,6 +3,7 @@ import { fail, handleError, isResponse, ok, requireTenant } from '@/lib/api';
 import { BookingError, getAvailability } from '@/lib/booking-service';
 import type { QualificationResponseRow } from '@/lib/db/types';
 import type { TenantScope } from '@/lib/db';
+import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
 
 /** Cap the range so one request cannot ask the engine to walk years of days. */
 const MAX_RANGE_DAYS = 62;
@@ -50,7 +51,15 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     const audience = params.get('audience') === 'client' ? 'client' : 'prospect';
     if (audience === 'prospect') {
       const onMeetingPath = await prospectIsOnMeetingPath(scope, params.get('responseId'));
-      if (!onMeetingPath) return fail('Complete the questions first', 403);
+      if (!onMeetingPath) {
+        // Only gate on a questionnaire that exists. A service with nothing
+        // to ask sends the visitor straight here (BookingFlow's
+        // chooseEventType), and refusing them turned "no screening set up
+        // yet" — the state every new business starts in — into a booking
+        // page that could never take a booking.
+        const asksSomething = await serviceAsksProspectAnything(scope, eventTypeId);
+        if (asksSomething) return fail('Complete the questions first', 403);
+      }
     }
 
     const today = DateTime.now().setZone(tenant.timezone);

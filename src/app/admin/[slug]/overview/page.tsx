@@ -65,6 +65,57 @@ const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute:
  *
  * So: Mineral numeral, Graphite label, thin border, white. The brief's
  * statistic exactly, and the judgement goes back to the person reading it. */
+function BookingLinkBar({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  /* Built in the browser from the address bar rather than from a configured
+     base URL, so it is always the host the person is actually on — the one
+     they would have copied by hand. */
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    setUrl(`${window.location.origin}/t/${slug}`);
+  }, [slug]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* Clipboard access can be refused outright — an insecure origin, a
+         browser that will not grant it. The link is selectable text either
+         way, so the fallback is simply that you copy it yourself. */
+    }
+  }
+
+  return (
+    <div className="booking-link">
+      <div className="booking-link-text">
+        <p className="admin-eyebrow">Your booking page</p>
+        <a href={url || `/t/${slug}`} target="_blank" rel="noreferrer" className="booking-link-url">
+          {url || `/t/${slug}`}
+        </a>
+      </div>
+      <div className="booking-link-actions">
+        <button type="button" className="btn-secondary" onClick={copy} disabled={!url}>
+          {copied ? 'Copied' : 'Copy link'}
+        </button>
+        <a className="text-action" href={url || `/t/${slug}`} target="_blank" rel="noreferrer">
+          Open
+          <span aria-hidden="true" className="text-action-arrow">
+            →
+          </span>
+        </a>
+      </div>
+      {/* Announced rather than only shown, so the confirmation is not
+          carried by a word appearing somewhere a screen reader has left. */}
+      <span aria-live="polite" className="sr-only">
+        {copied ? 'Booking page link copied to clipboard' : ''}
+      </span>
+    </div>
+  );
+}
+
 function Stat({ label, value, note }: { label: string; value: number | string; note?: string }) {
   return (
     <div className="stat-block" style={{ flex: '1 1 150px' }}>
@@ -135,6 +186,16 @@ export default function OverviewPage() {
               them. The period moves out of the label into its own line, so
               the label is a phrase rather than a phrase with a footnote
               stapled on. */}
+          {/* The link the whole product exists to produce.
+           *
+           * Nothing in the dashboard showed it. A business could set up its
+           * services, its hours and its questions, and still have no way to
+           * find out what to give people — the URL was only derivable from a
+           * slug they chose once, on a form, weeks earlier. On the first
+           * screen they open every day, because it is the first thing they
+           * need and the thing they will keep coming back for. */}
+          <BookingLinkBar slug={slug} />
+
           <div className="stat-row">
             <Stat label="Upcoming" value={data.upcomingCount} />
             <Stat label="This week" value={data.thisWeekCount} />
