@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 
 type PathType = 'meeting' | 'other';
@@ -11,6 +11,11 @@ interface AnsweredQuestion {
   questionId: string;
   prompt: string;
   answer: string;
+  /* Which way this particular answer pointed. Stored on every answer since
+     migration 0011 and never surfaced — so a business could see that someone
+     was sent elsewhere but not which answer did it, which is the only part
+     they can act on. Null for free text, which never routes anyone. */
+  outcomePathType: PathType | null;
 }
 
 interface ResponseItem {
@@ -29,17 +34,20 @@ interface Funnel {
   other: number;
 }
 
+/* "Aligned" and "Other path" survived the vocabulary sweep by being in an
+   array of labels rather than in markup. Same words the Overview figures
+   use, so a figure and the list it opens agree. */
 const FILTERS: { key: 'all' | Status; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'meeting', label: 'Aligned' },
-  { key: 'other', label: 'Other path' },
-  { key: 'in-progress', label: 'In progress' },
+  { key: 'all', label: 'Everyone' },
+  { key: 'meeting', label: 'Went on to book' },
+  { key: 'other', label: 'Sent somewhere else' },
+  { key: 'in-progress', label: 'Still answering' },
 ];
 
 const STATUS_LABEL: Record<Status, string> = {
-  meeting: 'Aligned',
-  other: 'Other path',
-  'in-progress': 'In progress',
+  meeting: 'Went on to book',
+  other: 'Sent somewhere else',
+  'in-progress': 'Still answering',
 };
 
 function statusOf(r: ResponseItem): Status {
@@ -72,7 +80,17 @@ export default function ResponsesPage() {
   const [responses, setResponses] = useState<ResponseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | Status>('all');
+  /* Seeded from the URL so a figure on Overview can open this list already
+     narrowed. Read once on mount rather than tracked: after that the chips
+     own it, and rewriting the address bar on every chip click would put a
+     dozen dead entries in the back button between here and Overview. */
+  const search = useSearchParams();
+  const requested = search.get('show');
+  const [filter, setFilter] = useState<'all' | Status>(
+    requested === 'meeting' || requested === 'other' || requested === 'in-progress'
+      ? requested
+      : 'all',
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -209,12 +227,25 @@ export default function ResponsesPage() {
                                 : 'No answers recorded for this response.'}
                             </p>
                           ) : (
-                            r.answers.map((a) => (
-                              <div key={a.questionId}>
-                                <div className="response-answer-prompt">{a.prompt}</div>
-                                <div className="response-answer-value">{a.answer}</div>
-                              </div>
-                            ))
+                            r.answers.map((a) => {
+                              /* The answer that did it. Without this a
+                                 business can see that somebody was sent
+                                 elsewhere and has no way to know which
+                                 question is doing the filtering — which is
+                                 the only thing they can actually change. */
+                              const routed = a.outcomePathType === 'other';
+                              return (
+                                <div key={a.questionId} className={routed ? 'response-answer-routed' : undefined}>
+                                  <div className="response-answer-prompt">{a.prompt}</div>
+                                  <div className="response-answer-value">{a.answer}</div>
+                                  {routed && (
+                                    <div className="response-answer-note">
+                                      This answer led to another next step
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       )}

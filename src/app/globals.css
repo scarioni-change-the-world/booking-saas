@@ -2396,3 +2396,41 @@ button.text-action {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* A figure you can press. Deliberately a link rather than a button: it
+   navigates, so it should middle-click, open in a tab and be read as a link
+   by anything that lists a page's links. */
+.stat-block-link {
+  text-decoration: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.stat-block-link:hover {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+}
+.stat-block-more {
+  margin-top: 8px;
+  color: var(--accent-ink);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-block-link {
+    transition: none;
+  }
+}
+
+/* The answer that sent someone down another path. A left edge rather than a
+   fill, so scanning a response the eye lands on the one line that explains
+   the outcome without the other answers looking like errors. */
+.response-answer-routed {
+  border-left: 2px solid var(--emphasis);
+  padding-left: 12px;
+  margin-left: -14px;
+}
+.response-answer-note {
+  margin-top: 3px;
+  color: var(--emphasis-ink);
+  font-size: 0.78rem;
+  font-weight: 500;
+}

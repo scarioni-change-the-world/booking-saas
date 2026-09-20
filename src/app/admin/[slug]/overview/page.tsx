@@ -116,13 +116,55 @@ function BookingLinkBar({ slug }: { slug: string }) {
   );
 }
 
-function Stat({ label, value, note }: { label: string; value: number | string; note?: string }) {
-  return (
-    <div className="stat-block" style={{ flex: '1 1 150px' }}>
+/* A figure, and where it goes when you press it.
+ *
+ * A number on a dashboard is only useful if you can get from it to the
+ * people it counts. "3 sent somewhere else" is a fact you cannot act on;
+ * the three responses, and which answer sent each of them, is a question
+ * you can go and fix.
+ *
+ * It links rather than opening a new view, because the list already exists
+ * on the Responses tab with the filters already built — it just could not
+ * be addressed from outside. One list to maintain, not two that can
+ * disagree about what "sent somewhere else" counts.
+ *
+ * Figures with nowhere useful to go stay as plain blocks. A link that
+ * lands on an unfiltered list is worse than no link: it looks like it did
+ * something. */
+function Stat({
+  label,
+  value,
+  note,
+  href,
+}: {
+  label: string;
+  value: number | string;
+  note?: string;
+  href?: string;
+}) {
+  const body = (
+    <>
       <span className="stat-block-value">{value}</span>
       <span className="stat-block-label">{label}</span>
       {note && <span className="stat-block-period">{note}</span>}
-    </div>
+    </>
+  );
+
+  if (!href) {
+    return (
+      <div className="stat-block" style={{ flex: '1 1 150px' }}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <a className="stat-block stat-block-link" style={{ flex: '1 1 150px' }} href={href}>
+      {body}
+      <span className="stat-block-more" aria-hidden="true">
+        See who →
+      </span>
+    </a>
   );
 }
 
@@ -203,9 +245,20 @@ export default function OverviewPage() {
               label="Finished the questions"
               value={completionRate(data.last30Days.started, data.last30Days.completed)}
               note="Last 30 days"
+              href={`/admin/${slug}/screening/responses`}
             />
-            <Stat label="Went on to book" value={data.last30Days.meeting} note="Last 30 days" />
-            <Stat label="Sent somewhere else" value={data.last30Days.other} note="Last 30 days" />
+            <Stat
+              label="Went on to book"
+              value={data.last30Days.meeting}
+              note="Last 30 days"
+              href={`/admin/${slug}/screening/responses?show=meeting`}
+            />
+            <Stat
+              label="Sent somewhere else"
+              value={data.last30Days.other}
+              note="Last 30 days"
+              href={`/admin/${slug}/screening/responses?show=other`}
+            />
           </div>
 
           {/* One sentence does not need a panel with a heading repeating the
