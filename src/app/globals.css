@@ -14,11 +14,12 @@
  *   --accent      is BRAND. It is the one token a tenant may override — see
  *                 the inline style set from `branding.accentColor` in
  *                 BookingFlow. Links, active/selected states, the
- *                 selected-answer highlight — but NOT a primary button's
- *                 fill: the kit's own button spec fills a primary button
- *                 with Ink at rest and swaps to Soft Mineral on hover (see
- *                 .btn-primary), which is why "buttons" isn't in this
- *                 list the way it used to be. Soft Mineral is the default
+ *                 selected-answer highlight, and a primary button's fill —
+ *                 .btn-primary takes --accent at rest and swaps to Ink on
+ *                 hover, per the kit's own button spec, so a tenant who sets
+ *                 their own colour sees it on their booking page's buttons
+ *                 too. Ink on hover is the part that does not move.
+ *                 Soft Mineral is the default
  *                 for a tenant who has not set their own; it is not
  *                 "intro's colour" applied to their page, it is simply what
  *                 an unbranded page looks like until they pick one.
@@ -150,7 +151,10 @@
   /* The marketing site's one material: a limestone grain, almost entirely
      washed out by a Soft White veil over it, so it reads as paper stock
      rather than as a photograph. Used there on a single band; used here on
-     the sign-in screens only — see .signin-ground. */
+     the company console's sign-in only — see .signin-ground. The business
+     owner's sign-in carries the site's photograph instead (.signin-split),
+     which is the louder half of the same idea, for the screen people
+     actually arrive at from the website. */
   --limestone: linear-gradient(rgba(252, 251, 248, 0.68), rgba(252, 251, 248, 0.68)),
     url('/images/limestone-texture.webp');
 
@@ -528,6 +532,257 @@ button {
   background-color: var(--canvas);
   background-image: var(--limestone);
   background-size: auto, 760px auto;
+}
+
+/* The sign-in split.
+ *
+ * Two halves that say different things. The left is the marketing site's
+ * own closing image, under its own closing line — someone who followed
+ * "Sign in" from the bottom of the website meets the same room and the same
+ * sentence, so the address has not changed. The right is the only part that
+ * does anything, and it is deliberately plain: a column on the ground, not
+ * a card floating above it.
+ *
+ * DOM order is form first, image second, with the image placed back into
+ * column one by grid. That way the small screen and the screen reader both
+ * get the credentials before the scenery, without a second copy of the
+ * markup. */
+.signin-split {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 43%) minmax(0, 1fr);
+}
+.signin-panel {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  /* Soft White here, against the limestone-toned scene beside it. The panel
+     is where the work happens, so it is the lighter, quieter plane. */
+  background: var(--surface);
+}
+.signin-column {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* The scene. Decorative in the accessibility sense — the image carries no
+   information — but the line over it is real copy, so only the picture and
+   its shade are hidden from assistive tech, not the words. */
+.signin-scene {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  background: var(--ink);
+}
+.signin-scene__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Pulled well below centre on purpose. A true centre crop of this 4:3
+     frame into a tall column fills it with the blank canvas on the wall and
+     pushes the chairs off both edges — the room stops reading as a room.
+     Anchoring low keeps the table, the chairs and the rug, which are what
+     make it a place someone is about to be met in. */
+  object-position: 50% 78%;
+}
+/* Dark-neutral, not black: Ink at two strengths, heavier at the foot where
+   the text sits. Composed rather than dimmed. */
+.signin-scene__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(32, 34, 33, 0.78) 0%,
+    rgba(32, 34, 33, 0.48) 42%,
+    rgba(32, 34, 33, 0.24) 100%
+  );
+}
+.signin-scene__words {
+  position: relative;
+  padding: 0 44px 52px;
+  max-width: 30ch;
+}
+.signin-scene__line {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 1.85vw, 1.78rem);
+  line-height: 1.26;
+  color: var(--surface);
+}
+.signin-scene__sub {
+  margin: 14px 0 0;
+  font-size: 0.93rem;
+  line-height: 1.5;
+  color: rgba(252, 251, 248, 0.76);
+}
+
+/* The wordmark, at the exact spec in the brand guide's logo reference, and
+   heavier here than in the admin sidebar: this is the one screen where the
+   name is doing the introducing rather than labelling a chrome. */
+.signin-wordmark {
+  display: block;
+  font-family: var(--font-wordmark);
+  font-weight: 900;
+  font-size: 40px;
+  letter-spacing: -0.075em;
+  line-height: 1;
+  text-transform: lowercase;
+  color: var(--ink);
+  margin-bottom: 34px;
+}
+/* Ochre, not Mineral. This is the page's single expressive detail — the
+   guide's 2-5% — and everything else functional stays Mineral. */
+.signin-eyebrow {
+  margin: 0 0 10px;
+  color: var(--emphasis);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.signin-heading {
+  margin: 0 0 10px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.9rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.signin-lede {
+  margin: 0 0 30px;
+  color: var(--faint);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.signin-form .field {
+  margin-bottom: 18px;
+}
+.signin-form label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.signin-form input {
+  min-height: 52px;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+/* The brief's focus treatment for this screen: a Mineral border with a
+   translucent Mineral ring, in place of the app-wide Ochre outline. Ochre is
+   reserved here for the eyebrow, and two expressive colours on one small
+   column is one too many. The ring is a box-shadow so it does not shift
+   layout, and the outline is explicitly cleared rather than left to fight
+   with it. */
+.signin-form input:focus-visible,
+.signin-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* The password field and its reveal share a border, so the control sits
+   inside the input rather than beside it. */
+.signin-password__control {
+  position: relative;
+}
+.signin-password input {
+  padding-right: 88px;
+}
+.signin-reveal {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--faint);
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.signin-reveal:hover {
+  color: var(--ink);
+}
+
+.signin-form .btn-primary {
+  min-height: 52px;
+}
+
+/* The error sits directly above the button — form-level, because a wrong
+   password is not a fault in either field on its own, and putting it under
+   one of them would point at the wrong thing. Tinted, not shouted: red
+   carries the meaning, the fill stays readable. */
+.signin-error {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--status-broken-tint);
+  color: var(--status-broken-ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.signin-foot {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.86rem;
+  color: var(--faint);
+  line-height: 1.6;
+}
+.signin-foot p {
+  margin: 0;
+}
+.signin-foot p + p {
+  margin-top: 8px;
+}
+.signin-foot a {
+  color: var(--faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.signin-foot a:hover {
+  color: var(--ink);
+}
+
+/* Below this the split stops earning its space: the image would be a strip
+   and the form would be squeezed. Form only, full width, and the picture
+   goes away rather than becoming a decorative band above a keyboard. */
+@media (max-width: 900px) {
+  .signin-split {
+    display: block;
+  }
+  .signin-scene {
+    display: none;
+  }
+  .signin-panel {
+    min-height: 100svh;
+    padding: 44px 22px;
+    align-items: flex-start;
+  }
+  .signin-wordmark {
+    font-size: 34px;
+    margin-bottom: 26px;
+  }
+  .signin-heading {
+    font-size: 1.6rem;
+  }
 }
 
 .eyebrow {
