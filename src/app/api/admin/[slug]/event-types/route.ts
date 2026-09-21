@@ -10,7 +10,7 @@ import {
 } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
-import { parseBookingModeForCreate } from '@/lib/admin-event-types';
+import { parseBookingModeForCreate, parseLocation, parsePrice } from '@/lib/admin-event-types';
 import type { EventTypeRow } from '@/lib/db/types';
 
 /** Duration and buffers default rather than being required, so the
@@ -94,6 +94,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const availableToExistingClients =
       optionalBoolean(body, 'availableToExistingClients') ?? false;
     const { bookingMode, packSize } = parseBookingModeForCreate(body);
+    const priceMinor = parsePrice(body) ?? null;
+    const location = parseLocation(body);
 
     const base = slugify(name);
 
@@ -114,6 +116,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
         available_to_existing_clients: availableToExistingClients,
         booking_mode: bookingMode,
         pack_size: packSize,
+        price_minor: priceMinor,
+        location_kind: location?.locationKind ?? null,
+        location_detail: location?.locationDetail ?? null,
       });
 
       if (!error) {

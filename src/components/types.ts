@@ -18,11 +18,19 @@ export interface PublicEventType {
      information about what the service is, not as a quantity to choose. */
   bookingMode: 'single' | 'pack';
   packSize: number | null;
+  /* Minor units of the tenant's currency (see PublicConfig.currency and
+     src/lib/money.ts). Null means no published price — which is not the
+     same as free, so nothing is rendered for it. */
+  priceMinor: number | null;
+  locationKind: 'online' | 'in_person' | 'phone' | null;
+  locationDetail: string | null;
 }
 
 export interface PublicConfig {
   name: string;
   timezone: string;
+  /** ISO 4217, for rendering every price on the page. */
+  currency: string;
   branding: { logoUrl?: string; accentColor?: string; buttonColor?: string };
   otherPath: {
     message: string;

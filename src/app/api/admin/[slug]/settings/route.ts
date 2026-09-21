@@ -1,4 +1,4 @@
-import { handleError, ok, readJson, requireEmail, requireInt } from '@/lib/api';
+import { fail, handleError, ok, readJson, requireEmail, requireInt, requireString } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeSettings } from '@/lib/admin-serializers';
 import type { TenantSettingsRow } from '@/lib/db/types';
@@ -46,6 +46,20 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ slug: str
     }
     if ('bookingWindowDays' in body) {
       patch.booking_window_days = requireInt(body, 'bookingWindowDays', { min: 0, max: 3650 });
+    }
+
+    /* Upper-cased before it is checked, so "eur" is accepted rather than
+       refused on a technicality. The pattern is enforced here as well as by
+       migration 0024's check because this value is handed to
+       Intl.NumberFormat, which throws on anything it does not recognise —
+       and a settings save should not be able to make every booking page in
+       an account fail to render. */
+    if ('currency' in body) {
+      const raw = requireString(body, 'currency', { maxLength: 3 }).toUpperCase();
+      if (!/^[A-Z]{3}$/.test(raw)) {
+        return fail('Currency must be a three-letter code, like EUR or USD', 400);
+      }
+      patch.currency = raw;
     }
 
     // Emails go through requireEmail (not the nullable helper) when present and

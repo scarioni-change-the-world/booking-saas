@@ -13,6 +13,7 @@ interface Settings {
   bookingWindowDays: number;
   notificationEmail: string | null;
   replyToEmail: string | null;
+  currency: string;
   updatedAt: string;
 }
 
@@ -22,6 +23,29 @@ interface EmailTemplate {
   subject: string;
   body: string;
   updatedAt: string;
+}
+
+/**
+ * The currencies offered in the picker.
+ *
+ * A short list rather than all 180 of ISO 4217: this product's customers are
+ * coaches, therapists and consultants, and a dropdown they have to scroll
+ * for a minute to find "EUR" in is worse than one that occasionally lacks
+ * the right code. The column accepts any three letters, so a currency that
+ * is missing here is a one-line addition, not a migration.
+ */
+const CURRENCIES = ['EUR', 'GBP', 'USD', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CAD', 'AUD', 'NZD', 'JPY', 'BRL', 'MXN'];
+
+/** The reader's own name for a currency — "euro" in Madrid, "Euro" in
+ * Berlin — rather than a hard-coded English table. */
+function currencyName(code: string): string {
+  try {
+    return (
+      new Intl.DisplayNames(undefined, { type: 'currency' }).of(code) ?? code
+    );
+  } catch {
+    return code;
+  }
 }
 
 const TEMPLATE_KIND_LABEL: Record<EmailTemplateKind, string> = {
@@ -62,7 +86,11 @@ export default function SettingsPage() {
   const calendarUrl = `/api/admin/${slug}/calendar`;
 
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [rulesForm, setRulesForm] = useState({ bookingNoticeHours: 24, bookingWindowDays: 60 });
+  const [rulesForm, setRulesForm] = useState({
+    bookingNoticeHours: 24,
+    bookingWindowDays: 60,
+    currency: 'EUR',
+  });
   const [notifyForm, setNotifyForm] = useState({ notificationEmail: '', replyToEmail: '' });
 
   const [loading, setLoading] = useState(true);
@@ -108,6 +136,7 @@ export default function SettingsPage() {
         setRulesForm({
           bookingNoticeHours: result.settings.bookingNoticeHours,
           bookingWindowDays: result.settings.bookingWindowDays,
+          currency: result.settings.currency,
         });
         setNotifyForm({
           notificationEmail: result.settings.notificationEmail ?? '',
@@ -257,7 +286,8 @@ export default function SettingsPage() {
           <form className="card" onSubmit={submitRules} style={{ marginBottom: 14 }}>
             <div className="admin-card-title">Booking rules</div>
             <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-4px 0 16px' }}>
-              How much warning you need, and how far into the future people can book.
+              How much warning you need, how far ahead people can book, and what you
+              charge in.
             </p>
 
             <div className="admin-field-row">
@@ -289,6 +319,26 @@ export default function SettingsPage() {
                   }
                 />
               </div>
+            </div>
+
+            <div className="field" style={{ maxWidth: 260 }}>
+              <label htmlFor="currency">Currency</label>
+              <select
+                id="currency"
+                value={rulesForm.currency}
+                onChange={(e) => setRulesForm({ ...rulesForm, currency: e.target.value })}
+              >
+                {CURRENCIES.map((code) => (
+                  <option key={code} value={code}>
+                    {code} — {currencyName(code)}
+                  </option>
+                ))}
+              </select>
+              <p className="field-note">
+                Every price you set on a service is shown in this. Changing it
+                re-labels existing prices rather than converting them, so check
+                your services after.
+              </p>
             </div>
 
             <div className="actions">

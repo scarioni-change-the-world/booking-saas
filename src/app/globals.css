@@ -319,6 +319,14 @@ a:visited {
 .field {
   margin-bottom: 22px;
 }
+/* The one-line explanation under an input. Was an inline style repeated at
+   each use, which is how two of them ended up different sizes. */
+.field-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--faint);
+}
 .field > label,
 .field > .prompt {
   display: block;
@@ -2918,6 +2926,12 @@ body:has(.bk-embedded) {
 .bk-facts li + li {
   margin-top: 4px;
 }
+/* The second thing anyone looks for after "how long", so it reads as a
+   fact rather than as fine print. Ink, not Graphite. */
+.bk-price {
+  color: var(--ink);
+  font-weight: 500;
+}
 
 .bk-chosen {
   margin-top: 24px;
@@ -3132,6 +3146,20 @@ body:has(.bk-embedded) {
 }
 .bk-service-option-facts {
   font-size: 0.83rem;
+  color: var(--faint);
+}
+.bk-service-option-price {
+  flex: 0 0 auto;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bk-service-option-per {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  font-weight: 400;
   color: var(--faint);
 }
 .bk-service-option-go {
@@ -3438,6 +3466,11 @@ body:has(.bk-embedded) {
 .bk-confirmed-what {
   margin-top: 8px !important;
 }
+.bk-confirmed-where {
+  margin-top: 4px !important;
+  font-size: 0.9rem;
+  opacity: 0.86;
+}
 .bk-confirmed-zone {
   margin-top: 10px !important;
   font-size: 0.8rem;
@@ -3543,6 +3576,19 @@ body:has(.bk-embedded) {
   .bk-review-row {
     grid-template-columns: 1fr;
     gap: 3px;
+  }
+  /* The row becomes two lines rather than two columns: a name and a price
+     fighting over 350px leaves neither readable. */
+  .bk-service-option {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .bk-service-option-price {
+    text-align: left;
+  }
+  .bk-service-option-per {
+    display: inline;
+    margin-left: 6px;
   }
 }
 

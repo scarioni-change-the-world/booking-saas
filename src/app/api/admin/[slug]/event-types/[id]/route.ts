@@ -9,7 +9,7 @@ import {
 } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
-import { parseBookingModeForUpdate } from '@/lib/admin-event-types';
+import { parseBookingModeForUpdate, parseLocation, parsePrice } from '@/lib/admin-event-types';
 import type { EventTypeRow } from '@/lib/db/types';
 
 /**
@@ -65,6 +65,15 @@ export async function PATCH(
 
     const active = optionalBoolean(body, 'active');
     if (active !== undefined) patch.active = active;
+
+    const priceMinor = parsePrice(body);
+    if (priceMinor !== undefined) patch.price_minor = priceMinor;
+
+    const location = parseLocation(body);
+    if (location !== undefined) {
+      patch.location_kind = location.locationKind;
+      patch.location_detail = location.locationDetail;
+    }
 
     const bookingModeUpdate = parseBookingModeForUpdate(body);
     if (bookingModeUpdate !== undefined) {

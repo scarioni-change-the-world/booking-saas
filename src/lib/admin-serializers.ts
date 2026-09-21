@@ -35,6 +35,9 @@ export function serializeEventType(row: EventTypeRow) {
     createdAt: row.created_at,
     bookingMode: row.booking_mode,
     packSize: row.pack_size,
+    priceMinor: row.price_minor,
+    locationKind: row.location_kind,
+    locationDetail: row.location_detail,
   };
 }
 
@@ -94,6 +97,7 @@ export function serializeSettings(row: TenantSettingsRow) {
     bookingWindowDays: row.booking_window_days,
     notificationEmail: row.notification_email,
     replyToEmail: row.reply_to_email,
+    currency: row.currency,
     updatedAt: row.updated_at,
   };
 }

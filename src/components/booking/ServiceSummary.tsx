@@ -1,6 +1,8 @@
 'use client';
 
 import { articleFor } from './journey';
+import { formatMoney } from '@/lib/money';
+import { describeLocation } from '@/lib/service-location';
 import { initials } from '../brand';
 import type { PublicConfig, PublicEventType } from '../types';
 
@@ -34,6 +36,11 @@ export function ServiceSummary({
 }) {
   if (!config) return null;
 
+  const currency = config.currency;
+  const location = eventType
+    ? describeLocation(eventType.locationKind, eventType.locationDetail)
+    : null;
+
   return (
     <div className="bk-summary">
       <div className="bk-identity">
@@ -59,6 +66,15 @@ export function ServiceSummary({
           )}
           <ul className="bk-facts">
             <li>{eventType.durationMinutes} minutes</li>
+            {location && <li>{location}</li>}
+            {/* Nothing at all when no price is set. An unset price is not
+                free, and "€0.00" would say it was. */}
+            {eventType.priceMinor !== null && (
+              <li className="bk-price">
+                {formatMoney(eventType.priceMinor, currency)}
+                {eventType.bookingMode === 'pack' ? ' per session' : ''}
+              </li>
+            )}
             {eventType.bookingMode === 'pack' && eventType.packSize && (
               <li>
                 Part of {articleFor(eventType.packSize)} {eventType.packSize}-session package

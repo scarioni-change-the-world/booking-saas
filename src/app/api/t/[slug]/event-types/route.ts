@@ -24,6 +24,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         color: t.color,
         bookingMode: t.booking_mode,
         packSize: t.pack_size,
+        priceMinor: t.price_minor,
+        locationKind: t.location_kind,
+        locationDetail: t.location_detail,
       })),
     });
   } catch (error) {

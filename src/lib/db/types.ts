@@ -26,6 +26,7 @@ export type PlatformRole = 'owner' | 'admin' | 'support';
  * itself, not on any one client's grant. See the migration for why this is
  * a declaration only and doesn't yet drive an actual checkout. */
 export type BookingMode = 'single' | 'pack';
+export type ServiceLocationKind = 'online' | 'in_person' | 'phone';
 /** Same shape and reasoning as SyncStatus (migration 0017) — a booking's
  * most recent transactional email attempt, reused across create, reschedule
  * and cancel rather than one column per stage. */
@@ -76,6 +77,10 @@ export interface TenantSettingsRow {
   booking_window_days: number;
   notification_email: string | null;
   reply_to_email: string | null;
+  /* ISO 4217, on the tenant rather than the service: a business bills in
+     one currency, and per-service would let two sit side by side on one
+     page. See migration 0024. */
+  currency: string;
   updated_at: string;
 }
 
@@ -112,6 +117,12 @@ export interface EventTypeRow {
   created_at: string;
   booking_mode: BookingMode;
   pack_size: number | null;
+  /* Minor units of the tenant's currency — never a float. See
+     src/lib/money.ts. Null means "no published price", which is different
+     from free. */
+  price_minor: number | null;
+  location_kind: ServiceLocationKind | null;
+  location_detail: string | null;
 }
 
 export interface AvailabilityRuleRow {

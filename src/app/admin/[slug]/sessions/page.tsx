@@ -5,7 +5,10 @@ import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
-import type { SerializedEventType } from '@/lib/admin-serializers';
+import type { SerializedEventType, SerializedSettings } from '@/lib/admin-serializers';
+import { DEFAULT_CURRENCY, formatMoney, parseOptionalMoney, toMoneyInput } from '@/lib/money';
+import { LOCATION_OPTIONS, describeLocation } from '@/lib/service-location';
+import type { ServiceLocationKind } from '@/lib/db/types';
 
 /** Up to this many active session types per tenant — a soft, UI-only guide
  * while pricing tiers are still undecided, not a database limit (see the
@@ -20,6 +23,12 @@ const PACK_PRESETS = [5, 8, 10];
 interface FormState {
   name: string;
   description: string;
+  /* Held as the text the person typed, not as a number. Parsing on every
+     keystroke would fight them halfway through "60.5", and the value is
+     only ever a price at the moment it is saved — see parseOptionalMoney. */
+  price: string;
+  locationKind: ServiceLocationKind | '';
+  locationDetail: string;
   durationMinutes: string;
   bufferBeforeMinutes: string;
   bufferAfterMinutes: string;
@@ -32,6 +41,9 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   name: '',
   description: '',
+  price: '',
+  locationKind: '',
+  locationDetail: '',
   durationMinutes: '30',
   bufferBeforeMinutes: '0',
   bufferAfterMinutes: '0',
@@ -41,10 +53,13 @@ const EMPTY_FORM: FormState = {
   packSize: '10',
 };
 
-function typeToForm(type: SerializedEventType): FormState {
+function typeToForm(type: SerializedEventType, currency: string): FormState {
   return {
     name: type.name,
     description: type.description ?? '',
+    price: toMoneyInput(type.priceMinor, currency),
+    locationKind: type.locationKind ?? '',
+    locationDetail: type.locationDetail ?? '',
     durationMinutes: String(type.durationMinutes),
     bufferBeforeMinutes: String(type.bufferBeforeMinutes),
     bufferAfterMinutes: String(type.bufferAfterMinutes),
@@ -86,13 +101,21 @@ export default function SessionsPage() {
 
   const [quickName, setQuickName] = useState('');
   const [creating, setCreating] = useState(false);
+  /* The currency lives on the tenant, not the service (migration 0024), so
+     it is loaded once here and every price on the page is read and written
+     in it. */
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const result = await adminFetchJson<{ eventTypes: SerializedEventType[] }>(base);
+      const [result, settings] = await Promise.all([
+        adminFetchJson<{ eventTypes: SerializedEventType[] }>(base),
+        adminFetchJson<{ settings: SerializedSettings }>(`/api/admin/${slug}/settings`),
+      ]);
       setTypes(result.eventTypes);
+      setCurrency(settings.settings.currency);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -110,7 +133,7 @@ export default function SessionsPage() {
 
   function openRow(type: SerializedEventType) {
     setExpandedId(type.id);
-    setForm(typeToForm(type));
+    setForm(typeToForm(type, currency));
   }
 
   function toggleRow(type: SerializedEventType) {
@@ -147,6 +170,15 @@ export default function SessionsPage() {
 
   async function submitEdit(event: React.FormEvent, id: string) {
     event.preventDefault();
+    /* Parsed before anything is sent, so a typo is a message under the
+       field rather than a 400 from the server — and so the value that
+       reaches the API is already the integer the column stores. */
+    const price = parseOptionalMoney(form.price, currency);
+    if (!price.ok) {
+      setError(`"${form.price}" is not a price. Leave it blank for no published price.`);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -163,6 +195,11 @@ export default function SessionsPage() {
           availableToExistingClients: form.availableToExistingClients,
           bookingMode: form.bookingMode,
           packSize: form.bookingMode === 'pack' ? Number(form.packSize) : null,
+          priceMinor: price.minor,
+          locationKind: form.locationKind === '' ? null : form.locationKind,
+          // Cleared with the kind, so an address can never outlive the
+          // thing it was describing.
+          locationDetail: form.locationKind === '' ? null : form.locationDetail || null,
         }),
       });
       setExpandedId(null);
@@ -253,8 +290,16 @@ export default function SessionsPage() {
                         )}
                     </span>
                     <span className="service-row-meta">
-                      {type.durationMinutes} min
-                      {type.bookingMode === 'pack' ? ` · pack of ${type.packSize}` : ''}
+                      {[
+                        `${type.durationMinutes} min`,
+                        describeLocation(type.locationKind, type.locationDetail),
+                        type.priceMinor !== null
+                          ? formatMoney(type.priceMinor, currency)
+                          : null,
+                        type.bookingMode === 'pack' ? `pack of ${type.packSize}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
                     <ChevronIcon />
                   </button>
@@ -368,6 +413,76 @@ export default function SessionsPage() {
                               sessions to a client still happens from their page on Clients, which
                               will suggest this number as a starting point.
                             </p>
+                          </div>
+                        )}
+
+                        <div className="field">
+                          <label htmlFor={`edit-price-${type.id}`}>
+                            Price ({currency})
+                          </label>
+                          <input
+                            id={`edit-price-${type.id}`}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Leave blank for no published price"
+                            value={form.price}
+                            onChange={(e) => setForm({ ...form, price: e.target.value })}
+                          />
+                          <p className="field-note">
+                            Shown to clients before they book. Blank means no price is
+                            shown at all — which is not the same as free.
+                            {form.bookingMode === 'pack' && ' For a pack, this is the price of one session.'}
+                          </p>
+                        </div>
+
+                        <div className="field">
+                          <label htmlFor={`edit-location-kind-${type.id}`}>Where it happens</label>
+                          <select
+                            id={`edit-location-kind-${type.id}`}
+                            value={form.locationKind}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                locationKind: e.target.value as ServiceLocationKind | '',
+                              })
+                            }
+                          >
+                            <option value="">Not specified</option>
+                            {LOCATION_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Only once there is something for it to describe —
+                            an address attached to nothing is a line a client
+                            cannot place, and the database refuses it anyway. */}
+                        {form.locationKind !== '' && (
+                          <div className="field">
+                            <label htmlFor={`edit-location-detail-${type.id}`}>
+                              {form.locationKind === 'in_person'
+                                ? 'Address'
+                                : 'Anything else clients should know'}
+                            </label>
+                            <input
+                              id={`edit-location-detail-${type.id}`}
+                              type="text"
+                              maxLength={300}
+                              placeholder={
+                                form.locationKind === 'in_person'
+                                  ? 'Calle Mayor 4, 2º, Madrid'
+                                  : form.locationKind === 'phone'
+                                    ? "We'll ring the number you give us"
+                                    : 'A video link is sent with the confirmation'
+                              }
+                              value={form.locationDetail}
+                              onChange={(e) =>
+                                setForm({ ...form, locationDetail: e.target.value })
+                              }
+                            />
+                            <p className="field-note">Optional.</p>
                           </div>
                         )}
 

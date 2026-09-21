@@ -5,6 +5,8 @@ import { DateNavigator } from './DateNavigator';
 import { ProgressHeader } from './ProgressHeader';
 import { downloadIcs, googleCalendarUrl, type CalendarEvent } from './calendar-actions';
 import { articleFor } from './journey';
+import { formatMoney } from '@/lib/money';
+import { LOCATION_LABELS, describeLocation } from '@/lib/service-location';
 import { groupSlots } from './slots';
 import type { BookingJourney } from './useBookingJourney';
 
@@ -97,6 +99,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
   }
 
   const activeDay = days.find((d) => d.date === selectedDate) ?? null;
+  const currency = config?.currency ?? 'EUR';
+  const reviewLocation = eventType
+    ? describeLocation(eventType.locationKind, eventType.locationDetail)
+    : null;
 
   return (
     <div className="bk-steps">
@@ -145,14 +151,35 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                           <span className="bk-service-option-note">{type.description}</span>
                         )}
                         <span className="bk-service-option-facts">
-                          {type.durationMinutes} minutes
-                          {type.bookingMode === 'pack' && type.packSize
-                            ? ` · part of ${articleFor(type.packSize)} ${
-                                type.packSize
-                              }-session package`
-                            : ''}
+                          {/* The kind of location, not the address. At the
+                              moment of choosing, "In person" is the fact that
+                              decides; the street belongs on review and on the
+                              confirmation, where somebody is working out how
+                              to get there. */}
+                          {[
+                            `${type.durationMinutes} minutes`,
+                            type.locationKind ? LOCATION_LABELS[type.locationKind] : null,
+                            type.bookingMode === 'pack' && type.packSize
+                              ? `part of ${articleFor(type.packSize)} ${
+                                  type.packSize
+                                }-session package`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                       </span>
+                      {/* Right-hand column, the way a menu sets a price:
+                          it is the second thing anyone looks for, and in the
+                          facts run it was the fifth. */}
+                      {type.priceMinor !== null && (
+                        <span className="bk-service-option-price">
+                          {formatMoney(type.priceMinor, currency)}
+                          {type.bookingMode === 'pack' && (
+                            <span className="bk-service-option-per">per session</span>
+                          )}
+                        </span>
+                      )}
                       <span className="bk-service-option-go" aria-hidden="true">
                         →
                       </span>
@@ -472,6 +499,26 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
               <dt>Length</dt>
               <dd>{eventType.durationMinutes} minutes</dd>
             </div>
+            {reviewLocation && (
+              <div className="bk-review-row">
+                <dt>Where</dt>
+                <dd>{reviewLocation}</dd>
+              </div>
+            )}
+            {/* Shown only when there is one. Nobody should have to wonder,
+                at the moment of confirming, whether a blank line means free
+                or means nobody said. */}
+            {eventType.priceMinor !== null && (
+              <div className="bk-review-row">
+                <dt>Price</dt>
+                <dd>
+                  {formatMoney(eventType.priceMinor, currency)}
+                  {eventType.bookingMode === 'pack' && (
+                    <span className="bk-review-sub">per session</span>
+                  )}
+                </dd>
+              </div>
+            )}
             <div className="bk-review-row">
               <dt>You</dt>
               <dd>
@@ -511,6 +558,8 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
           confirmed={confirmed}
           serviceName={eventType.name}
           durationMinutes={eventType.durationMinutes}
+          location={reviewLocation}
+          locationDetail={eventType.locationDetail}
           businessName={config?.name ?? ''}
           email={email}
           viewerZone={viewerZone}
@@ -530,6 +579,8 @@ function Confirmation({
   confirmed,
   serviceName,
   durationMinutes,
+  location,
+  locationDetail,
   businessName,
   email,
   viewerZone,
@@ -544,6 +595,8 @@ function Confirmation({
   };
   serviceName: string;
   durationMinutes: number;
+  location: string | null;
+  locationDetail: string | null;
   businessName: string;
   email: string;
   viewerZone: string;
@@ -555,7 +608,11 @@ function Confirmation({
     startsAt: confirmed.startsAt,
     durationMinutes,
     details: confirmed.meetingUrl ? `Join: ${confirmed.meetingUrl}` : undefined,
-    location: confirmed.meetingUrl ?? undefined,
+    /* A video link if there is one, because that is what somebody taps from
+       a calendar reminder. Otherwise the address the business wrote — an
+       in-person appointment whose calendar entry has no address is the one
+       people arrive late to. */
+    location: confirmed.meetingUrl ?? locationDetail ?? location ?? undefined,
     uid: confirmed.manageToken,
   };
 
@@ -571,6 +628,9 @@ function Confirmation({
         <p className="bk-confirmed-what">
           {serviceName} with {businessName}
         </p>
+        {location && !confirmed.meetingUrl && (
+          <p className="bk-confirmed-where">{location}</p>
+        )}
         <p className="bk-confirmed-zone">{viewerZone}</p>
       </div>
 
