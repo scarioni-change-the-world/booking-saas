@@ -55,6 +55,7 @@ const TEMPLATE_KIND_LABEL: Record<EmailTemplateKind, string> = {
   owner_notification: 'New booking (sent to you)',
   client_invite: 'Client booking link',
   booking_reminder: 'Appointment reminder',
+  booking_pack_confirmed: 'Programme booked (a pack)',
 };
 
 type CalendarStatus = 'active' | 'needs_reconnect' | 'revoked';

@@ -69,11 +69,16 @@ export function useBookingJourney(slug: string) {
   const [days, setDays] = useState<DaySlots[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
+  /* A programme's appointments, in the order the client picked them. A
+     single booking keeps using `slot` — one field that is sometimes a list
+     would make every reader check which it is today. */
+  const [packSlots, setPackSlots] = useState<string[]>([]);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [confirmed, setConfirmed] = useState<Confirmed | null>(null);
+  const [confirmedPack, setConfirmedPack] = useState<Confirmed[]>([]);
 
   const base = `/api/t/${encodeURIComponent(slug)}`;
 
@@ -239,27 +244,39 @@ export function useBookingJourney(slug: string) {
   }
 
   async function confirmBooking() {
-    if (!eventType || !slot) return;
+    if (!eventType) return;
+    if (isPack ? packSlots.length !== slotsNeeded : !slot) return;
 
     setBusy(true);
     setError(null);
     try {
-      const result = await postJson<{ booking: Confirmed }>(`${base}/bookings`, {
-        eventTypeId: eventType.id,
-        startsAt: slot,
-        name,
-        email,
-        notes,
-        responseId,
-      });
+      const result = await postJson<{ booking: Confirmed; bookings: Confirmed[] }>(
+        `${base}/bookings`,
+        {
+          eventTypeId: eventType.id,
+          // One or the other, never both — the route reads which was sent to
+          // decide what is being booked.
+          ...(isPack ? { slots: packSlots } : { startsAt: slot }),
+          name,
+          email,
+          notes,
+          responseId,
+        },
+      );
       setConfirmed(result.booking);
+      setConfirmedPack(result.bookings ?? [result.booking]);
       setPhase('confirmed');
     } catch (cause) {
       setError((cause as Error).message);
-      // A 409 means the slot went while the form was open. Reload the calendar
-      // rather than leaving a stale grid the client can pick from again.
-      if ((cause as Error).message.toLowerCase().includes('available')) {
+      /* A 409 means a time went while the form was open. Back to the
+         calendar with a clean slate rather than a stale grid — and for a
+         programme that means clearing the whole set, because the server
+         books all of them or none, so a partial selection would be a lie
+         about what is still held. */
+      const message = (cause as Error).message.toLowerCase();
+      if (message.includes('available') || message.includes('just taken')) {
         setSlot(null);
+        setPackSlots([]);
         setPhase('time');
       }
     } finally {
@@ -267,10 +284,38 @@ export function useBookingJourney(slug: string) {
     }
   }
 
+  /**
+   * Pick a time — or, for a programme, add one to the set.
+   *
+   * A second press on the same time removes it rather than doing nothing.
+   * Choosing ten dates means occasionally choosing the wrong one, and the
+   * undo has to be in the same place as the action.
+   */
   function chooseSlot(iso: string) {
-    setSlot(iso);
+    if (!isPack) {
+      setSlot(iso);
+      setPhase('details');
+      return;
+    }
+
+    setError(null);
+    setPackSlots((current) => {
+      if (current.includes(iso)) return current.filter((existing) => existing !== iso);
+      if (current.length >= slotsNeeded) return current;
+      return [...current, iso].sort();
+    });
+  }
+
+  /** Done choosing a programme's dates — only once all of them are chosen. */
+  function confirmSlots() {
+    if (packSlots.length !== slotsNeeded) return;
     setPhase('details');
   }
+
+  /** How many appointments this service is booked in — 1 unless it is a pack. */
+  const slotsNeeded =
+    eventType?.bookingMode === 'pack' && eventType.packSize ? eventType.packSize : 1;
+  const isPack = slotsNeeded > 1;
 
   const steps = useMemo(
     () =>
@@ -307,7 +352,9 @@ export function useBookingJourney(slug: string) {
         setPhase(responseId ? 'questions' : 'email');
         break;
       case 'time':
-        setSlot(null);
+        // The chosen times stay for a programme: going back to adjust one of
+        // ten must not throw away the other nine.
+        if (!isPack) setSlot(null);
         setPhase('time');
         break;
       case 'details':
@@ -319,11 +366,14 @@ export function useBookingJourney(slug: string) {
   }, [currentStep, steps, responseId]);
 
   /** Jump straight to a step from the review screen. */
-  const editStep = useCallback((target: StepId) => {
-    setError(null);
-    if (target === 'time') setSlot(null);
-    setPhase(target === 'questions' ? 'questions' : (target as Phase));
-  }, []);
+  const editStep = useCallback(
+    (target: StepId) => {
+      setError(null);
+      if (target === 'time' && !isPack) setSlot(null);
+      setPhase(target === 'questions' ? 'questions' : (target as Phase));
+    },
+    [isPack],
+  );
 
   const answeredCount = questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length;
   const canGoBack = currentStep !== null && previousStep(steps, currentStep) !== null;
@@ -360,6 +410,10 @@ export function useBookingJourney(slug: string) {
     setSelectedDate,
     slot,
     chooseSlot,
+    packSlots,
+    slotsNeeded,
+    isPack,
+    confirmSlots,
 
     name,
     setName,
@@ -368,6 +422,7 @@ export function useBookingJourney(slug: string) {
     submitDetails,
     confirmBooking,
     confirmed,
+    confirmedPack,
   };
 }
 

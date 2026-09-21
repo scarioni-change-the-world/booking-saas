@@ -9,9 +9,10 @@ import {
   requireTenant,
   fail,
 } from '@/lib/api';
-import { createBooking } from '@/lib/booking-service';
+import { createBooking, createBookingPack } from '@/lib/booking-service';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
+import { BookingError } from '@/lib/booking-service';
 import type { QualificationResponseRow } from '@/lib/db/types';
 
 /**
@@ -72,39 +73,84 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       return fail('Complete the questions first', 403);
     }
 
-    const booking = await createBooking(tenant, scope, {
+    const common = {
       eventTypeId,
-      startsAt: requireString(body, 'startsAt', { maxLength: 40 }),
       name: requireString(body, 'name', { maxLength: 200 }),
       email: requireEmail(body, 'email'),
       notes: optionalString(body, 'notes', { maxLength: 5000 }),
       qualificationResponseId: responseId,
-    });
+    };
+
+    /* A pack is asked for by sending `slots` instead of `startsAt`. Which one
+       the caller sent decides the path, and createBookingPack then checks
+       against the *service* that a pack is what it really is — so sending
+       ten slots for a single-appointment service is refused there rather
+       than quietly booking ten separate appointments. */
+    const packSlots = requireSlotsIfPresent(body);
+
+    const bookings = packSlots
+      ? await createBookingPack(tenant, scope, { ...common, slots: packSlots })
+      : [
+          await createBooking(tenant, scope, {
+            ...common,
+            startsAt: requireString(body, 'startsAt', { maxLength: 40 }),
+          }),
+        ];
 
     // The confirmation email (with .ics and the manage link) and the
-    // owner notification already went out from inside createBooking —
-    // src/lib/booking-email.ts, brief 7.5.
+    // owner notification already went out from inside createBooking /
+    // createBookingPack — src/lib/booking-email.ts, brief 7.5.
 
-    return ok(
-      {
-        booking: {
-          id: booking.id,
-          startsAt: booking.starts_at,
-          endsAt: booking.ends_at,
-          manageToken: booking.manage_token,
-          meetingUrl: booking.meeting_url,
-          // A boolean, not the email_status enum, because a stranger needs
-          // to know whether to expect an email and nothing else. 'failed'
-          // and 'not_configured' differ only to the operator — who sees
-          // both, with the reason, on the booking in their dashboard — and
-          // telling a visitor which one would describe the state of a mail
-          // server to someone with no business knowing it.
-          confirmationEmailSent: booking.email_status === 'sent',
-        },
-      },
-      201,
-    );
+    const shaped = bookings.map((booking) => ({
+      id: booking.id,
+      startsAt: booking.starts_at,
+      endsAt: booking.ends_at,
+      manageToken: booking.manage_token,
+      meetingUrl: booking.meeting_url,
+      // A boolean, not the email_status enum, because a stranger needs
+      // to know whether to expect an email and nothing else. 'failed'
+      // and 'not_configured' differ only to the operator — who sees
+      // both, with the reason, on the booking in their dashboard — and
+      // telling a visitor which one would describe the state of a mail
+      // server to someone with no business knowing it.
+      confirmationEmailSent: booking.email_status === 'sent',
+    }));
+
+    /* `booking` stays in the response, always, and for a pack it is the
+       first appointment. Removing it would break the confirmation screen
+       for every single booking, and a pack's first appointment is the one
+       that screen leads with anyway. */
+    return ok({ booking: shaped[0]!, bookings: shaped }, 201);
   } catch (error) {
     return handleError(error);
   }
+}
+
+/**
+ * The slots of a pack, or null when this is an ordinary booking.
+ *
+ * Validated to the shape only — that these are strings, that there are a
+ * plausible number of them, that none is absurdly long. Whether they are
+ * real, available times for a service that is actually sold as a pack is
+ * createBookingPack's job, against the database, where the answer cannot be
+ * argued with.
+ */
+function requireSlotsIfPresent(body: Record<string, unknown>): string[] | null {
+  if (body.slots === undefined || body.slots === null) return null;
+
+  const value = body.slots;
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new BookingError('"slots" must be a list of times', 400);
+  }
+  // Ten is the product's ceiling (migration 0014); the check here is a
+  // bound on what an unauthenticated caller can make this route do, not the
+  // business rule — that lives with the service.
+  if (value.length > 10) {
+    throw new BookingError('That is more appointments than any programme has', 400);
+  }
+  if (!value.every((item) => typeof item === 'string' && item.length <= 40)) {
+    throw new BookingError('"slots" must be a list of times', 400);
+  }
+
+  return value as string[];
 }

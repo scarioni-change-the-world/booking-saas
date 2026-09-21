@@ -81,12 +81,41 @@ function foldLine(line: string): string {
 /** Build one VEVENT wrapped in a complete VCALENDAR — the whole attachment
  * a single booking's confirmation or reschedule email needs. */
 export function buildIcs(input: IcsEventInput): string {
+  return buildIcsCalendar([input]);
+}
+
+/**
+ * Several events in one file.
+ *
+ * A programme booked as a pack is ten appointments, and ten separate .ics
+ * attachments is ten things to open. RFC 5545 allows any number of VEVENTs
+ * inside one VCALENDAR, and every calendar client adds them all from a
+ * single file — so the client taps once and the whole programme is in their
+ * diary.
+ *
+ * Each event keeps its own UID, because they remain independent
+ * appointments: cancelling session three must update session three's entry
+ * and nothing else.
+ */
+export function buildIcsCalendar(events: readonly IcsEventInput[]): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Intro//Booking//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
+  ];
+
+  for (const input of events) lines.push(...eventLines(input));
+
+  lines.push('END:VCALENDAR');
+
+  // RFC 5545 requires CRLF line endings throughout, not just at fold points.
+  return lines.map(foldLine).join('\r\n') + '\r\n';
+}
+
+function eventLines(input: IcsEventInput): string[] {
+  const lines = [
     'BEGIN:VEVENT',
     `UID:${input.uid}@intro`,
     `DTSTAMP:${toIcsUtc(new Date().toISOString())}`,
@@ -106,8 +135,6 @@ export function buildIcs(input: IcsEventInput): string {
     );
   }
 
-  lines.push('END:VEVENT', 'END:VCALENDAR');
-
-  // RFC 5545 requires CRLF line endings throughout, not just at fold points.
-  return lines.map(foldLine).join('\r\n') + '\r\n';
+  lines.push('END:VEVENT');
+  return lines;
 }

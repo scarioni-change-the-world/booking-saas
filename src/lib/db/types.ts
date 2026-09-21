@@ -44,7 +44,8 @@ export type EmailTemplateKind =
   /** The one kind that is not part of a booking's lifecycle: it carries a
    * client's own private booking link to them — see src/lib/client-email.ts. */
   | 'client_invite'
-  | 'booking_reminder';
+  | 'booking_reminder'
+  | 'booking_pack_confirmed';
 
 export interface TenantBranding {
   logoUrl?: string;
@@ -202,6 +203,12 @@ export interface BookingRow {
   cancelled_at: string | null;
   cancellation_reason: string | null;
   qualification_response_id: string | null;
+  /* Set together, on every appointment of a pack booked in one go (migration
+     0025). pack_size is a copy of what the service declared at the moment of
+     booking, so editing the service later cannot change what somebody
+     already bought. */
+  pack_id: string | null;
+  pack_size: number | null;
   calendar_event_id: string | null;
   meeting_url: string | null;
   sync_status: SyncStatus;

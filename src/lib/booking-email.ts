@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 import { baseUrl } from './base-url';
-import { buildIcs } from './ics';
+import { buildIcs, buildIcsCalendar } from './ics';
 import { mapUrlForInvite } from './maps';
 import { describeLocation } from './service-location';
 import { emailProvider } from './email';
@@ -379,4 +379,111 @@ function icsDescription(
   }
 
   return lines.length > 0 ? lines.join('\n') : undefined;
+}
+
+/**
+ * One email for a whole programme.
+ *
+ * The alternative — the confirmation sender called once per appointment —
+ * would put ten near-identical emails in somebody's inbox within a second of
+ * each other, which reads as a fault rather than a confirmation, and buries
+ * whatever else was in there.
+ *
+ * So: one message, every appointment listed, and one calendar file holding
+ * all of them (buildIcsCalendar) so the client taps once and the programme
+ * is in their diary.
+ *
+ * Each appointment keeps its own line and its own link, because each really
+ * is independent — that is the "stay flexible" half of what a pack promises,
+ * and it falls out of these being ordinary bookings underneath.
+ *
+ * The outcome is recorded on every booking in the pack rather than the first
+ * one, so the admin Bookings list tells the truth about all ten if the send
+ * failed.
+ */
+export async function sendBookingPackConfirmedEmail(
+  tenant: TenantRow,
+  scope: TenantScope,
+  bookings: BookingRow[],
+): Promise<EmailStatus> {
+  const [first] = bookings;
+  if (!first) return 'not_configured';
+
+  const packId = first.pack_id;
+  const record = async (status: EmailStatus, error?: string) => {
+    if (!packId) return;
+    await scope
+      .update('bookings', { email_status: status, email_error: error ?? null })
+      .eq('pack_id', packId);
+  };
+
+  const [service, template, settings] = await Promise.all([
+    loadServiceFacts(scope, first.event_type_id),
+    loadTemplate(scope, 'booking_pack_confirmed'),
+    loadTenantSettings(scope),
+  ]);
+
+  if (!template) {
+    await record('not_configured');
+    return 'not_configured';
+  }
+
+  const provider = emailProvider();
+  if (provider.id === 'console') {
+    await record('not_configured');
+    return 'not_configured';
+  }
+
+  try {
+    const rendered = renderTemplate(
+      template,
+      {
+        clientName: first.name,
+        serviceName: service.name,
+        dateTime: formatDateTime(first.starts_at, tenant.timezone),
+        packSize: String(first.pack_size ?? bookings.length),
+        tenantName: tenant.name,
+      },
+      bookings.map((booking, index) => ({
+        label: `${index + 1}. ${formatDateTime(booking.starts_at, tenant.timezone)} — change or cancel`,
+        url: manageUrl(booking.manage_token),
+      })),
+    );
+
+    await provider.send({
+      to: { name: first.name, email: first.email },
+      fromName: tenant.name,
+      replyTo: settings?.reply_to_email ?? undefined,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      attachments: [
+        {
+          filename: 'appointments.ics',
+          content: buildIcsCalendar(
+            bookings.map((booking) => ({
+              uid: booking.id,
+              summary: `${service.name} — ${tenant.name}`,
+              description: icsDescription(booking.meeting_url, service),
+              location: booking.meeting_url ?? service.locationDetail ?? undefined,
+              startsAt: booking.starts_at,
+              endsAt: booking.ends_at,
+              organizer: settings?.notification_email
+                ? { name: tenant.name, email: settings.notification_email }
+                : undefined,
+              attendee: { name: first.name, email: first.email },
+            })),
+          ),
+          contentType: 'text/calendar; method=PUBLISH',
+        },
+      ],
+    });
+
+    await record('sent');
+    return 'sent';
+  } catch (cause) {
+    console.error('[booking-email] pack confirmation failed:', cause);
+    await record('failed', (cause as Error).message);
+    return 'failed';
+  }
 }

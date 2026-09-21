@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import { DateNavigator } from './DateNavigator';
 import { ProgressHeader } from './ProgressHeader';
-import { downloadIcs, googleCalendarUrl, type CalendarEvent } from './calendar-actions';
+import {
+  downloadCalendar,
+  downloadIcs,
+  googleCalendarUrl,
+  type CalendarEvent,
+} from './calendar-actions';
 import { articleFor } from './journey';
 import { formatMoney } from '@/lib/money';
 import { LOCATION_LABELS, describeLocation } from '@/lib/service-location';
@@ -54,6 +59,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
     setSelectedDate,
     slot,
     chooseSlot,
+    packSlots,
+    slotsNeeded,
+    isPack,
+    confirmSlots,
     name,
     setName,
     notes,
@@ -61,6 +70,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
     submitDetails,
     confirmBooking,
     confirmed,
+    confirmedPack,
   } = journey;
 
   const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({});
@@ -101,6 +111,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
 
   const activeDay = days.find((d) => d.date === selectedDate) ?? null;
   const currency = config?.currency ?? 'EUR';
+  /* The times being booked, whichever way this service is sold — so the
+     steps after the calendar do not each branch on it. */
+  const chosenSlots = isPack ? packSlots : slot ? [slot] : [];
+  const firstSlot = chosenSlots[0] ?? null;
   const reviewLocation = eventType
     ? describeLocation(eventType.locationKind, eventType.locationDetail)
     : null;
@@ -334,7 +348,15 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       {/* ─── Time ───────────────────────────────────────────────────── */}
       {phase === 'time' && eventType && (
         <section>
-          <h1 className="bk-heading">Choose a time</h1>
+          <h1 className="bk-heading">
+            {isPack ? `Choose your ${slotsNeeded} times` : 'Choose a time'}
+          </h1>
+          {isPack && (
+            <p className="bk-lede">
+              Pick every appointment now and they are all booked together. You can
+              change any one of them afterwards without affecting the rest.
+            </p>
+          )}
 
           {busy && (
             <p className="bk-status" role="status">
@@ -374,16 +396,29 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                       <div className="bk-period" key={group.period}>
                         <h3 className="bk-period-label">{group.label}</h3>
                         <div className="bk-slots">
-                          {shown.map((iso) => (
-                            <button
-                              key={iso}
-                              type="button"
-                              className={`bk-slot${slot === iso ? ' is-selected' : ''}`}
-                              onClick={() => chooseSlot(iso)}
-                            >
-                              {formatTimeRange(iso, eventType.durationMinutes)}
-                            </button>
-                          ))}
+                          {shown.map((iso) => {
+                            const picked = isPack
+                              ? packSlots.includes(iso)
+                              : slot === iso;
+                            /* Full, and this is not one of the chosen — so
+                               pressing it would silently do nothing. Said
+                               with a disabled state instead. */
+                            const full =
+                              isPack && !picked && packSlots.length >= slotsNeeded;
+
+                            return (
+                              <button
+                                key={iso}
+                                type="button"
+                                className={`bk-slot${picked ? ' is-selected' : ''}`}
+                                disabled={full}
+                                aria-pressed={isPack ? picked : undefined}
+                                onClick={() => chooseSlot(iso)}
+                              >
+                                {formatTimeRange(iso, eventType.durationMinutes)}
+                              </button>
+                            );
+                          })}
                         </div>
                         {hidden > 0 && (
                           <button
@@ -405,16 +440,63 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
           )}
 
           <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+
+          {isPack && (
+            /* Sticky at the foot of the panel: choosing ten dates means
+               scrolling, and a count that scrolls away stops being a count. */
+            <div className="bk-pack-bar">
+              <div>
+                <p className="bk-pack-count" aria-live="polite">
+                  {packSlots.length} of {slotsNeeded} chosen
+                </p>
+                {packSlots.length > 0 && (
+                  <ol className="bk-pack-list">
+                    {packSlots.map((iso) => (
+                      <li key={iso}>
+                        <span>{formatInstantDay(iso)}, {formatTime(iso)}</span>
+                        <button
+                          type="button"
+                          className="bk-pack-remove"
+                          onClick={() => chooseSlot(iso)}
+                        >
+                          Remove
+                          <span className="sr-only">
+                            {' '}
+                            {formatInstantDay(iso)} at {formatTime(iso)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+              <button
+                type="button"
+                className="btn-primary btn-full"
+                disabled={packSlots.length !== slotsNeeded}
+                onClick={confirmSlots}
+              >
+                {packSlots.length === slotsNeeded
+                  ? 'Continue'
+                  : `Choose ${slotsNeeded - packSlots.length} more`}
+              </button>
+            </div>
+          )}
         </section>
       )}
 
       {/* ─── Your details ───────────────────────────────────────────── */}
-      {phase === 'details' && eventType && slot && (
+      {phase === 'details' && eventType && firstSlot && (
         <section>
           <h1 className="bk-heading">Your details</h1>
           <p className="bk-lede">
-            {eventType.name} · {formatInstantDay(slot)} at{' '}
-            {formatTimeRange(slot, eventType.durationMinutes)}
+            {eventType.name} ·{' '}
+            {isPack
+              ? `${chosenSlots.length} appointments, starting ${formatInstantDay(firstSlot)}`
+              : `${formatInstantDay(firstSlot)} at ${formatTimeRange(
+                  firstSlot,
+                  eventType.durationMinutes,
+                )}`}
           </p>
 
           <form onSubmit={submitDetails} className="bk-form">
@@ -466,7 +548,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       )}
 
       {/* ─── Review ─────────────────────────────────────────────────── */}
-      {phase === 'review' && eventType && slot && (
+      {phase === 'review' && eventType && firstSlot && (
         <section>
           <h1 className="bk-heading">Check this over</h1>
           <p className="bk-lede">Nothing is booked until you confirm.</p>
@@ -492,9 +574,26 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
               <dd>{config?.name}</dd>
             </div>
             <div className="bk-review-row">
-              <dt>When</dt>
+              <dt>{isPack ? 'Appointments' : 'When'}</dt>
               <dd>
-                {formatInstantDay(slot)}, {formatTimeRange(slot, eventType.durationMinutes)}
+                {isPack ? (
+                  /* Every one of them, numbered. This is the last screen
+                     before ten commitments are made, and "10 appointments"
+                     is not something anybody can check. */
+                  <ol className="bk-review-dates">
+                    {chosenSlots.map((iso) => (
+                      <li key={iso}>
+                        {formatInstantDay(iso)},{' '}
+                        {formatTimeRange(iso, eventType.durationMinutes)}
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <>
+                    {formatInstantDay(firstSlot)},{' '}
+                    {formatTimeRange(firstSlot, eventType.durationMinutes)}
+                  </>
+                )}
                 <button
                   type="button"
                   className="bk-textlink bk-edit"
@@ -507,7 +606,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
             </div>
             <div className="bk-review-row">
               <dt>Length</dt>
-              <dd>{eventType.durationMinutes} minutes</dd>
+              <dd>
+                {eventType.durationMinutes} minutes
+                {isPack && <span className="bk-review-sub">each</span>}
+              </dd>
             </div>
             {reviewLocation && (
               <div className="bk-review-row">
@@ -536,8 +638,15 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                 <dt>Price</dt>
                 <dd>
                   {formatMoney(eventType.priceMinor, currency)}
-                  {eventType.bookingMode === 'pack' && (
-                    <span className="bk-review-sub">per session</span>
+                  {isPack && (
+                    /* Both numbers, because neither alone is the answer: per
+                       session is what was advertised, and the total is what
+                       somebody is agreeing to. */
+                    <span className="bk-review-sub">
+                      per session ·{' '}
+                      {formatMoney(eventType.priceMinor * chosenSlots.length, currency)} in
+                      total
+                    </span>
                   )}
                 </dd>
               </div>
@@ -579,6 +688,8 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       {phase === 'confirmed' && confirmed && eventType && (
         <Confirmation
           confirmed={confirmed}
+          pack={confirmedPack}
+          packSize={isPack ? slotsNeeded : 1}
           serviceName={eventType.name}
           durationMinutes={eventType.durationMinutes}
           location={reviewLocation}
@@ -600,6 +711,8 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
  */
 function Confirmation({
   confirmed,
+  pack,
+  packSize,
   serviceName,
   durationMinutes,
   location,
@@ -616,6 +729,13 @@ function Confirmation({
     meetingUrl: string | null;
     confirmationEmailSent: boolean;
   };
+  pack: Array<{
+    startsAt: string;
+    manageToken: string;
+    meetingUrl: string | null;
+    confirmationEmailSent: boolean;
+  }>;
+  packSize: number;
   serviceName: string;
   durationMinutes: number;
   location: string | null;
@@ -640,6 +760,21 @@ function Confirmation({
         )
       : null;
 
+  const calendarEventFor = (booking: {
+    startsAt: string;
+    manageToken: string;
+    meetingUrl: string | null;
+  }): CalendarEvent => ({
+    title: `${serviceName} with ${businessName}`,
+    startsAt: booking.startsAt,
+    durationMinutes,
+    details: booking.meetingUrl ? `Join: ${booking.meetingUrl}` : undefined,
+    location: booking.meetingUrl ?? locationDetail ?? location ?? undefined,
+    uid: booking.manageToken,
+  });
+
+  const packEvents = pack.map(calendarEventFor);
+
   const event: CalendarEvent = {
     title: `${serviceName} with ${businessName}`,
     startsAt: confirmed.startsAt,
@@ -655,7 +790,16 @@ function Confirmation({
 
   return (
     <section>
-      <h1 className="bk-heading">You&apos;re booked.</h1>
+      <h1 className="bk-heading">
+        {packSize > 1 ? "You're all booked in." : "You're booked."}
+      </h1>
+
+      {packSize > 1 && (
+        <p className="bk-lede">
+          All {pack.length} appointments are held. Each one can be changed or
+          cancelled on its own.
+        </p>
+      )}
 
       <div className="bk-confirmed">
         <p className="bk-confirmed-when">{formatInstantDay(confirmed.startsAt)}</p>
@@ -664,6 +808,7 @@ function Confirmation({
         </p>
         <p className="bk-confirmed-what">
           {serviceName} with {businessName}
+          {packSize > 1 && <span className="bk-confirmed-first"> · first of {pack.length}</span>}
         </p>
         {location && !confirmed.meetingUrl && (
           <p className="bk-confirmed-where">
@@ -688,20 +833,55 @@ function Confirmation({
         </a>
       )}
 
+      {packSize > 1 && pack.length > 1 && (
+        <ol className="bk-pack-confirmed">
+          {pack.map((booking, index) => (
+            <li key={booking.manageToken}>
+              <span className="bk-pack-n">{index + 1}</span>
+              <span className="bk-pack-when">
+                {formatInstantDay(booking.startsAt)},{' '}
+                {formatTimeRange(booking.startsAt, durationMinutes)}
+              </span>
+              <a className="bk-textlink" href={`/manage/${booking.manageToken}`}>
+                Change
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
+
       <div className="bk-add">
-        <p className="bk-add-label">Add it to your calendar</p>
+        <p className="bk-add-label">
+          {packSize > 1 ? 'Add them to your calendar' : 'Add it to your calendar'}
+        </p>
         <div className="bk-add-actions">
-          <a
-            className="bk-textlink"
-            href={googleCalendarUrl(event)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Google Calendar
-          </a>
-          <button type="button" className="bk-textlink" onClick={() => downloadIcs(event)}>
-            Apple, Outlook or other
-          </button>
+          {packSize > 1 ? (
+            /* One file, every appointment. No Google link beside it: their
+               template URL carries exactly one event, and offering it here
+               would quietly drop the other nine. .ics imports into Google
+               Calendar too. */
+            <button
+              type="button"
+              className="bk-textlink"
+              onClick={() => downloadCalendar(packEvents)}
+            >
+              Download all {pack.length} appointments
+            </button>
+          ) : (
+            <>
+              <a
+                className="bk-textlink"
+                href={googleCalendarUrl(event)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Google Calendar
+              </a>
+              <button type="button" className="bk-textlink" onClick={() => downloadIcs(event)}>
+                Apple, Outlook or other
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -712,11 +892,25 @@ function Confirmation({
           they trusted the email instead of noting the time. */}
       {confirmed.confirmationEmailSent ? (
         <p className="bk-after">
-          We&apos;ve sent a confirmation to <strong>{email}</strong> with everything you
-          need{confirmed.meetingUrl ? ', including the video call link' : ''}. Nothing
-          arrived? Check your spam folder. You can{' '}
-          <a href={`/manage/${confirmed.manageToken}`}>reschedule or cancel</a> here — worth
-          keeping this link.
+          We&apos;ve sent a confirmation to <strong>{email}</strong> with{' '}
+          {packSize > 1 ? 'every appointment' : 'everything you need'}
+          {confirmed.meetingUrl
+            ? packSize > 1
+              ? ', including the video call links'
+              : ', including the video call link'
+            : ''}
+          . Nothing arrived? Check your spam folder.{' '}
+          {packSize > 1 ? (
+            /* No "keep this link" here: there are as many links as there are
+               appointments, they are listed above, and the email carries them
+               too. Telling somebody to keep one of five would lose them four. */
+            <>The email carries a link for each one, so nothing is lost if you close this page.</>
+          ) : (
+            <>
+              You can <a href={`/manage/${confirmed.manageToken}`}>reschedule or cancel</a>{' '}
+              here — worth keeping this link.
+            </>
+          )}
         </p>
       ) : (
         /* No email is coming, so this page is the only record. Said without
@@ -724,9 +918,22 @@ function Confirmation({
            telling them it is would only make a booking that worked feel
            broken. What they can act on is keeping the link. */
         <p className="bk-after">
-          Your booking is confirmed. <strong>Save this link</strong> — it&apos;s how
-          you&apos;ll find, change or cancel it:{' '}
-          <a href={`/manage/${confirmed.manageToken}`}>manage your booking</a>.
+          {packSize > 1 ? (
+            /* No single link to keep — each appointment has its own, and
+               they are listed above. Telling somebody to save "this link"
+               when there are ten would lose them nine. */
+            <>
+              Your appointments are confirmed. <strong>Keep this page</strong>, or
+              add them to your calendar above — the links beside each one are how
+              you&apos;ll change them later.
+            </>
+          ) : (
+            <>
+              Your booking is confirmed. <strong>Save this link</strong> — it&apos;s
+              how you&apos;ll find, change or cancel it:{' '}
+              <a href={`/manage/${confirmed.manageToken}`}>manage your booking</a>.
+            </>
+          )}
         </p>
       )}
     </section>

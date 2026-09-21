@@ -35,6 +35,12 @@ export const TEMPLATE_TOKENS: Record<EmailTemplateKind, string[]> = {
   // describe one do either. The link itself is deliberately not a token —
   // see the module comment above and renderTemplate's linkLine.
   client_invite: ['clientName', 'tenantName'],
+  /* dateTime is the *first* appointment of the programme, and packSize how
+     many there are. The rest of the dates are appended as links rather than
+     placed, for the reason in the module comment: a business who deletes
+     {{dateTime}} from their wording should still not be able to send
+     somebody a ten-session confirmation with no dates in it. */
+  booking_pack_confirmed: ['clientName', 'serviceName', 'dateTime', 'packSize', 'tenantName'],
 };
 
 export type TemplateTokens = Record<string, string>;

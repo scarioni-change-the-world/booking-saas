@@ -3634,3 +3634,133 @@ body:has(.bk-embedded) {
     transition: none;
   }
 }
+
+/* ── Booking packs ──────────────────────────────────────────────────── */
+
+/*
+ * Choosing ten dates is a different task from choosing one, and the
+ * difference is bookkeeping: which have I picked, how many are left, and can
+ * I undo one. All three live in a bar pinned to the foot of the panel,
+ * because picking ten dates means scrolling and a count that scrolls away
+ * stops being a count.
+ */
+.bk-pack-bar {
+  position: sticky;
+  bottom: 0;
+  margin: 26px -32px -32px;
+  padding: 18px 32px 22px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bk-pack-count {
+  margin: 0;
+  font-weight: 600;
+}
+.bk-pack-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.86rem;
+  /* Ten lines is a lot of panel. Beyond about four it scrolls rather than
+     pushing the button off the screen — which would defeat the point of
+     pinning it. */
+  max-height: 132px;
+  overflow-y: auto;
+}
+.bk-pack-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--muted);
+}
+/* Graphite at rest, red only on approach: a remove control that is red on
+   every one of ten rows stops reading as a warning and starts reading as an
+   error state. Same reasoning as the admin list's Remove. */
+.bk-pack-remove {
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.bk-pack-remove:hover,
+.bk-pack-remove:focus-visible {
+  color: var(--status-broken-ink);
+}
+
+/* A slot that cannot be chosen because the programme is full. Dimmed rather
+   than hidden: the times are still real, and removing them as you pick would
+   make the grid move under the pointer. */
+.bk-slot:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.bk-slot:disabled:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+/* The dates on the review screen — numbered, because this is the last look
+   before several commitments at once. */
+.bk-review-dates {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bk-pack-confirmed {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+.bk-pack-confirmed li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.9rem;
+}
+.bk-pack-n {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--side);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.bk-pack-when {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.bk-confirmed-first {
+  opacity: 0.76;
+}
+
+@media (max-width: 880px) {
+  .bk-pack-bar {
+    margin: 22px -20px -24px;
+    padding: 16px 20px 20px;
+  }
+}

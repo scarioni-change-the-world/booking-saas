@@ -1,4 +1,4 @@
-import { buildIcs } from '@/lib/ics';
+import { buildIcs, buildIcsCalendar } from '@/lib/ics';
 
 /**
  * Putting a confirmed booking into the client's own calendar, from the page.
@@ -73,7 +73,34 @@ export function icsFor(event: CalendarEvent): string {
  * it is.
  */
 export function downloadIcs(event: CalendarEvent, filename = 'booking.ics'): void {
-  const blob = new Blob([icsFor(event)], { type: 'text/calendar;charset=utf-8' });
+  downloadCalendar([event], filename);
+}
+
+/**
+ * Several appointments as one file.
+ *
+ * A programme is ten appointments and one download. Note there is no Google
+ * equivalent on the page for this: Google's template URL carries exactly one
+ * event, and offering it beside a ten-appointment file would add nine
+ * silently missing. Google Calendar imports .ics perfectly well, so the file
+ * serves everybody.
+ */
+export function downloadCalendar(
+  events: readonly CalendarEvent[],
+  filename = 'appointments.ics',
+): void {
+  const ics = buildIcsCalendar(
+    events.map((event) => ({
+      uid: event.uid,
+      summary: event.title,
+      description: event.details,
+      location: event.location,
+      startsAt: event.startsAt,
+      endsAt: endOf(event),
+    })),
+  );
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement('a');

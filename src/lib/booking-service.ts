@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { DateTime } from 'luxon';
 import {
   generateSlots,
@@ -9,7 +10,12 @@ import {
   type SlotQuery,
 } from './availability';
 import { providerForTenant, CalendarUnavailableError } from './calendar';
-import { sendBookingCancelledEmail, sendBookingConfirmedEmail, sendBookingRescheduledEmail } from './booking-email';
+import {
+  sendBookingCancelledEmail,
+  sendBookingConfirmedEmail,
+  sendBookingPackConfirmedEmail,
+  sendBookingRescheduledEmail,
+} from './booking-email';
 import type { TenantScope } from './db';
 import type {
   AvailabilityRuleRow,
@@ -294,6 +300,127 @@ export async function createBooking(
   // Returning the real outcome saves the caller a re-read, and is what lets
   // the confirmation screen say whether an email is actually coming.
   return { ...synced, email_status: emailStatus };
+}
+
+export interface CreateBookingPackInput extends Omit<CreateBookingInput, 'startsAt'> {
+  /** Every appointment in the programme, as the client chose them. */
+  slots: string[];
+}
+
+/**
+ * Book a whole programme at once.
+ *
+ * The thing that makes this safe is that it is a *single* INSERT. Postgres
+ * evaluates migration 0004's exclusion constraint across the statement, so
+ * ten appointments either all land or none do — including the case where two
+ * of the chosen times overlap each other, which the per-slot check below
+ * cannot see because neither exists yet.
+ *
+ * Getting this wrong in the obvious way — a loop of ten inserts — would
+ * leave a client holding six appointments of a ten-session programme they
+ * thought they had bought, with no record that four failed. There is no
+ * sensible recovery from that, so the design removes the possibility rather
+ * than handling it.
+ *
+ * The per-slot availability check still runs first, for the same reason it
+ * does for a single booking: it produces a useful error ("that time is no
+ * longer available") where the constraint produces only a violation.
+ *
+ * Calendar sync and email happen after, per appointment for the calendar and
+ * once for the pack — see the caller. Neither can undo the booking, and by
+ * this point the programme genuinely exists.
+ */
+export async function createBookingPack(
+  tenant: TenantRow,
+  scope: TenantScope,
+  input: CreateBookingPackInput,
+): Promise<BookingRow[]> {
+  const eventType = await loadEventType(scope, input.eventTypeId);
+
+  if (eventType.booking_mode !== 'pack' || !eventType.pack_size) {
+    throw new BookingError('That service is not booked as a pack', 400);
+  }
+
+  const slots = [...new Set(input.slots)].sort();
+  if (slots.length !== eventType.pack_size) {
+    throw new BookingError(
+      `This programme is ${eventType.pack_size} appointments — please choose ${eventType.pack_size} times`,
+      400,
+    );
+  }
+
+  // One availability query per distinct day rather than per slot: a
+  // ten-session programme usually spans ten days, but two sessions on one
+  // day would otherwise cost two identical round trips.
+  const days = [
+    ...new Set(
+      slots.map((iso) =>
+        DateTime.fromISO(iso).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
+      ),
+    ),
+  ].sort();
+
+  for (const day of days) {
+    const query = await buildSlotQuery(tenant, scope, input.eventTypeId, day, day);
+    for (const iso of slots) {
+      const onThisDay =
+        DateTime.fromISO(iso).setZone(tenant.timezone).toFormat('yyyy-MM-dd') === day;
+      if (onThisDay && !isSlotBookable(query, iso)) {
+        throw new BookingError('One of those times is no longer available', 409);
+      }
+    }
+  }
+
+  const packId = randomUUID();
+  const rows = slots.map((iso) => {
+    const startsAt = DateTime.fromISO(iso, { zone: 'utc' });
+    return {
+      event_type_id: eventType.id,
+      manage_token: generateManageToken(),
+      starts_at: startsAt.toISO()!,
+      ends_at: startsAt.plus({ minutes: eventType.duration_minutes }).toISO()!,
+      name: input.name,
+      email: input.email,
+      notes: input.notes ?? null,
+      qualification_response_id: input.qualificationResponseId ?? null,
+      client_id: input.clientId ?? null,
+      sync_status: 'pending' as const,
+      pack_id: packId,
+      // Copied, not referenced: what the client bought must not change when
+      // the business later edits the service. See migration 0025.
+      pack_size: eventType.pack_size,
+    };
+  });
+
+  const { data, error } = await scope.insert('bookings', rows);
+
+  if (error) {
+    if (error.code === '23P01') {
+      throw new BookingError('One of those times was just taken — please choose again', 409);
+    }
+    throw error;
+  }
+
+  const created = (data as unknown as BookingRow[]) ?? [];
+  // Ordered by time, because every screen and email that follows reads them
+  // as a programme running forwards.
+  created.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+  // Each appointment gets its own calendar event: they are separate
+  // commitments in a diary, and cancelling one must not disturb the rest.
+  // Sequential rather than parallel, because ten simultaneous writes to one
+  // Google calendar is how a tenant's quota gets spent on a single booking.
+  const synced: BookingRow[] = [];
+  for (const booking of created) {
+    synced.push(await syncBookingToCalendar(tenant, scope, booking, eventType));
+  }
+
+  // One email for the whole programme, after sync, for the same reason a
+  // single booking waits: the meeting links exist by now, or have
+  // definitively failed to.
+  const emailStatus = await sendBookingPackConfirmedEmail(tenant, scope, synced);
+
+  return synced.map((booking) => ({ ...booking, email_status: emailStatus }));
 }
 
 /** Create the calendar event and record the outcome — success or failure. */
