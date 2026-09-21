@@ -38,6 +38,8 @@ interface Booking {
   /** Whether this person already has a client record, matched on their
    * email — see the bookings route for why not on client_id. */
   isClient: boolean;
+  /** Set when this appointment is one of a programme — see the row marker. */
+  pack: { size: number; booked: number; remaining: number } | null;
 }
 
 const TABS: { view: View; label: string }[] = [
@@ -267,6 +269,22 @@ export default function BookingsPage() {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
                   <span className="data-row-title">{b.name}</span>
                   <span className="data-row-meta">{b.eventTypeName}</span>
+                  {/* This appointment is part of a programme. Said on the row
+                      rather than by grouping the rows: a business scans this
+                      list by date, and pulling a programme's appointments
+                      together would take two of them out of the order they
+                      are looked for in. */}
+                  {b.pack && (
+                    <span className="programme-mark">
+                      Programme · {b.pack.booked} of {b.pack.size}
+                      {b.pack.remaining > 0 && (
+                        /* The actionable half. A client owed an appointment
+                           is somebody to chase, and before this only they
+                           could see it. */
+                        <strong> · {b.pack.remaining} still to book</strong>
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>

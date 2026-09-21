@@ -28,7 +28,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
        that page's whole job is to let the client book the one they lost, and
        refusing here would leave them looking at a dead end. */
     if (booking.status === 'cancelled') {
-      const standing = booking.pack_id ? await packStanding(scope, booking.pack_id) : null;
+      const standing = booking.pack_id ? await packStanding(scope, booking) : null;
       if (!standing || standing.remaining < 1) {
         return fail('That booking was cancelled', 409);
       }

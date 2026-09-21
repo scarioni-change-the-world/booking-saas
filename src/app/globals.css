@@ -3793,3 +3793,18 @@ body:has(.bk-embedded) {
   color: var(--faint);
   flex: 0 0 auto;
 }
+
+/* "Programme · 2 of 3 · 1 still to book" on a booking that belongs to one.
+   Quiet by default; the part that needs chasing is the part in Ink. */
+.programme-mark {
+  font-size: 0.78rem;
+  color: var(--faint);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--side);
+  white-space: nowrap;
+}
+.programme-mark strong {
+  color: var(--ink);
+  font-weight: 600;
+}

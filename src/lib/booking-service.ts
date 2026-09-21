@@ -303,6 +303,57 @@ export async function createBooking(
   return { ...synced, email_status: emailStatus };
 }
 
+/**
+ * The client record for somebody who just bought a programme.
+ *
+ * Buying ten sessions is what makes a stranger a client, so this is where
+ * that happens. Two mechanisms used to describe the same fact — a pack of
+ * bookings on one side, a granted balance on the Clients page on the other —
+ * and a business could end up with both without either knowing about the
+ * other. They are one thing now: a programme is a client with a balance,
+ * however it was arranged.
+ *
+ * Find-or-create, not create: the unique index on (tenant_id, lower(email))
+ * means a returning buyer tops up the record they already have rather than
+ * forking their history in two. The race — two requests for the same new
+ * address at once — resolves the same way, because the loser of the insert
+ * reads back the winner's row instead of failing.
+ */
+async function findOrCreateClient(
+  scope: TenantScope,
+  name: string,
+  email: string,
+): Promise<ClientRow> {
+  const existing = await scope
+    .select('clients')
+    .ilike('email', email)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) return existing.data as unknown as ClientRow;
+
+  const { data, error } = await scope.insert('clients', {
+    name,
+    email,
+    access_token: generateManageToken(),
+  });
+
+  if (error) {
+    // 23505 = unique_violation: somebody else created it between the read
+    // and the write. Their row is as good as ours.
+    if (error.code === '23505') {
+      const { data: raced, error: reread } = await scope
+        .select('clients')
+        .ilike('email', email)
+        .maybeSingle();
+      if (reread) throw reread;
+      if (raced) return raced as unknown as ClientRow;
+    }
+    throw error;
+  }
+
+  return (data as unknown as ClientRow[])[0]!;
+}
+
 export interface CreateBookingPackInput extends Omit<CreateBookingInput, 'startsAt'> {
   /** Every appointment in the programme, as the client chose them. */
   slots: string[];
@@ -372,6 +423,32 @@ export async function createBookingPack(
     }
   }
 
+  /* Buying a programme makes somebody a client, so the client record and
+     the session balance are created here rather than left to an admin to
+     add by hand afterwards. This is what keeps the two halves of the
+     product agreeing: the Clients page shows this programme exactly as it
+     shows one granted manually, cancelBooking's existing entitlement
+     restore covers these bookings for free, and the buyer's own private
+     link offers the remaining sessions with no second flow to build.
+
+     Best effort, deliberately. The appointments are the thing the client
+     came for; a failure to file the paperwork around them must not lose the
+     booking. A business can always grant the balance by hand, and the log
+     says so. */
+  let client: ClientRow | null = null;
+  let entitlement: ClientEntitlementRow | null = null;
+  try {
+    client = await findOrCreateClient(scope, input.name, input.email);
+    entitlement = await grantEntitlement(
+      scope,
+      client.id,
+      eventType.id,
+      eventType.pack_size,
+    );
+  } catch (cause) {
+    console.error('[packs] could not set up the client record for a programme:', cause);
+  }
+
   const packId = randomUUID();
   const rows = slots.map((iso) => {
     const startsAt = DateTime.fromISO(iso, { zone: 'utc' });
@@ -384,7 +461,10 @@ export async function createBookingPack(
       email: input.email,
       notes: input.notes ?? null,
       qualification_response_id: input.qualificationResponseId ?? null,
-      client_id: input.clientId ?? null,
+      client_id: input.clientId ?? client?.id ?? null,
+      // The link that lets cancelBooking hand a session back without
+      // knowing anything about packs.
+      entitlement_id: entitlement?.id ?? null,
       sync_status: 'pending' as const,
       pack_id: packId,
       // Copied, not referenced: what the client bought must not change when
@@ -406,6 +486,25 @@ export async function createBookingPack(
   // Ordered by time, because every screen and email that follows reads them
   // as a programme running forwards.
   created.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+  /* The appointments just taken, drawn down in one update rather than one
+     per booking: they were all created by a single statement, so counting
+     them off one at a time would only add ways to end up halfway. */
+  if (entitlement && created.length > 0) {
+    try {
+      await scope
+        .update('client_entitlements', {
+          used_sessions: Math.min(
+            entitlement.total_sessions,
+            entitlement.used_sessions + created.length,
+          ),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', entitlement.id);
+    } catch (cause) {
+      console.error('[packs] could not draw down the balance for a programme:', cause);
+    }
+  }
 
   // Each appointment gets its own calendar event: they are separate
   // commitments in a diary, and cancelling one must not disturb the rest.
@@ -450,11 +549,13 @@ export interface PackStanding {
  */
 export async function packStanding(
   scope: TenantScope,
-  packId: string,
+  booking: BookingRow,
 ): Promise<PackStanding | null> {
+  if (!booking.pack_id) return null;
+
   const { data, error } = await scope
     .select('bookings', 'starts_at, status, pack_size')
-    .eq('pack_id', packId)
+    .eq('pack_id', booking.pack_id)
     .order('starts_at', { ascending: true });
   if (error) throw error;
 
@@ -465,10 +566,33 @@ export async function packStanding(
   const size = rows[0]!.pack_size ?? rows.length;
   const booked = rows.filter((row) => row.status === 'confirmed').length;
 
+  /* The balance is the answer when there is one.
+   *
+   * A programme creates a client entitlement, and from then on that grant is
+   * what the business tops up, what the Clients page shows and what
+   * cancelBooking credits back. Deriving "remaining" from the pack's own
+   * rows as well would be a second answer to the same question, and the two
+   * would disagree the first time a business added three more sessions.
+   *
+   * The derivation below is still the answer for a programme booked before
+   * the two halves were joined up, which has no entitlement to read.
+   */
+  let remaining = Math.max(0, size - booked);
+  if (booking.entitlement_id) {
+    const { data: grant, error: grantError } = await scope
+      .select('client_entitlements')
+      .eq('id', booking.entitlement_id)
+      .maybeSingle();
+    if (grantError) throw grantError;
+
+    const row = grant as unknown as ClientEntitlementRow | null;
+    if (row) remaining = Math.max(0, row.total_sessions - row.used_sessions);
+  }
+
   return {
     size,
     booked,
-    remaining: Math.max(0, size - booked),
+    remaining,
     appointments: rows.map((row) => ({ startsAt: row.starts_at, status: row.status })),
   };
 }
@@ -498,7 +622,7 @@ export async function bookPackReplacement(
     throw new BookingError('That booking is not part of a programme', 400);
   }
 
-  const standing = await packStanding(scope, sibling.pack_id);
+  const standing = await packStanding(scope, sibling);
   if (!standing || standing.remaining < 1) {
     throw new BookingError('Every appointment in this programme is already booked', 409);
   }
@@ -527,6 +651,7 @@ export async function bookPackReplacement(
     notes: sibling.notes,
     qualification_response_id: sibling.qualification_response_id,
     client_id: sibling.client_id,
+    entitlement_id: sibling.entitlement_id,
     sync_status: 'pending',
     pack_id: sibling.pack_id,
     pack_size: sibling.pack_size,
@@ -538,6 +663,30 @@ export async function bookPackReplacement(
   }
 
   const booking = (data as unknown as BookingRow[])[0]!;
+
+  /* Draw the session down again. cancelBooking credited it back when the
+     original was cancelled, so without this the client could rebook the same
+     appointment indefinitely. */
+  if (sibling.entitlement_id) {
+    try {
+      const { data: grant } = await scope
+        .select('client_entitlements')
+        .eq('id', sibling.entitlement_id)
+        .maybeSingle();
+      const row = grant as unknown as ClientEntitlementRow | null;
+      if (row) {
+        await scope
+          .update('client_entitlements', {
+            used_sessions: Math.min(row.total_sessions, row.used_sessions + 1),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', row.id);
+      }
+    } catch (cause) {
+      console.error('[packs] could not draw down the balance for a replacement:', cause);
+    }
+  }
+
   const synced = await syncBookingToCalendar(tenant, scope, booking, eventType);
 
   // The ordinary single-booking confirmation, not the pack one: this is one
@@ -671,7 +820,7 @@ export async function cancelBooking(
   let replacementLink: string | undefined;
   if (booking.pack_id) {
     try {
-      const standing = await packStanding(scope, booking.pack_id);
+      const standing = await packStanding(scope, booking);
       if (standing && standing.remaining > 0) {
         replacementLink = `${baseUrl()}/manage/${encodeURIComponent(booking.manage_token)}`;
       }

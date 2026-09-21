@@ -48,7 +48,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
        sibling appointments are listed by date and status only — never by
        their manage tokens. Those are credentials, and one shared link
        should not hand somebody the ability to cancel the other two. */
-    const pack = booking.pack_id ? await packStanding(scope, booking.pack_id) : null;
+    const pack = booking.pack_id ? await packStanding(scope, booking) : null;
 
     return ok({
       booking: {

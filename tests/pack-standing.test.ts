@@ -11,13 +11,30 @@ import { packStanding } from '@/lib/booking-service';
  * A count of confirmed rows cannot drift from the confirmed rows.
  */
 
-function scopeReturning(rows: unknown[]) {
-  const chain = {
-    eq: () => chain,
+/**
+ * A scope that answers the bookings query with `rows` and the entitlement
+ * query with `grant` — which is the distinction that matters now: a
+ * programme's balance is the answer when it has one, and the derivation
+ * from its own rows is only the fallback for a programme booked before the
+ * two halves of the product were joined up.
+ */
+function scopeReturning(rows: unknown[], grant: unknown = null) {
+  const bookings = {
+    eq: () => bookings,
     order: () => Promise.resolve({ data: rows, error: null }),
   };
-  return { select: () => chain } as never;
+  const entitlements = {
+    eq: () => entitlements,
+    maybeSingle: () => Promise.resolve({ data: grant, error: null }),
+  };
+  return {
+    select: (table: string) => (table === 'client_entitlements' ? entitlements : bookings),
+  } as never;
 }
+
+/** A booking of a programme, as packStanding reads one. */
+const packBooking = (entitlementId: string | null = null) =>
+  ({ pack_id: 'pack-1', entitlement_id: entitlementId }) as never;
 
 const row = (startsAt: string, status: 'confirmed' | 'cancelled', packSize = 3) => ({
   starts_at: startsAt,
@@ -33,7 +50,7 @@ describe('packStanding', () => {
         row('2026-10-09T09:00:00Z', 'confirmed'),
         row('2026-10-13T09:00:00Z', 'confirmed'),
       ]),
-      'pack-1',
+      packBooking(),
     );
 
     expect(standing).toMatchObject({ size: 3, booked: 3, remaining: 0 });
@@ -48,7 +65,7 @@ describe('packStanding', () => {
         row('2026-10-09T09:00:00Z', 'cancelled'),
         row('2026-10-13T09:00:00Z', 'confirmed'),
       ]),
-      'pack-1',
+      packBooking(),
     );
 
     expect(standing).toMatchObject({ size: 3, booked: 2, remaining: 1 });
@@ -61,7 +78,7 @@ describe('packStanding', () => {
         row('2026-10-09T09:00:00Z', 'cancelled'),
         row('2026-10-13T09:00:00Z', 'confirmed'),
       ]),
-      'pack-1',
+      packBooking(),
     );
 
     expect(standing?.remaining).toBe(2);
@@ -78,7 +95,7 @@ describe('packStanding', () => {
         row('2026-10-13T09:00:00Z', 'confirmed'),
         row('2026-10-16T09:00:00Z', 'confirmed'),
       ]),
-      'pack-1',
+      packBooking(),
     );
 
     expect(standing).toMatchObject({ size: 3, booked: 3, remaining: 0 });
@@ -95,7 +112,7 @@ describe('packStanding', () => {
         row('2026-10-13T09:00:00Z', 'confirmed'),
         row('2026-10-16T09:00:00Z', 'confirmed'),
       ]),
-      'pack-1',
+      packBooking(),
     );
 
     expect(standing?.remaining).toBe(0);
@@ -107,7 +124,7 @@ describe('packStanding', () => {
         row('2026-10-06T09:00:00Z', 'confirmed'),
         row('2026-10-09T09:00:00Z', 'cancelled'),
       ]),
-      'pack-1',
+      packBooking(),
     );
 
     expect(standing?.appointments).toHaveLength(2);
@@ -115,6 +132,52 @@ describe('packStanding', () => {
   });
 
   it('has nothing to say about a pack id with no bookings', async () => {
-    expect(await packStanding(scopeReturning([]), 'nope')).toBeNull();
+    expect(await packStanding(scopeReturning([]), packBooking())).toBeNull();
+  });
+});
+
+describe('packStanding, once a programme is a client balance', () => {
+  /* The balance is what a business tops up, what the Clients page shows and
+     what a cancellation credits back. Two answers to "how many are still
+     owed" would disagree the first time somebody added three more sessions,
+     so there is only one. */
+  it('reads what is owed from the grant, not from its own rows', async () => {
+    const standing = await packStanding(
+      scopeReturning(
+        [
+          row('2026-10-06T09:00:00Z', 'confirmed'),
+          row('2026-10-09T09:00:00Z', 'confirmed'),
+          row('2026-10-13T09:00:00Z', 'confirmed'),
+        ],
+        { total_sessions: 6, used_sessions: 3 },
+      ),
+      packBooking('ent-1'),
+    );
+
+    // Three booked out of a topped-up six: the pack's own rows would have
+    // said nothing was owed.
+    expect(standing?.remaining).toBe(3);
+  });
+
+  it('still counts the rows for a programme booked before grants existed', async () => {
+    const standing = await packStanding(
+      scopeReturning([
+        row('2026-10-06T09:00:00Z', 'confirmed'),
+        row('2026-10-09T09:00:00Z', 'cancelled'),
+        row('2026-10-13T09:00:00Z', 'confirmed'),
+      ]),
+      packBooking(null),
+    );
+
+    expect(standing?.remaining).toBe(1);
+  });
+
+  it('has nothing to say about a booking that is not part of a programme', async () => {
+    const standing = await packStanding(
+      scopeReturning([row('2026-10-06T09:00:00Z', 'confirmed')]),
+      { pack_id: null, entitlement_id: null } as never,
+    );
+
+    expect(standing).toBeNull();
   });
 });

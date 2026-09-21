@@ -53,13 +53,96 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     );
 
     const rows = (data ?? []) as unknown as BookingWithJoins[];
+
+    /* Which programme each booking belongs to, and where that programme
+       stands.
+       
+       Two queries for the whole page rather than one per booking: the list
+       is a hundred rows on a busy week, and a per-row lookup would be a
+       hundred round trips to answer a question about a handful of
+       programmes. The list itself stays in date order — a business scans it
+       by day, and pulling a programme's three appointments together would
+       take two of them out of the order they are looked for in. */
+    const packs = await programmeStandings(scope, rows);
+
     return ok({
       bookings: rows.map((row) => ({
         ...serializeBooking(row),
         isClient: clientEmails.has(row.email.toLowerCase()),
+        pack: row.pack_id ? (packs.get(row.pack_id) ?? null) : null,
       })),
     });
   } catch (error) {
     return handleError(error);
   }
+}
+
+interface ProgrammeStanding {
+  size: number;
+  booked: number;
+  remaining: number;
+}
+
+/**
+ * Where each programme on this page stands, keyed by pack id.
+ *
+ * `remaining` comes from the client's balance when the programme has one,
+ * exactly as it does on the client's own manage page — one answer to "how
+ * many are still owed", so the two sides of the product cannot disagree. A
+ * programme booked before packs and balances were joined up has no grant to
+ * read, and falls back to counting its own confirmed appointments.
+ */
+async function programmeStandings(
+  scope: Awaited<ReturnType<typeof requireTenantAdmin>>['scope'],
+  rows: BookingWithJoins[],
+): Promise<Map<string, ProgrammeStanding>> {
+  const packIds = [...new Set(rows.map((row) => row.pack_id).filter((id): id is string => !!id))];
+  if (packIds.length === 0) return new Map();
+
+  const { data, error } = await scope
+    .select('bookings', 'pack_id, pack_size, status, entitlement_id')
+    .in('pack_id', packIds);
+  if (error) throw error;
+
+  const members = (data ?? []) as unknown as Array<
+    Pick<BookingWithJoins, 'pack_id' | 'pack_size' | 'status' | 'entitlement_id'>
+  >;
+
+  const entitlementIds = [
+    ...new Set(members.map((m) => m.entitlement_id).filter((id): id is string => !!id)),
+  ];
+
+  const balances = new Map<string, number>();
+  if (entitlementIds.length > 0) {
+    const grants = await scope
+      .select('client_entitlements', 'id, total_sessions, used_sessions')
+      .in('id', entitlementIds);
+    if (grants.error) throw grants.error;
+
+    for (const grant of (grants.data ?? []) as unknown as Array<{
+      id: string;
+      total_sessions: number;
+      used_sessions: number;
+    }>) {
+      balances.set(grant.id, Math.max(0, grant.total_sessions - grant.used_sessions));
+    }
+  }
+
+  const standings = new Map<string, ProgrammeStanding>();
+  for (const packId of packIds) {
+    const own = members.filter((m) => m.pack_id === packId);
+    if (own.length === 0) continue;
+
+    const size = own[0]!.pack_size ?? own.length;
+    const booked = own.filter((m) => m.status === 'confirmed').length;
+    const entitlementId = own.find((m) => m.entitlement_id)?.entitlement_id ?? null;
+    const remaining =
+      entitlementId && balances.has(entitlementId)
+        ? balances.get(entitlementId)!
+        : Math.max(0, size - booked);
+
+    standings.set(packId, { size, booked, remaining });
+  }
+
+  return standings;
 }
