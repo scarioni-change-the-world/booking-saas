@@ -3764,3 +3764,32 @@ body:has(.bk-embedded) {
     padding: 16px 20px 20px;
   }
 }
+
+/* The appointments of a programme, on the manage page. A cancelled one is
+   struck through rather than removed: the client needs to see that it
+   happened, and that it is why they are owed another. */
+.pack-standing {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9rem;
+}
+.pack-standing li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.pack-standing li[data-cancelled] span {
+  text-decoration: line-through;
+  color: var(--ghost);
+}
+.pack-standing em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--faint);
+  flex: 0 0 auto;
+}

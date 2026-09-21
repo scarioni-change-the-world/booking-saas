@@ -6,7 +6,13 @@ import {
   readJson,
   requireString,
 } from '@/lib/api';
-import { BookingError, cancelBooking, rescheduleBooking } from '@/lib/booking-service';
+import {
+  BookingError,
+  bookPackReplacement,
+  cancelBooking,
+  packStanding,
+  rescheduleBooking,
+} from '@/lib/booking-service';
 import { resolveBookingByToken } from '@/lib/db';
 import type { EventTypeRow } from '@/lib/db/types';
 
@@ -36,7 +42,13 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
     const resolved = await load(token);
     if (!resolved) return fail('Not found', 404);
 
-    const { booking, tenant, eventType } = resolved;
+    const { booking, tenant, eventType, scope } = resolved;
+
+    /* Every appointment of a programme, and how many are still owed. The
+       sibling appointments are listed by date and status only — never by
+       their manage tokens. Those are credentials, and one shared link
+       should not hand somebody the ability to cancel the other two. */
+    const pack = booking.pack_id ? await packStanding(scope, booking.pack_id) : null;
 
     return ok({
       booking: {
@@ -50,6 +62,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
         eventTypeId: booking.event_type_id,
         eventTypeName: eventType?.name ?? null,
       },
+      pack,
       tenant: { name: tenant.name, timezone: tenant.timezone, branding: tenant.branding },
     });
   } catch (error) {
@@ -85,6 +98,23 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
         requireString(body, 'startsAt', { maxLength: 40 }),
       );
       return ok({ status: 'confirmed', startsAt: moved.starts_at, endsAt: moved.ends_at });
+    }
+
+    if (action === 'book-replacement') {
+      /* Booking back an appointment a cancellation took out of a
+         programme. The token already proved who this is; the service
+         checks the only thing left — that the programme is really short. */
+      const booked = await bookPackReplacement(
+        tenant,
+        scope,
+        booking,
+        requireString(body, 'startsAt', { maxLength: 40 }),
+      );
+      return ok({
+        status: 'confirmed',
+        startsAt: booked.starts_at,
+        manageToken: booked.manage_token,
+      });
     }
 
     throw new BookingError(`Unknown action "${action}"`, 400);

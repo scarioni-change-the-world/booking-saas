@@ -16,8 +16,17 @@ interface BookingView {
   eventTypeName: string | null;
 }
 
+interface PackView {
+  size: number;
+  booked: number;
+  remaining: number;
+  appointments: Array<{ startsAt: string; status: 'confirmed' | 'cancelled' }>;
+}
+
 interface Payload {
   booking: BookingView;
+  /** Present only when this booking is one appointment of a programme. */
+  pack: PackView | null;
   tenant: {
     name: string;
     timezone: string;
@@ -41,7 +50,7 @@ export default function ManageBooking({ token }: { token: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<'view' | 'reschedule' | 'cancel'>('view');
+  const [mode, setMode] = useState<'view' | 'reschedule' | 'cancel' | 'rebook'>('view');
   const [days, setDays] = useState<DaySlots[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
@@ -79,9 +88,9 @@ export default function ManageBooking({ token }: { token: string }) {
     }
   }
 
-  async function openReschedule() {
+  async function openPicker(next: 'reschedule' | 'rebook') {
     if (!payload) return;
-    setMode('reschedule');
+    setMode(next);
     setBusy(true);
     setError(null);
     try {
@@ -132,7 +141,7 @@ export default function ManageBooking({ token }: { token: string }) {
     );
   }
 
-  const { booking, tenant } = payload;
+  const { booking, tenant, pack } = payload;
 
   // The existing booking's own span is its duration — a reschedule keeps the
   // same session length, so there is no need to fetch the event type again
@@ -192,9 +201,55 @@ export default function ManageBooking({ token }: { token: string }) {
         </a>
       )}
 
+      {/* A programme: where it stands, and — if a cancellation left it short
+          — the way to put that right. Without this, cancelling one
+          appointment of a three-session programme simply lost it: the client
+          had paid for three, held two, and had nowhere to go. */}
+      {pack && mode === 'view' && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h2 style={{ marginTop: 0 }}>Your programme</h2>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
+            {pack.booked} of {pack.size} appointments booked.
+          </p>
+
+          <ol className="pack-standing">
+            {pack.appointments.map((appointment) => (
+              <li
+                key={`${appointment.startsAt}-${appointment.status}`}
+                data-cancelled={appointment.status === 'cancelled' ? 'true' : undefined}
+              >
+                <span>
+                  {formatInstantDay(appointment.startsAt)} at{' '}
+                  {formatTime(appointment.startsAt)}
+                </span>
+                {appointment.status === 'cancelled' && <em>Cancelled</em>}
+              </li>
+            ))}
+          </ol>
+
+          {pack.remaining > 0 && (
+            <>
+              <p style={{ margin: '14px 0 0' }}>
+                {pack.remaining === 1
+                  ? 'You have one appointment still to book.'
+                  : `You have ${pack.remaining} appointments still to book.`}
+              </p>
+              <button
+                type="button"
+                className="btn-primary btn-full"
+                style={{ marginTop: 12 }}
+                onClick={() => void openPicker('rebook')}
+              >
+                {pack.remaining === 1 ? 'Book it now' : 'Book the next one'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {booking.status === 'confirmed' && mode === 'view' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button type="button" className="btn-secondary btn-full" onClick={openReschedule}>
+          <button type="button" className="btn-secondary btn-full" onClick={() => void openPicker('reschedule')}>
             Reschedule
           </button>
           <button
@@ -208,9 +263,11 @@ export default function ManageBooking({ token }: { token: string }) {
         </div>
       )}
 
-      {mode === 'reschedule' && (
+      {(mode === 'reschedule' || mode === 'rebook') && (
         <>
-          <h2 style={{ marginTop: 24 }}>Pick a new time</h2>
+          <h2 style={{ marginTop: 24 }}>
+            {mode === 'rebook' ? 'Book your replacement appointment' : 'Pick a new time'}
+          </h2>
           {busy && <p className="status">Loading times…</p>}
           {!busy && days.length === 0 && (
             <p className="notice notice-muted">No other times are available right now.</p>
@@ -248,7 +305,12 @@ export default function ManageBooking({ token }: { token: string }) {
                         type="button"
                         className="slot"
                         disabled={busy}
-                        onClick={() => act({ action: 'reschedule', startsAt: iso })}
+                        onClick={() =>
+                          act({
+                            action: mode === 'rebook' ? 'book-replacement' : 'reschedule',
+                            startsAt: iso,
+                          })
+                        }
                       >
                         {formatTimeRange(iso)}
                       </button>
@@ -261,7 +323,7 @@ export default function ManageBooking({ token }: { token: string }) {
 
           <div className="actions" style={{ justifyContent: 'center' }}>
             <button type="button" className="btn-link" onClick={() => setMode('view')}>
-              Keep my current time
+              {mode === 'rebook' ? 'Not now' : 'Keep my current time'}
             </button>
           </div>
         </>

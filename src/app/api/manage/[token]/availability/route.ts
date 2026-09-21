@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon';
 import { generateSlots } from '@/lib/availability';
 import { fail, handleError, ok } from '@/lib/api';
-import { buildSlotQuery } from '@/lib/booking-service';
+import { buildSlotQuery, packStanding } from '@/lib/booking-service';
 import { resolveBookingByToken } from '@/lib/db';
 
 /**
@@ -22,7 +22,17 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
     if (!resolved) return fail('Not found', 404);
 
     const { booking, tenant, scope } = resolved;
-    if (booking.status === 'cancelled') return fail('That booking was cancelled', 409);
+
+    /* A cancelled booking normally has nothing to offer — there is nothing
+       to move. The exception is a programme with an appointment missing:
+       that page's whole job is to let the client book the one they lost, and
+       refusing here would leave them looking at a dead end. */
+    if (booking.status === 'cancelled') {
+      const standing = booking.pack_id ? await packStanding(scope, booking.pack_id) : null;
+      if (!standing || standing.remaining < 1) {
+        return fail('That booking was cancelled', 409);
+      }
+    }
 
     const today = DateTime.now().setZone(tenant.timezone);
     const query = await buildSlotQuery(

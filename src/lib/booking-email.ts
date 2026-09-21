@@ -98,6 +98,9 @@ async function recordEmailStatus(
 interface ClientEmailOptions {
   includeIcs: boolean;
   includeManageLink: boolean;
+  /** Appended after the tenant's own words, like every other link this
+   * module adds — see the module comment in email/templates.ts. */
+  extraLinks?: TemplateLink[];
 }
 
 /**
@@ -150,6 +153,9 @@ async function sendClientEmail(
   }
   if (options.includeManageLink) {
     links.push({ label: 'Change or cancel your booking', url: manageUrl(booking.manage_token) });
+  }
+  if (options.extraLinks) {
+    links.push(...options.extraLinks);
   }
 
   try {
@@ -306,14 +312,31 @@ export async function sendBookingReminderEmail(
   });
 }
 
+/**
+ * Cancelled — and, when this was one appointment of a programme, how to put
+ * it back.
+ *
+ * The link matters more here than anywhere else in this file. Somebody who
+ * cancels session two of three may never open that page again, and without
+ * this the only record that they are owed an appointment is a number on a
+ * page they have closed. The email is where they will look.
+ *
+ * `replacementLink` is passed in rather than worked out here: computing it
+ * needs packStanding, which lives in booking-service — and booking-service
+ * already imports this module, so reaching back would be a cycle.
+ */
 export async function sendBookingCancelledEmail(
   tenant: TenantRow,
   scope: TenantScope,
   booking: BookingRow,
+  replacementLink?: string,
 ): Promise<void> {
   await sendClientEmail(tenant, scope, booking, 'booking_cancelled', {
     includeIcs: false,
     includeManageLink: false,
+    extraLinks: replacementLink
+      ? [{ label: 'Book a replacement appointment', url: replacementLink }]
+      : undefined,
   });
 }
 

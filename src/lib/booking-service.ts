@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { baseUrl } from './base-url';
 import { DateTime } from 'luxon';
 import {
   generateSlots,
@@ -423,6 +424,130 @@ export async function createBookingPack(
   return synced.map((booking) => ({ ...booking, email_status: emailStatus }));
 }
 
+export interface PackStanding {
+  /** How many appointments the programme was sold as. */
+  size: number;
+  /** How many are currently held. */
+  booked: number;
+  /** How many the client is still owed — 0 when the programme is whole. */
+  remaining: number;
+  /** Every appointment in the programme, earliest first. */
+  appointments: Array<{ startsAt: string; status: BookingRow['status'] }>;
+}
+
+/**
+ * Where a programme stands.
+ *
+ * Derived on every read rather than kept in a column, and that is the whole
+ * design: a "sessions remaining" counter would have to be decremented on
+ * booking, incremented on cancel, left alone on reschedule, and corrected by
+ * hand the first time any of those failed halfway. A count of confirmed rows
+ * cannot drift from the confirmed rows.
+ *
+ * `remaining` is what a client is owed. It goes above zero the moment one of
+ * their appointments is cancelled, which is exactly the hole this closes:
+ * before, cancelling session two of three simply lost it.
+ */
+export async function packStanding(
+  scope: TenantScope,
+  packId: string,
+): Promise<PackStanding | null> {
+  const { data, error } = await scope
+    .select('bookings', 'starts_at, status, pack_size')
+    .eq('pack_id', packId)
+    .order('starts_at', { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as Array<Pick<BookingRow, 'starts_at' | 'status' | 'pack_size'>>;
+  if (rows.length === 0) return null;
+
+  // Every row of a pack carries the same size, written once (migration 0025).
+  const size = rows[0]!.pack_size ?? rows.length;
+  const booked = rows.filter((row) => row.status === 'confirmed').length;
+
+  return {
+    size,
+    booked,
+    remaining: Math.max(0, size - booked),
+    appointments: rows.map((row) => ({ startsAt: row.starts_at, status: row.status })),
+  };
+}
+
+/**
+ * Book one of the appointments a programme still owes.
+ *
+ * The credential is the manage token of any appointment in the same pack —
+ * the caller resolves that before reaching here, so by this point "is this
+ * the right person" is already answered. What this checks is the only thing
+ * left: that the programme is genuinely short. Without it, somebody holding
+ * a link to a three-session programme could book a fourth, a fifth, and a
+ * sixth, for free.
+ *
+ * The new appointment joins the same pack rather than replacing the
+ * cancelled row. The cancellation stays as history — it happened, it is on
+ * the calendar's record of what was freed, and rewriting it would make the
+ * programme's story unreadable later.
+ */
+export async function bookPackReplacement(
+  tenant: TenantRow,
+  scope: TenantScope,
+  sibling: BookingRow,
+  startsAt: string,
+): Promise<BookingRow> {
+  if (!sibling.pack_id || !sibling.pack_size) {
+    throw new BookingError('That booking is not part of a programme', 400);
+  }
+
+  const standing = await packStanding(scope, sibling.pack_id);
+  if (!standing || standing.remaining < 1) {
+    throw new BookingError('Every appointment in this programme is already booked', 409);
+  }
+
+  const eventType = await loadEventType(scope, sibling.event_type_id);
+  const query = await buildSlotQuery(
+    tenant,
+    scope,
+    sibling.event_type_id,
+    DateTime.fromISO(startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
+    DateTime.fromISO(startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
+  );
+
+  if (!isSlotBookable(query, startsAt)) {
+    throw new BookingError('That time is no longer available', 409);
+  }
+
+  const starts = DateTime.fromISO(startsAt, { zone: 'utc' });
+  const { data, error } = await scope.insert('bookings', {
+    event_type_id: sibling.event_type_id,
+    manage_token: generateManageToken(),
+    starts_at: starts.toISO()!,
+    ends_at: starts.plus({ minutes: eventType.duration_minutes }).toISO()!,
+    name: sibling.name,
+    email: sibling.email,
+    notes: sibling.notes,
+    qualification_response_id: sibling.qualification_response_id,
+    client_id: sibling.client_id,
+    sync_status: 'pending',
+    pack_id: sibling.pack_id,
+    pack_size: sibling.pack_size,
+  });
+
+  if (error) {
+    if (error.code === '23P01') throw new BookingError('That time was just taken', 409);
+    throw error;
+  }
+
+  const booking = (data as unknown as BookingRow[])[0]!;
+  const synced = await syncBookingToCalendar(tenant, scope, booking, eventType);
+
+  // The ordinary single-booking confirmation, not the pack one: this is one
+  // appointment being added back, and an email listing the whole programme
+  // again would read as though everything had been rebooked.
+  const emailStatus = await sendBookingConfirmedEmail(tenant, scope, synced);
+
+  return { ...synced, email_status: emailStatus };
+}
+
 /** Create the calendar event and record the outcome — success or failure. */
 async function syncBookingToCalendar(
   tenant: TenantRow,
@@ -538,7 +663,24 @@ export async function cancelBooking(
     }
   }
 
-  await sendBookingCancelledEmail(tenant, scope, booking);
+  /* A cancelled appointment inside a programme is one the client is still
+     owed, so the email carries the way to book it back. Worked out here
+     because packStanding lives in this module; the email module cannot
+     reach it without a cycle. Best effort — the cancellation has already
+     happened and must not fail over a count. */
+  let replacementLink: string | undefined;
+  if (booking.pack_id) {
+    try {
+      const standing = await packStanding(scope, booking.pack_id);
+      if (standing && standing.remaining > 0) {
+        replacementLink = `${baseUrl()}/manage/${encodeURIComponent(booking.manage_token)}`;
+      }
+    } catch (cause) {
+      console.error('[packs] could not work out what a cancellation left owing:', cause);
+    }
+  }
+
+  await sendBookingCancelledEmail(tenant, scope, booking, replacementLink);
 }
 
 /**
