@@ -144,3 +144,43 @@ export function toMoneyInput(minor: number | null, currency: string): string {
   const rest = String(minor % 10 ** digits).padStart(digits, '0');
   return `${major}.${rest}`;
 }
+
+/**
+ * Why a price was refused, in words the person who typed it can act on.
+ *
+ * parseMoney returns null for four quite different mistakes, and "that is
+ * not a price" is useless for three of them. Somebody who typed "60.999"
+ * needs to know euros stop at two decimal places; somebody who typed
+ * "1,500" needs to know the comma is the problem and what to write instead.
+ *
+ * Only ever called on input parseMoney has already refused, so it does not
+ * repeat that check — it works out which refusal it was.
+ */
+export function priceRefusal(input: string, currency: string): string {
+  const digits = minorUnitDigits(currency);
+  const trimmed = input.trim();
+
+  if (trimmed.startsWith('-')) {
+    return 'A price cannot be negative. Leave it blank if this service has no published price.';
+  }
+
+  // Two separators, or a comma with more than two digits after it: either
+  // way somebody meant a thousands separator, and which one is genuinely
+  // ambiguous. Say what to write instead rather than guessing.
+  const separators = (trimmed.match(/[.,]/g) ?? []).length;
+  if (separators > 1 || /,\d{3}(\D|$)/.test(trimmed)) {
+    const withoutGrouping = trimmed.replace(/[^\d]/g, '');
+    return `"${trimmed}" could mean two different amounts, so it hasn't been saved. Write it without separators — ${withoutGrouping} — or use one decimal point.`;
+  }
+
+  const fraction = /[.,](\d+)$/.exec(trimmed)?.[1];
+  if (fraction && fraction.length > digits) {
+    if (digits === 0) {
+      return `${currency} has no decimal places. Write a whole number.`;
+    }
+    const whole = trimmed.split(/[.,]/)[0];
+    return `${currency} goes to ${digits} decimal places. Did you mean ${whole}.${fraction.slice(0, digits)}?`;
+  }
+
+  return 'That is not a price. Use digits, like 60 or 60.50 — or leave it blank for no published price.';
+}

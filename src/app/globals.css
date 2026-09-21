@@ -327,6 +327,18 @@ a:visited {
   line-height: 1.5;
   color: var(--faint);
 }
+/* Directly under the input it belongs to. Red here is meaning, not
+   decoration: this is the one place on the form where something is actually
+   wrong. */
+.field-error {
+  margin: 8px 0 0;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: var(--status-broken-ink);
+}
+.field input[aria-invalid='true'] {
+  border-color: var(--status-broken);
+}
 .field > label,
 .field > .prompt {
   display: block;
@@ -3470,6 +3482,13 @@ body:has(.bk-embedded) {
   margin-top: 4px !important;
   font-size: 0.9rem;
   opacity: 0.86;
+}
+/* Underlined rather than recoloured: on the confirmation panel this sits on
+   the accent fill, where a link colour would either vanish or fight it. */
+.bk-map-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .bk-confirmed-zone {
   margin-top: 10px !important;

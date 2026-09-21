@@ -1,11 +1,14 @@
 import { DateTime } from 'luxon';
 import { baseUrl } from './base-url';
 import { buildIcs } from './ics';
+import { mapUrlForInvite } from './maps';
+import { describeLocation } from './service-location';
 import { emailProvider } from './email';
 import { renderTemplate, type TemplateTokens, type TemplateLink } from './email/templates';
 import type { TenantScope } from './db';
 import type {
   BookingRow,
+  ServiceLocationKind,
   EmailStatus,
   EmailTemplateKind,
   EmailTemplateRow,
@@ -29,13 +32,36 @@ import type {
 
 const PRODUCT_NAME = 'Intro';
 
-async function loadEventTypeName(scope: TenantScope, eventTypeId: string): Promise<string> {
+interface ServiceFacts {
+  name: string;
+  locationKind: ServiceLocationKind | null;
+  locationDetail: string | null;
+}
+
+async function loadServiceFacts(
+  scope: TenantScope,
+  eventTypeId: string,
+): Promise<ServiceFacts> {
   // Not loadEventType (booking-service.ts) — that filters on active, and an
   // archived service's own past booking should still get a real name in its
   // emails, not a 404.
-  const { data, error } = await scope.select('event_types', 'name').eq('id', eventTypeId).maybeSingle();
+  const { data, error } = await scope
+    .select('event_types', 'name, location_kind, location_detail')
+    .eq('id', eventTypeId)
+    .maybeSingle();
   if (error) throw error;
-  return (data as { name: string } | null)?.name ?? 'your session';
+
+  const row = data as {
+    name: string;
+    location_kind: ServiceLocationKind | null;
+    location_detail: string | null;
+  } | null;
+
+  return {
+    name: row?.name ?? 'your session',
+    locationKind: row?.location_kind ?? null,
+    locationDetail: row?.location_detail ?? null,
+  };
 }
 
 async function loadTenantSettings(scope: TenantScope): Promise<TenantSettingsRow | null> {
@@ -87,11 +113,12 @@ async function sendClientEmail(
   kind: EmailTemplateKind,
   options: ClientEmailOptions,
 ): Promise<EmailStatus> {
-  const [serviceName, template, settings] = await Promise.all([
-    loadEventTypeName(scope, booking.event_type_id),
+  const [service, template, settings] = await Promise.all([
+    loadServiceFacts(scope, booking.event_type_id),
     loadTemplate(scope, kind),
     loadTenantSettings(scope),
   ]);
+  const serviceName = service.name;
 
   if (!template) {
     await recordEmailStatus(scope, booking.id, 'not_configured');
@@ -135,8 +162,13 @@ async function sendClientEmail(
             content: buildIcs({
               uid: booking.id,
               summary: `${serviceName} — ${tenant.name}`,
-              description: booking.meeting_url ? `Meeting link: ${booking.meeting_url}` : undefined,
-              location: booking.meeting_url ?? undefined,
+              /* LOCATION is what a calendar app turns into a tappable row —
+                 a map on a phone, a Join button for a URL. A video link takes
+                 it when there is one; otherwise the address the business
+                 wrote, which until now was simply missing from every
+                 in-person invitation. */
+              description: icsDescription(booking.meeting_url, service),
+              location: booking.meeting_url ?? service.locationDetail ?? undefined,
               startsAt: booking.starts_at,
               endsAt: booking.ends_at,
               organizer: settings?.notification_email
@@ -235,7 +267,7 @@ export async function sendBookingConfirmedEmail(
 
   const settings = await loadTenantSettings(scope);
   if (settings?.notification_email) {
-    const serviceName = await loadEventTypeName(scope, booking.event_type_id);
+    const { name: serviceName } = await loadServiceFacts(scope, booking.event_type_id);
     const dateTime = formatDateTime(booking.starts_at, tenant.timezone);
     await sendOwnerNotification(tenant, scope, booking, serviceName, dateTime, settings.notification_email);
   }
@@ -315,4 +347,36 @@ export async function retryBookingEmail(
   const { data, error } = await scope.select('bookings', 'email_status').eq('id', booking.id).maybeSingle();
   if (error) throw error;
   return (data as { email_status: EmailStatus } | null)?.email_status ?? 'failed';
+}
+
+/**
+ * What goes in the invitation's description.
+ *
+ * Calendar apps make LOCATION tappable on their own, but not consistently —
+ * and a client reading the invitation on a laptop gets nothing from a bare
+ * address. An explicit map link costs one line and works everywhere, so the
+ * person who opens this on the morning of the appointment has one thing to
+ * tap whatever they are holding.
+ *
+ * Google's URL rather than the device's likely preference: an invitation is
+ * written once, on a server, and read on whatever the client opens it with —
+ * which is often several devices, none of them the one they booked from.
+ */
+function icsDescription(
+  meetingUrl: string | null,
+  service: ServiceFacts,
+): string | undefined {
+  const lines: string[] = [];
+
+  if (meetingUrl) lines.push(`Meeting link: ${meetingUrl}`);
+
+  const described = describeLocation(service.locationKind, service.locationDetail);
+  if (described && !meetingUrl) lines.push(described);
+
+  if (service.locationKind === 'in_person' && service.locationDetail) {
+    const map = mapUrlForInvite(service.locationDetail);
+    if (map) lines.push(`Directions: ${map}`);
+  }
+
+  return lines.length > 0 ? lines.join('\n') : undefined;
 }

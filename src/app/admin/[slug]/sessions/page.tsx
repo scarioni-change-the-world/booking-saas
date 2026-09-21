@@ -6,7 +6,13 @@ import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
 import type { SerializedEventType, SerializedSettings } from '@/lib/admin-serializers';
-import { DEFAULT_CURRENCY, formatMoney, parseOptionalMoney, toMoneyInput } from '@/lib/money';
+import {
+  DEFAULT_CURRENCY,
+  formatMoney,
+  parseOptionalMoney,
+  priceRefusal,
+  toMoneyInput,
+} from '@/lib/money';
 import { LOCATION_OPTIONS, describeLocation } from '@/lib/service-location';
 import type { ServiceLocationKind } from '@/lib/db/types';
 
@@ -105,6 +111,11 @@ export default function SessionsPage() {
      it is loaded once here and every price on the page is read and written
      in it. */
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
+  /* Held beside the field it belongs to, not in the page-level `error`.
+     That one renders at the top of a long list, so a refusal on a form
+     three services down was silently off-screen — the form simply did not
+     save and said nothing, which is the worst thing a form can do. */
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -133,6 +144,7 @@ export default function SessionsPage() {
 
   function openRow(type: SerializedEventType) {
     setExpandedId(type.id);
+    setPriceError(null);
     setForm(typeToForm(type, currency));
   }
 
@@ -175,9 +187,13 @@ export default function SessionsPage() {
        reaches the API is already the integer the column stores. */
     const price = parseOptionalMoney(form.price, currency);
     if (!price.ok) {
-      setError(`"${form.price}" is not a price. Leave it blank for no published price.`);
+      setPriceError(priceRefusal(form.price, currency));
+      // Moved to, not just marked: on a long page the field may be below
+      // the fold, and a message nobody scrolls to is the same as none.
+      document.getElementById(`edit-price-${id}`)?.focus();
       return;
     }
+    setPriceError(null);
 
     setSaving(true);
     setError(null);
@@ -425,9 +441,21 @@ export default function SessionsPage() {
                             type="text"
                             inputMode="decimal"
                             placeholder="Leave blank for no published price"
+                            aria-invalid={priceError ? true : undefined}
+                            aria-describedby={
+                              priceError ? `edit-price-error-${type.id}` : undefined
+                            }
                             value={form.price}
-                            onChange={(e) => setForm({ ...form, price: e.target.value })}
+                            onChange={(e) => {
+                              setPriceError(null);
+                              setForm({ ...form, price: e.target.value });
+                            }}
                           />
+                          {priceError && (
+                            <p className="field-error" id={`edit-price-error-${type.id}`} role="alert">
+                              {priceError}
+                            </p>
+                          )}
                           <p className="field-note">
                             Shown to clients before they book. Blank means no price is
                             shown at all — which is not the same as free.

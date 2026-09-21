@@ -4,6 +4,7 @@ import {
   minorUnitDigits,
   parseMoney,
   parseOptionalMoney,
+  priceRefusal,
   toMoneyInput,
 } from '@/lib/money';
 
@@ -143,5 +144,55 @@ describe('toMoneyInput', () => {
 
   it('writes no decimal point for a currency with no minor unit', () => {
     expect(toMoneyInput(6000, 'JPY')).toBe('6000');
+  });
+});
+
+describe('priceRefusal', () => {
+  /* The complaint that produced this: "60.999" and "1,500" both did nothing
+     at all, and doing nothing is the worst thing a form can do. Each
+     refusal has to say which mistake it was and what to write instead. */
+  it('explains too much precision, and offers the likely intent', () => {
+    const message = priceRefusal('60.999', 'EUR');
+    expect(message).toContain('2 decimal places');
+    expect(message).toContain('60.99');
+  });
+
+  it('explains that a currency with no decimals has none', () => {
+    expect(priceRefusal('60.5', 'JPY')).toContain('no decimal places');
+  });
+
+  it('explains an ambiguous separator and says what to write instead', () => {
+    const message = priceRefusal('1,500', 'EUR');
+    expect(message).toContain('two different amounts');
+    expect(message).toContain('1500');
+  });
+
+  it('explains a negative price', () => {
+    expect(priceRefusal('-60', 'EUR')).toContain('cannot be negative');
+  });
+
+  it('falls back to something useful for anything else', () => {
+    const message = priceRefusal('free', 'EUR');
+    expect(message).toContain('60');
+    expect(message).toContain('blank');
+  });
+
+  /* Every one of them has to name a way forward, or it is just a rejection
+     with better grammar. */
+  it('always tells the reader what to do next', () => {
+    for (const bad of ['60.999', '1,500', '-60', 'free', '60.', '1.500,00']) {
+      const message = priceRefusal(bad, 'EUR');
+      expect(message.length).toBeGreaterThan(20);
+      expect(message).toMatch(/blank|Write|write|Did you mean|Use digits/);
+    }
+  });
+
+  /* A guard on the pairing: anything parseMoney refuses must get an
+     explanation, and nothing it accepts should ever reach this. */
+  it('has something to say about every input parseMoney turns down', () => {
+    for (const bad of ['', 'free', '-60', '60.', '.60.', 'NaN', '60.999', '1,500']) {
+      expect(parseMoney(bad, 'EUR')).toBeNull();
+      expect(priceRefusal(bad, 'EUR')).toBeTruthy();
+    }
   });
 });

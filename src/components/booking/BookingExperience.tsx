@@ -7,6 +7,7 @@ import { downloadIcs, googleCalendarUrl, type CalendarEvent } from './calendar-a
 import { articleFor } from './journey';
 import { formatMoney } from '@/lib/money';
 import { LOCATION_LABELS, describeLocation } from '@/lib/service-location';
+import { mapUrl, preferredMapService } from '@/lib/maps';
 import { groupSlots } from './slots';
 import type { BookingJourney } from './useBookingJourney';
 
@@ -103,6 +104,15 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
   const reviewLocation = eventType
     ? describeLocation(eventType.locationKind, eventType.locationDetail)
     : null;
+  const reviewDirections =
+    eventType?.locationKind === 'in_person' && eventType.locationDetail
+      ? mapUrl(
+          eventType.locationDetail,
+          typeof navigator === 'undefined'
+            ? 'google'
+            : preferredMapService(navigator.userAgent),
+        )
+      : null;
 
   return (
     <div className="bk-steps">
@@ -502,7 +512,20 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
             {reviewLocation && (
               <div className="bk-review-row">
                 <dt>Where</dt>
-                <dd>{reviewLocation}</dd>
+                <dd>
+                  {reviewDirections ? (
+                    <a
+                      className="bk-map-link"
+                      href={reviewDirections}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {reviewLocation}
+                    </a>
+                  ) : (
+                    reviewLocation
+                  )}
+                </dd>
               </div>
             )}
             {/* Shown only when there is one. Nobody should have to wonder,
@@ -603,6 +626,20 @@ function Confirmation({
   formatInstantDay: (iso: string) => string;
   formatTimeRange: (iso: string, durationMinutes: number) => string;
 }) {
+  /* Read at render time rather than in a state hook: the value is only ever
+     used to choose a URL, and reading navigator during render is safe here
+     because this screen only exists after a click. The guard is for the
+     server pass, where there is no navigator at all. */
+  const directions =
+    locationDetail && !confirmed.meetingUrl
+      ? mapUrl(
+          locationDetail,
+          typeof navigator === 'undefined'
+            ? 'google'
+            : preferredMapService(navigator.userAgent),
+        )
+      : null;
+
   const event: CalendarEvent = {
     title: `${serviceName} with ${businessName}`,
     startsAt: confirmed.startsAt,
@@ -629,7 +666,18 @@ function Confirmation({
           {serviceName} with {businessName}
         </p>
         {location && !confirmed.meetingUrl && (
-          <p className="bk-confirmed-where">{location}</p>
+          <p className="bk-confirmed-where">
+            {directions ? (
+              /* The whole line, not a separate "Directions" link beside it:
+                 an address that looks tappable is tappable, which is what
+                 somebody already running late will reach for. */
+              <a className="bk-map-link" href={directions} target="_blank" rel="noreferrer">
+                {location}
+              </a>
+            ) : (
+              location
+            )}
+          </p>
         )}
         <p className="bk-confirmed-zone">{viewerZone}</p>
       </div>
