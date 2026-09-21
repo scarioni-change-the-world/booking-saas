@@ -69,7 +69,43 @@ export const RATE_LIMITS = {
     windowSeconds: 3600,
     message: 'Too many requests for that address just now. Please try again in a little while.',
   },
+  /**
+   * Asking for a password-reset link. The same two-sided shape as the pair
+   * above, and for the same reason — it mails an address the caller chose —
+   * but tighter, and the tenant slot in the key is a constant because this
+   * endpoint belongs to no business (see PLATFORM_SCOPE).
+   *
+   * There is a third thing at stake here that the client-link pair does not
+   * have. Every message this product sends leaves through one mailbox. An
+   * unlimited public send endpoint is a way to spend that mailbox's daily
+   * quota on nothing, and the first casualty would not be password resets —
+   * it would be every booking confirmation for every business on the
+   * platform. That is what these numbers are actually protecting.
+   */
+  passwordResetRequest: {
+    limit: 5,
+    windowSeconds: 3600,
+    message: 'Too many requests from here just now. Please try again in a little while.',
+  },
+  /** Per address asked about, so spreading the requests across IPs still
+   * cannot fill one person's inbox. Never actually shown for a real
+   * address — the route answers identically either way. */
+  passwordResetAddress: {
+    limit: 3,
+    windowSeconds: 3600,
+    message: 'Too many requests for that address just now. Please try again in a little while.',
+  },
 } as const;
+
+/**
+ * The tenant slot for a limit that belongs to no tenant.
+ *
+ * enforceRateLimit builds its key as "<action>:<tenant>:<subject>", which
+ * assumes every limited action happens inside a business. Signing in does
+ * not. A constant keeps the key shape intact — and keeps these counters in
+ * their own namespace, where no real tenant id can ever collide with them.
+ */
+export const PLATFORM_SCOPE = 'platform';
 
 export type RateLimitedAction = keyof typeof RATE_LIMITS;
 
