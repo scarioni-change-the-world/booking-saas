@@ -1,702 +1,132 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { accentStyle, initials } from './brand';
-import { useAutoResize } from './useAutoResize';
-import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from './types';
+import { useEffect, useState } from 'react';
+import { BookingExperience } from './booking/BookingExperience';
+import { ServiceSummary } from './booking/ServiceSummary';
+import { useBookingJourney } from './booking/useBookingJourney';
+import { useHostHeight } from './booking/useHostHeight';
+import { accentStyle } from './brand';
 
-type Step =
-  | 'loading'
-  | 'email'
-  | 'questions'
-  | 'other-path'
-  | 'pick-type'
-  | 'pick-time'
-  | 'details'
-  | 'done';
+/**
+ * The booking experience, in whichever of its two forms applies.
+ *
+ * One journey, two shells. The shells differ in what surrounds the booking,
+ * never in the booking itself: standalone puts it on a page of its own, with
+ * the business's identity beside it and a discreet credit at the foot;
+ * embedded strips all of that away and lets the host page's own background,
+ * width and margins show through, so it reads as part of that site rather
+ * than as a second website trapped inside it.
+ *
+ * Prospects pass through the qualification gate before any time is shown
+ * (brief 2.1). An existing client never comes through here at all — their
+ * own private, per-client link (ClientBooking, .../client/[token]) skips the
+ * gate and identifies who they are, which this has no way to do for an
+ * anonymous visitor.
+ */
+
+export type BookingMode = 'standalone' | 'embedded';
 
 interface Props {
   slug: string;
+  /**
+   * Which shell to render. Left unset, the component works it out from
+   * whether it is in a frame.
+   *
+   * The prop wins when given, because detection cannot see intent: a
+   * customer may want the standalone page inside a frame (a modal on their
+   * own site, say), and a `?mode=` on the URL is how they ask for that.
+   * Detection is the default, not the rule.
+   */
+  mode?: BookingMode;
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Request failed');
-  return body as T;
-}
-
-async function postJson<T>(url: string, payload: unknown): Promise<T> {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Request failed');
-  return body as T;
-}
-
-/**
- * The booking flow, for prospects.
- *
- * Prospects pass through the qualification gate before any time is shown
- * (brief 2.1). An existing client never goes through here at all — their own
- * private, per-client link (ClientBooking, .../client/[token]) skips the
- * gate and identifies who they are, which this component has no way to do
- * for an anonymous visitor. This used to also serve that audience, gated on
- * a plain prop, but nothing stopped a client-only session type resting on
- * the URL being unlisted rather than on any real identity check — see
- * .../api/t/[slug]/bookings for where that was actually closed.
- *
- * Built mobile-first: a prospect arrives from a link in Instagram or
- * WhatsApp, on a phone, usually one-handed. The wider viewport is the
- * exception this layout has to survive, not the one it is designed for.
- */
-export default function BookingFlow({ slug }: Props) {
-  useAutoResize();
-
-  const [step, setStep] = useState<Step>('loading');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const [config, setConfig] = useState<PublicConfig | null>(null);
-  const [questions, setQuestions] = useState<PublicQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [responseId, setResponseId] = useState<string | null>(null);
-  const [redirect, setRedirect] = useState<{
-    message: string;
-    url: string | null;
-    label: string | null;
-  } | null>(null);
-
-  const [eventTypes, setEventTypes] = useState<PublicEventType[]>([]);
-  const [eventType, setEventType] = useState<PublicEventType | null>(null);
-  const [days, setDays] = useState<DaySlots[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [slot, setSlot] = useState<string | null>(null);
-
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [notes, setNotes] = useState('');
-  const [confirmed, setConfirmed] = useState<{
-    startsAt: string;
-    manageToken: string;
-    meetingUrl: string | null;
-    confirmationEmailSent: boolean;
-  } | null>(null);
-
-  const base = `/api/t/${encodeURIComponent(slug)}`;
-
-  /** The client's own timezone, used only for display. */
-  const viewerZone = useMemo(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-    [],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const [cfg, types] = await Promise.all([
-          getJson<PublicConfig>(`${base}/config`),
-          getJson<{ eventTypes: PublicEventType[] }>(`${base}/event-types?audience=prospect`),
-        ]);
-        if (cancelled) return;
-
-        setConfig(cfg);
-        setEventTypes(types.eventTypes);
-        // Which service is being booked decides which questions apply
-        // (migration 0016), so that has to come first now — see chooseEventType.
-        setStep('pick-type');
-      } catch (cause) {
-        if (!cancelled) setError((cause as Error).message);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [base]);
+export default function BookingFlow({ slug, mode }: Props) {
+  const journey = useBookingJourney(slug);
+  useHostHeight();
 
   /**
-   * A service has been picked — explicitly, via the one-choice auto-skip
-   * below, or by picking a *different* one after already qualifying for a
-   * first ("Choose a different session" at the pick-time step). Called
-   * every time, deliberately: each service can have its own questions
-   * (migration 0016), so switching services means re-checking what *this*
-   * one asks, not assuming the last service's gate still applies. The gate
-   * is the tenant's shared questions plus this service's own
-   * (GET .../questions?eventTypeId=). A service with nothing to ask goes
-   * straight to the calendar, same as a tenant with no questions at all did
-   * before this existed. Answers already given for a still-shared question
-   * (`answers` state isn't cleared on a switch) carry over rather than
-   * being asked twice.
+   * Framed or not — resolved after mount, never during render.
+   *
+   * `window.parent !== window` is not knowable on the server, so reading it
+   * while rendering would produce one tree on the server and another in the
+   * browser: a hydration mismatch, and a visible flash of the wrong shell.
+   * Standalone is the first paint because it is the one that is right when
+   * somebody opens the link directly, which is the case where a flash would
+   * actually be seen.
    */
-  const chooseEventType = useCallback(
-    async (type: PublicEventType) => {
-      setEventType(type);
-      setBusy(true);
-      setError(null);
-      try {
-        const q = await getJson<{ questions: PublicQuestion[] }>(
-          `${base}/questions?eventTypeId=${encodeURIComponent(type.id)}`,
-        );
-        setQuestions(q.questions);
-        setStep(q.questions.length > 0 ? 'email' : 'pick-time');
-      } catch (cause) {
-        setError((cause as Error).message);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [base],
-  );
-
-  /* Tell a host page how tall this needs to be.
-   *
-   * Only when actually framed, and only ever the height — the message
-   * carries nothing else, so a site embedding this learns its size and
-   * nothing about the person using it. public/embed.js is the other half.
-   *
-   * ResizeObserver rather than firing on step changes: the height moves for
-   * reasons a step change does not capture — a validation message appearing,
-   * a long question wrapping onto another line, a slot list loading — and
-   * watching the element itself catches all of them without anybody having
-   * to remember to announce a new one.
-   *
-   * The wildcard target origin is deliberate and safe here: we do not know
-   * which customer's site has embedded this, the payload is a number, and
-   * the receiving script verifies both the origin and the frame identity
-   * before acting on it. */
+  const [framed, setFramed] = useState(false);
   useEffect(() => {
-    if (typeof window === 'undefined' || window.parent === window) return;
-
-    const post = () => {
-      const height = document.documentElement.scrollHeight;
-      window.parent.postMessage({ type: 'intro:height', height }, '*');
-    };
-
-    post();
-    const observer = new ResizeObserver(post);
-    observer.observe(document.documentElement);
-    return () => observer.disconnect();
+    setFramed(window.parent !== window);
   }, []);
 
-  // Auto-skip the type picker when there is only one choice (brief 2.3).
-  useEffect(() => {
-    if (step === 'pick-type' && eventTypes.length === 1) {
-      void chooseEventType(eventTypes[0]!);
-    }
-  }, [step, eventTypes, chooseEventType]);
+  const resolved: BookingMode = mode ?? (framed ? 'embedded' : 'standalone');
+  const accent = accentStyle(journey.config?.branding.accentColor);
 
-  const loadAvailability = useCallback(
-    async (chosen: PublicEventType) => {
-      setBusy(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams({ eventTypeId: chosen.id, audience: 'prospect' });
-        if (responseId) params.set('responseId', responseId);
-        const result = await getJson<{ days: DaySlots[] }>(
-          `${base}/availability?${params.toString()}`,
-        );
-        setDays(result.days);
-        // Land on the first day that actually has something to book, rather
-        // than the calendar's literal first day, which is usually empty.
-        setSelectedDate(result.days.find((d) => d.slots.length > 0)?.date ?? null);
-      } catch (cause) {
-        setError((cause as Error).message);
-      } finally {
-        setBusy(false);
+  const summary = (
+    <ServiceSummary
+      config={journey.config}
+      eventType={journey.eventType}
+      /* Dropped once the booking exists: the confirmation states the time
+         far more clearly than a sidebar note, and two places showing the
+         same fact is two places that can disagree. */
+      slot={journey.phase === 'confirmed' ? null : journey.slot}
+      viewerZone={journey.viewerZone}
+      formatInstantDay={(iso) =>
+        new Intl.DateTimeFormat(undefined, {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }).format(new Date(iso))
       }
-    },
-    [base, responseId],
+      formatTimeRange={(iso, minutes) => {
+        const format = new Intl.DateTimeFormat(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const start = new Date(iso);
+        return `${format.format(start)} – ${format.format(
+          new Date(start.getTime() + minutes * 60_000),
+        )}`;
+      }}
+    />
   );
 
-  useEffect(() => {
-    if (step === 'pick-time' && eventType) void loadAvailability(eventType);
-  }, [step, eventType, loadAvailability]);
-
-  /**
-   * The very first step for a prospect, ahead of the questions themselves —
-   * see .../qualify/start. Nothing about the answers is known yet; this
-   * only fixes who the response belongs to, so a prospect who leaves partway
-   * through the questions still shows up in the tenant's own numbers instead
-   * of vanishing without a trace. `eventType` is already set by this point —
-   * chooseEventType is what got the prospect here — and the server stamps
-   * the response with it, so .../qualify never needs it sent again.
-   */
-  async function submitEmail(event: React.FormEvent) {
-    event.preventDefault();
-    if (!eventType) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await postJson<{ responseId: string }>(`${base}/qualify/start`, {
-        email,
-        eventTypeId: eventType.id,
-      });
-      setResponseId(result.responseId);
-      setStep('questions');
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitAnswers(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await postJson<{
-        outcomePathType: 'meeting' | 'other';
-        responseId: string;
-        message?: string;
-        redirectUrl?: string | null;
-        redirectLabel?: string | null;
-      }>(`${base}/qualify`, { responseId, answers });
-
-      if (result.outcomePathType === 'other') {
-        setRedirect({
-          message: result.message ?? config?.otherPath.message ?? '',
-          url: result.redirectUrl ?? null,
-          label: result.redirectLabel ?? null,
-        });
-        setStep('other-path');
-        return;
-      }
-
-      // The service was already chosen before the gate ran — no need to ask
-      // again, straight to the calendar for it.
-      setStep('pick-time');
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitBooking(event: React.FormEvent) {
-    event.preventDefault();
-    if (!eventType || !slot) return;
-
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await postJson<{
-        booking: {
-          startsAt: string;
-          manageToken: string;
-          meetingUrl: string | null;
-          confirmationEmailSent: boolean;
-        };
-      }>(`${base}/bookings`, {
-        eventTypeId: eventType.id,
-        startsAt: slot,
-        name,
-        email,
-        notes,
-        responseId,
-      });
-      setConfirmed(result.booking);
-      setStep('done');
-    } catch (cause) {
-      setError((cause as Error).message);
-      // A 409 means the slot went while the form was open. Reload the calendar
-      // rather than leaving a stale grid the client can pick from again.
-      if ((cause as Error).message.toLowerCase().includes('available')) {
-        setSlot(null);
-        setStep('pick-time');
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const dayFormat = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-  const dowFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
-
-  /** Render a tenant-local 'yyyy-MM-dd' as a day heading. */
-  const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00:00`));
-
-  /**
-   * Render the day an instant falls on, in the viewer's timezone.
-   *
-   * Not the same as slicing the ISO string: that yields the UTC date, which is
-   * the wrong day for any viewer whose local date has already rolled over.
-   */
-  const formatInstantDay = (iso: string) => dayFormat.format(new Date(iso));
-
-  const formatTime = (iso: string) => timeFormat.format(new Date(iso));
-
-  /** "10:00 – 10:30", using the event type's own duration — never a fixed grid. */
-  const formatTimeRange = (iso: string, durationMinutes: number) => {
-    const start = new Date(iso);
-    const end = new Date(start.getTime() + durationMinutes * 60_000);
-    return `${timeFormat.format(start)} – ${timeFormat.format(end)}`;
-  };
-
-  const answeredCount = questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length;
-
-  if (step === 'loading' && !error) {
+  if (resolved === 'embedded') {
     return (
-      <main className="widget">
-        <p className="status">Loading…</p>
-      </main>
+      /* No page background, no outer margins, no credit, no two columns.
+         The host page supplies all of that, and anything added here reads as
+         a box somebody dropped into their layout.
+         
+         The identity moves *inside* the panel rather than sitting above it.
+         Framed, there is no page for a header to sit on — a name floating
+         above the panel would be flush against the iframe's own edge, which
+         is the one thing that gives an embed away. */
+      <div className="bk bk-embedded" style={accent}>
+        <div className="bk-panel">
+          {summary}
+          <BookingExperience journey={journey} />
+        </div>
+      </div>
     );
   }
 
-  const activeDay = days.find((d) => d.date === selectedDate) ?? null;
-
   return (
-    <main className="widget" style={accentStyle(config?.branding.accentColor)}>
-      {config && (
-        <div className="brand-row">
-          <div className="brand-mark">
-            {config.branding.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
-              <img src={config.branding.logoUrl} alt="" />
-            ) : (
-              initials(config.name)
-            )}
+    <div className="bk bk-standalone" style={accent}>
+      <main className="bk-page">
+        <div className="bk-columns">
+          <aside className="bk-aside-col">{summary}</aside>
+          <div className="bk-panel">
+            <BookingExperience journey={journey} />
           </div>
-          <span className="brand-name">{config.name}</span>
         </div>
-      )}
 
-      {error && (
-        <div className="notice notice-error" role="alert">
-          {error}
-        </div>
-      )}
-
-      {step === 'email' && (
-        <form onSubmit={submitEmail}>
-          <p className="lede">
-            A few quick questions first — starting with how to reach you, so we can follow up
-            either way.
-          </p>
-
-          <div className="field">
-            <label htmlFor="prospect-email">
-              Email<span className="required">*</span>
-            </label>
-            <input
-              id="prospect-email"
-              type="email"
-              required
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <button type="submit" className="btn-primary btn-full" disabled={busy}>
-            {busy ? 'Continuing…' : 'Continue'}
-          </button>
-        </form>
-      )}
-
-      {step === 'questions' && (
-        <form onSubmit={submitAnswers}>
-          <p className="lede">A few questions before we find a time.</p>
-
-          {questions.map((question, i) => (
-            <div className="field" key={question.id}>
-              <span className="prompt">
-                <span className="question-num">{i + 1}.</span>
-                {question.prompt}
-                {question.required && <span className="required">*</span>}
-              </span>
-
-              {question.kind === 'text' ? (
-                <textarea
-                  value={answers[question.id] ?? ''}
-                  required={question.required}
-                  onChange={(e) =>
-                    setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
-                  }
-                />
-              ) : (
-                <div className="options">
-                  {question.options.map((option) => (
-                    <label
-                      key={option}
-                      className={`option${answers[question.id] === option ? ' selected' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name={question.id}
-                        value={option}
-                        required={question.required}
-                        checked={answers[question.id] === option}
-                        onChange={() =>
-                          setAnswers((prev) => ({ ...prev, [question.id]: option }))
-                        }
-                      />
-                      <span>{option}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          <button type="submit" className="btn-primary btn-full" disabled={busy}>
-            {busy ? 'Checking…' : 'Continue'}
-          </button>
-          <p className="progress-label">
-            {answeredCount} of {questions.length} answered
-          </p>
-        </form>
-      )}
-
-      {step === 'other-path' && redirect && (
-        <div className="card">
-          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{redirect.message}</p>
-          {redirect.url && (
-            <div className="actions">
-              <a
-                className="btn-primary btn-full"
-                href={redirect.url}
-                style={{ textDecoration: 'none', textAlign: 'center' }}
-              >
-                {redirect.label ?? 'Find out more'}
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
-      {step === 'pick-type' && (
-        <>
-          <h2>Choose a session</h2>
-          {eventTypes.length === 0 ? (
-            <p className="notice notice-muted">
-              There are no sessions available to book right now.
-            </p>
-          ) : (
-            <div className="type-list">
-              {eventTypes.map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  className="type"
-                  disabled={busy}
-                  onClick={() => void chooseEventType(type)}
-                >
-                  <strong>{type.name}</strong>
-                  <span>
-                    {type.durationMinutes} min
-                    {type.description ? ` · ${type.description}` : ''}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {step === 'pick-time' && eventType && (
-        <>
-          <h2>Pick a time</h2>
-          {busy && <p className="status">Loading times…</p>}
-
-          {!busy && days.length === 0 && (
-            <p className="notice notice-muted">
-              No times are available in the next few weeks.
-            </p>
-          )}
-
-          {days.length > 0 && (
-            <>
-              <div className="date-strip">
-                {days.map((day) => {
-                  const date = new Date(`${day.date}T12:00:00`);
-                  const has = day.slots.length > 0;
-                  const active = day.date === selectedDate;
-                  return (
-                    <button
-                      key={day.date}
-                      type="button"
-                      className={`date-chip${active ? ' active' : ''}${has ? '' : ' empty'}`}
-                      disabled={!has}
-                      onClick={() => setSelectedDate(day.date)}
-                    >
-                      <span className="dow">{dowFormat.format(date)}</span>
-                      <span className="num">{date.getDate()}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeDay && (
-                <>
-                  <p className="day-label">{formatDay(activeDay.date)}</p>
-                  <div className="slots">
-                    {activeDay.slots.map((iso) => (
-                      <button
-                        key={iso}
-                        type="button"
-                        className="slot"
-                        onClick={() => {
-                          setSlot(iso);
-                          setStep('details');
-                        }}
-                      >
-                        {formatTimeRange(iso, eventType.durationMinutes)}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          <p className="tz">Times shown in your timezone ({viewerZone}).</p>
-
-          {eventTypes.length > 1 && (
-            <div className="actions">
-              <button
-                type="button"
-                className="btn-link"
-                onClick={() => {
-                  setEventType(null);
-                  setDays([]);
-                  setSelectedDate(null);
-                  setStep('pick-type');
-                }}
-              >
-                Choose a different session
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {step === 'details' && eventType && slot && (
-        <form onSubmit={submitBooking}>
-          <h2>Your details</h2>
-          <p className="lede">
-            {eventType.name} · {formatInstantDay(slot)} at {formatTime(slot)}
-          </p>
-
-          <div className="field">
-            <label htmlFor="name">
-              Name<span className="required">*</span>
-            </label>
-            <input
-              id="name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="email">
-              Email<span className="required">*</span>
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="notes">Anything we should know?</label>
-            <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
-
-          <button type="submit" className="btn-primary btn-full" disabled={busy}>
-            {busy ? 'Booking…' : 'Confirm booking'}
-          </button>
-          <div className="actions" style={{ justifyContent: 'center' }}>
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => {
-                setSlot(null);
-                setStep('pick-time');
-              }}
-            >
-              Pick another time
-            </button>
-          </div>
-        </form>
-      )}
-
-      {step === 'done' && confirmed && (
-        <>
-          <h2>You&apos;re booked</h2>
-          <div className="hero">
-            <div className="eyebrow">{formatInstantDay(confirmed.startsAt)}</div>
-            <div className="when">{formatTime(confirmed.startsAt)}</div>
-            {eventType && <div className="what">{eventType.name}</div>}
-          </div>
-
-          {confirmed.meetingUrl && (
-            <a className="hero-link" href={confirmed.meetingUrl}>
-              Join the video call
-            </a>
-          )}
-
-          {/* Said plainly, because the next thing anyone does after booking is
-              wonder whether they are supposed to write the time down.
-
-              Which of these two shows is decided by whether an email really
-              went out, not by whether one was meant to. Promising a
-              confirmation that never left the building is the worst version
-              of this screen: it is the person who believes it who arrives at
-              no appointment, because they trusted the email instead of
-              noting the time. */}
-          {confirmed.confirmationEmailSent ? (
-            <>
-              <p style={{ marginTop: 18 }}>
-                We&apos;ve sent a confirmation to <strong>{email}</strong> with everything
-                you need{confirmed.meetingUrl ? ', including the video call link' : ''} —
-                plus a calendar invitation you can add in one tap.
-              </p>
-
-              <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
-                Nothing arrived? Check your spam folder. You can also{' '}
-                <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
-                  reschedule or cancel
-                </a>{' '}
-                here — worth keeping this link.
-              </p>
-            </>
-          ) : (
-            /* No email is coming, so this page is the only record. Said
-               without alarm — a visitor cannot act on a mail server being
-               down, and telling them it is would only make a booking that
-               worked feel broken. What they can act on is keeping the link,
-               so that is what this asks for. */
-            <p style={{ marginTop: 18 }}>
-              Your booking is confirmed. <strong>Save this link</strong> — it&apos;s how
-              you&apos;ll find, change or cancel it:{' '}
-              <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
-                manage your booking
-              </a>
-              .
-            </p>
-          )}
-        </>
-      )}
-
-      <p className="footer-credit">Powered by intro</p>
-    </main>
+        {/* The only place intro speaks on this page, and it speaks quietly.
+            Lowercase always; the wordmark treatment is reserved for here and
+            never lent to the business's own name above. */}
+        <p className="bk-credit">
+          Powered by <span className="bk-wordmark">intro</span>
+        </p>
+      </main>
+    </div>
   );
 }

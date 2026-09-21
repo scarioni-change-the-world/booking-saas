@@ -2713,3 +2713,859 @@ button.text-action {
   font-size: 0.78rem;
   font-weight: 500;
 }
+
+/* ---------------------------------------------------------------------- */
+/* The client-facing booking experience                                    */
+/* ---------------------------------------------------------------------- */
+
+/*
+ * One set of rules for two shells — see BookingFlow. .bk-standalone adds a
+ * page around the booking; .bk-embedded takes it away. Everything inside
+ * .bk-panel is identical in both, which is the point: a client who books
+ * from a link and a client who books inside the professional's own site are
+ * using the same product, not two that resemble each other.
+ *
+ * The business is the identity on this surface. intro appears once, small,
+ * at the foot of the standalone shell. --accent may be the business's own
+ * colour (see brand.ts), so nothing here assumes Soft Mineral by name.
+ */
+
+.bk {
+  color: var(--ink);
+}
+
+.bk-standalone {
+  min-height: 100svh;
+  background-color: var(--canvas);
+  background-image: var(--limestone);
+  background-size: auto, 760px auto;
+  padding: 56px 24px 40px;
+  /* Centred while the content fits, top-aligned the moment it does not —
+     which is what `center` does with `min-height` here. A short step on a
+     tall screen otherwise sits in the top third with the rest of the page
+     empty below it. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bk-page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.bk-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
+  gap: 44px;
+  align-items: start;
+}
+/* The identity column stays put while the steps change beside it — that is
+   its whole job, so it sticks rather than scrolling away on a long slot
+   list. */
+.bk-aside-col {
+  position: sticky;
+  top: 56px;
+}
+
+/* The embedded shell: no background, no page padding, no credit. The host
+   page owns all three. */
+.bk-embedded {
+  width: 100%;
+}
+/*
+ * Let the host's own background through.
+ *
+ * body carries --canvas for every other screen in this app, and inside an
+ * iframe that paints Warm Chalk over whatever the customer's page is — a
+ * pale rectangle sitting in their design, which is exactly the "website
+ * inside another website" this shell exists to avoid. :has() is what makes
+ * this reachable from here: the shell is chosen in a component, far below
+ * body, and adding a class to <body> from an effect would paint the wrong
+ * colour for a frame first.
+ *
+ * The panel keeps its own Soft White surface rather than going transparent
+ * too, and that is deliberate: a host page may have a dark or photographic
+ * background, and Ink text on an unknown backdrop is a legibility problem we
+ * cannot test for. The surface guarantees contrast on any site.
+ */
+body:has(.bk-embedded) {
+  background: transparent;
+}
+/* All of it, not 680px of it. A panel that stops short inside a full-width
+   section is the other thing that gives an embed away. */
+.bk-embedded .bk-panel {
+  max-width: none;
+}
+/* Framed, the identity is a header inside the panel rather than a column
+   beside it — an iframe is rarely wide enough for two, and the business's
+   name still has to be the first thing read. */
+.bk-embedded .bk-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.bk-embedded .bk-service,
+.bk-embedded .bk-chosen {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+/* Beside the name rather than stacked under it: framed, vertical space is
+   the host's, not ours to spend. */
+.bk-embedded .bk-service-name {
+  font-size: 1rem;
+}
+.bk-embedded .bk-service-note {
+  display: none;
+}
+.bk-embedded .bk-facts {
+  margin: 0;
+}
+.bk-embedded .bk-chosen-label {
+  display: none;
+}
+.bk-embedded .bk-chosen-when,
+.bk-embedded .bk-chosen-time {
+  display: inline;
+  font-size: 0.88rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+.bk-embedded .bk-chosen-zone {
+  display: none;
+}
+/* Two columns is right inside the standalone panel, which is capped at
+   680px. Framed, the panel is as wide as the host's section — and two
+   columns there produces time buttons several hundred pixels wide, which
+   look like nothing anyone would press. Fill the row instead. */
+.bk-embedded .bk-slots {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.bk-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  max-width: 680px;
+}
+
+/* ── The identity column ────────────────────────────────────────────── */
+
+.bk-identity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.bk-avatar {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--side);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent-ink);
+}
+.bk-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The body face, at a normal weight. A business name set like the intro
+   wordmark would be this product wearing its customer's identity. */
+.bk-business {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.bk-service {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+.bk-service-name {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.24rem;
+  line-height: 1.3;
+}
+.bk-service-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.bk-facts {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+  color: var(--faint);
+}
+.bk-facts li + li {
+  margin-top: 4px;
+}
+
+.bk-chosen {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+.bk-chosen-label {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--emphasis);
+}
+.bk-chosen-when {
+  margin: 0;
+  font-weight: 600;
+}
+.bk-chosen-time {
+  margin: 2px 0 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.bk-chosen-zone {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+
+/* ── Progress ───────────────────────────────────────────────────────── */
+
+.bk-progress {
+  margin-bottom: 28px;
+}
+.bk-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.bk-back {
+  border: 0;
+  background: transparent;
+  padding: 6px 2px;
+  min-height: 34px;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--faint);
+  cursor: pointer;
+}
+.bk-back:hover {
+  color: var(--ink);
+}
+.bk-progress-label {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--faint);
+  text-align: right;
+}
+.bk-progress-count {
+  color: var(--ghost);
+}
+.bk-rule {
+  height: 2px;
+  background: var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+}
+/* Ochre, and the only place it appears in the journey — the guide's scarce
+   expressive note, spent on the one thing that marks forward movement. */
+.bk-rule-fill {
+  height: 100%;
+  background: var(--emphasis);
+  transition: width 0.3s ease;
+}
+
+/* ── Shared step furniture ──────────────────────────────────────────── */
+
+.bk-heading {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.6rem;
+  line-height: 1.24;
+}
+.bk-lede {
+  margin: 0 0 26px;
+  color: var(--muted);
+  font-size: 0.97rem;
+  line-height: 1.6;
+}
+.bk-hint {
+  margin: 7px 0 0;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.bk-status,
+.bk-empty {
+  margin: 0;
+  padding: 18px 0;
+  color: var(--faint);
+}
+.bk-error {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--status-broken-tint);
+  color: var(--status-broken-ink);
+  font-size: 0.9rem;
+}
+.bk-form .field {
+  margin-bottom: 22px;
+}
+.bk-form label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.bk-form input,
+.bk-form textarea {
+  min-height: 50px;
+}
+.bk-form textarea {
+  min-height: 96px;
+}
+.bk-count {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.bk-required {
+  color: var(--faint);
+}
+.bk-privacy {
+  margin: 0 0 22px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--faint);
+}
+.bk-textlink {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.bk-textlink:hover {
+  color: var(--ink);
+}
+.bk-aside {
+  margin: 22px 0 0;
+}
+
+/* ── Choosing a service ─────────────────────────────────────────────── */
+
+.bk-service-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* The whole row is the control. A radio the size of a full stop, beside text
+   that is obviously the thing you mean to press, is a target people miss. */
+.bk-service-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  text-align: left;
+  padding: 18px 20px;
+  min-height: 72px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.bk-service-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.bk-service-option:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.bk-service-option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.bk-service-option-name {
+  font-weight: 600;
+}
+.bk-service-option-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.bk-service-option-facts {
+  font-size: 0.83rem;
+  color: var(--faint);
+}
+.bk-service-option-go {
+  color: var(--ghost);
+  flex: 0 0 auto;
+}
+.bk-service-option:hover:not(:disabled) .bk-service-option-go {
+  color: var(--accent);
+}
+
+/* ── Questions ──────────────────────────────────────────────────────── */
+
+.bk-question {
+  border: 0;
+  padding: 0;
+  margin: 0 0 30px;
+}
+.bk-question legend {
+  display: flex;
+  gap: 11px;
+  padding: 0;
+  margin-bottom: 13px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+.bk-question-num {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--side);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.bk-options {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.bk-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 16px;
+  min-height: 50px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.bk-option:hover {
+  border-color: var(--strong-border);
+}
+.bk-option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.bk-option input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--accent);
+}
+/* The ring belongs to the row, not to the dot inside it — the row is what
+   the eye and the pointer both treat as the control. */
+.bk-option:focus-within {
+  outline: 3px solid var(--emphasis);
+  outline-offset: 3px;
+}
+.bk-option input:focus-visible {
+  outline: none;
+}
+
+/* ── A better next step than a meeting ──────────────────────────────── */
+
+.bk-resource {
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--canvas);
+}
+.bk-resource-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+/* An anchor wearing .btn-primary: the global `a` colour wins over the
+   button class, so the fill ends up Mineral with Ink text on it. Stated
+   here rather than left to the cascade. */
+.bk-resource-link,
+.bk-resource-link:hover {
+  margin-top: 20px;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: var(--accent-contrast);
+}
+
+/* ── Dates ──────────────────────────────────────────────────────────── */
+
+.bk-dates {
+  margin-bottom: 30px;
+}
+.bk-dates-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.bk-dates-range {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.bk-arrow {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.bk-arrow:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* Disabled rather than hidden or wrapping: an arrow that disappears makes
+   the row jump, and one that wraps round tells you there is more when there
+   is not. */
+.bk-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.bk-date-row {
+  display: flex;
+  gap: 7px;
+}
+.bk-date,
+.bk-date-pad {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.bk-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 11px 4px;
+  min-height: 62px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.bk-date:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.bk-date.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.bk-date.is-empty {
+  opacity: 0.4;
+  cursor: default;
+}
+.bk-date-dow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+.bk-date-num {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+/* ── Times ──────────────────────────────────────────────────────────── */
+
+.bk-day {
+  margin: 0 0 18px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.bk-period + .bk-period {
+  margin-top: 24px;
+}
+.bk-period-label {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.bk-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.bk-slot {
+  padding: 13px 10px;
+  min-height: 50px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.bk-slot:hover {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.bk-slot.is-selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.bk-more {
+  margin-top: 12px;
+}
+.bk-zone {
+  margin: 26px 0 0;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+
+/* ── Review ─────────────────────────────────────────────────────────── */
+
+.bk-review {
+  margin: 0 0 28px;
+  border-top: 1px solid var(--rule);
+}
+.bk-review-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.bk-review dt {
+  color: var(--faint);
+  font-size: 0.86rem;
+}
+.bk-review dd {
+  margin: 0;
+  min-width: 0;
+}
+.bk-review-sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.83rem;
+  color: var(--faint);
+}
+.bk-review-note {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.bk-edit {
+  margin-left: 12px;
+  font-size: 0.83rem;
+}
+
+/* ── Confirmed ──────────────────────────────────────────────────────── */
+
+.bk-confirmed {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.bk-confirmed p {
+  margin: 0;
+}
+.bk-confirmed-when {
+  font-size: 0.9rem;
+  opacity: 0.86;
+}
+.bk-confirmed-time {
+  margin-top: 4px !important;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.7rem;
+  line-height: 1.2;
+}
+.bk-confirmed-what {
+  margin-top: 8px !important;
+}
+.bk-confirmed-zone {
+  margin-top: 10px !important;
+  font-size: 0.8rem;
+  opacity: 0.76;
+}
+.bk-join {
+  display: block;
+  margin-top: 14px;
+  padding: 14px;
+  min-height: 50px;
+  text-align: center;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent-ink);
+  text-decoration: none;
+  font-weight: 500;
+}
+.bk-join:hover {
+  background: var(--accent-tint);
+}
+.bk-add {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+.bk-add-label {
+  margin: 0 0 9px;
+  font-size: 0.86rem;
+  color: var(--faint);
+}
+.bk-add-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+}
+/* One is an anchor and one is a button; without this they sit on different
+   baselines and read as two unrelated things. */
+.bk-add-actions > * {
+  line-height: 1.5;
+}
+.bk-after {
+  margin: 22px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ── The credit ─────────────────────────────────────────────────────── */
+
+.bk-credit {
+  margin: 40px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ghost);
+}
+/* Lowercase, always, and the one place the wordmark treatment appears on
+   this surface. */
+.bk-wordmark {
+  font-family: var(--font-wordmark);
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  text-transform: lowercase;
+  color: var(--faint);
+}
+
+/* ── Narrow ─────────────────────────────────────────────────────────── */
+
+/* Below this the two columns stop being two columns: the identity goes above
+   the step, where it still answers "who am I booking with" without stealing
+   the height the form needs. */
+@media (max-width: 880px) {
+  .bk-standalone {
+    padding: 28px 20px 32px;
+  }
+  .bk-columns {
+    display: block;
+  }
+  .bk-aside-col {
+    position: static;
+    margin-bottom: 24px;
+  }
+  .bk-panel {
+    padding: 24px 20px;
+    max-width: none;
+  }
+  .bk-service {
+    margin-top: 18px;
+    padding-top: 16px;
+  }
+  /* A long description costs the whole screen on a phone. Three lines is
+     enough to know what the service is; the rest is detail the business can
+     repeat when they reply. */
+  .bk-service-note {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .bk-heading {
+    font-size: 1.36rem;
+  }
+  .bk-review-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+/* One column of times on a small phone: two makes each one too narrow to
+   read a range in, and a wrapped "10:00 – 10:30" is worse than a taller
+   list. */
+@media (max-width: 400px) {
+  .bk-slots {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bk-date-row {
+    gap: 5px;
+  }
+}
+
+/* A progress rule that slides and buttons that fade are decoration. Anyone
+   who has asked for less of it gets none. */
+@media (prefers-reduced-motion: reduce) {
+  .bk-rule-fill,
+  .bk-service-option,
+  .bk-option,
+  .bk-date,
+  .bk-slot {
+    transition: none;
+  }
+}

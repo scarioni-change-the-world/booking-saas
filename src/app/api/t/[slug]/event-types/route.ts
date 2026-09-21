@@ -22,6 +22,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         description: t.description,
         durationMinutes: t.duration_minutes,
         color: t.color,
+        bookingMode: t.booking_mode,
+        packSize: t.pack_size,
       })),
     });
   } catch (error) {
