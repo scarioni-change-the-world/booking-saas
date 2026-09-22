@@ -382,11 +382,22 @@ export interface CreateBookingPackInput extends Omit<CreateBookingInput, 'starts
  * once for the pack — see the caller. Neither can undo the booking, and by
  * this point the programme genuinely exists.
  */
+export interface CreatedPack {
+  bookings: BookingRow[];
+  /**
+   * The buyer's own access token, so the caller can hand them the way back
+   * to their programme. Null when the client record could not be set up —
+   * see the best-effort block below, which must not cost anybody their
+   * appointments.
+   */
+  clientToken: string | null;
+}
+
 export async function createBookingPack(
   tenant: TenantRow,
   scope: TenantScope,
   input: CreateBookingPackInput,
-): Promise<BookingRow[]> {
+): Promise<CreatedPack> {
   const eventType = await loadEventType(scope, input.eventTypeId);
 
   if (eventType.booking_mode !== 'pack' || !eventType.pack_size) {
@@ -518,9 +529,17 @@ export async function createBookingPack(
   // One email for the whole programme, after sync, for the same reason a
   // single booking waits: the meeting links exist by now, or have
   // definitively failed to.
-  const emailStatus = await sendBookingPackConfirmedEmail(tenant, scope, synced);
+  const emailStatus = await sendBookingPackConfirmedEmail(
+    tenant,
+    scope,
+    synced,
+    client?.access_token ?? null,
+  );
 
-  return synced.map((booking) => ({ ...booking, email_status: emailStatus }));
+  return {
+    bookings: synced.map((booking) => ({ ...booking, email_status: emailStatus })),
+    clientToken: client?.access_token ?? null,
+  };
 }
 
 export interface PackStanding {

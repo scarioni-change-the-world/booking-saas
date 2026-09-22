@@ -79,6 +79,9 @@ export function useBookingJourney(slug: string) {
   const [notes, setNotes] = useState('');
   const [confirmed, setConfirmed] = useState<Confirmed | null>(null);
   const [confirmedPack, setConfirmedPack] = useState<Confirmed[]>([]);
+  /** Where the buyer of a programme goes to spend what they are still
+   *  owed. Null for a single booking, which has no balance. */
+  const [programmeLink, setProgrammeLink] = useState<string | null>(null);
 
   const base = `/api/t/${encodeURIComponent(slug)}`;
 
@@ -250,7 +253,11 @@ export function useBookingJourney(slug: string) {
     setBusy(true);
     setError(null);
     try {
-      const result = await postJson<{ booking: Confirmed; bookings: Confirmed[] }>(
+      const result = await postJson<{
+        booking: Confirmed;
+        bookings: Confirmed[];
+        programmeLink: string | null;
+      }>(
         `${base}/bookings`,
         {
           eventTypeId: eventType.id,
@@ -265,6 +272,7 @@ export function useBookingJourney(slug: string) {
       );
       setConfirmed(result.booking);
       setConfirmedPack(result.bookings ?? [result.booking]);
+      setProgrammeLink(result.programmeLink ?? null);
       setPhase('confirmed');
     } catch (cause) {
       setError((cause as Error).message);
@@ -423,6 +431,7 @@ export function useBookingJourney(slug: string) {
     confirmBooking,
     confirmed,
     confirmedPack,
+    programmeLink,
   };
 }
 

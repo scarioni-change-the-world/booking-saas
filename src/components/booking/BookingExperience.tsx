@@ -60,6 +60,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
     slot,
     chooseSlot,
     packSlots,
+    programmeLink,
     slotsNeeded,
     isPack,
     confirmSlots,
@@ -709,6 +710,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
           confirmed={confirmed}
           pack={confirmedPack}
           packSize={isPack ? slotsNeeded : 1}
+          programmeLink={programmeLink}
           serviceName={eventType.name}
           durationMinutes={eventType.durationMinutes}
           location={reviewLocation}
@@ -732,6 +734,7 @@ function Confirmation({
   confirmed,
   pack,
   packSize,
+  programmeLink,
   serviceName,
   durationMinutes,
   location,
@@ -755,6 +758,7 @@ function Confirmation({
     confirmationEmailSent: boolean;
   }>;
   packSize: number;
+  programmeLink: string | null;
   serviceName: string;
   durationMinutes: number;
   location: string | null;
@@ -867,6 +871,31 @@ function Confirmation({
             </li>
           ))}
         </ol>
+      )}
+
+      {/* The programme, as opposed to the appointments in it.
+       *
+       * Every other link on this screen manages one booking. Cancel one and
+       * the session comes back to you, and until this existed there was
+       * nowhere to spend it: the balance lives on a page whose address only
+       * an admin could send you. The door a person finds instead is the
+       * public booking page, which does not know them, asks the
+       * questionnaire over again and sells them a second programme — which
+       * is exactly what happened the first time anyone tried it.
+       *
+       * Shown for a programme only. A single booking has no balance, so a
+       * link to one would be a page saying there is nothing to book. */}
+      {packSize > 1 && programmeLink && (
+        <div className="bk-programme-link">
+          <p className="bk-programme-link-label">Your programme</p>
+          <p className="bk-programme-link-note">
+            Keep this link. If you ever cancel an appointment, this is where you book
+            it again — no questions to answer a second time.
+          </p>
+          <a className="bk-textlink" href={programmeLink}>
+            Open my programme
+          </a>
+        </div>
       )}
 
       <div className="bk-add">

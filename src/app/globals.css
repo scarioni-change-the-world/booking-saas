@@ -3515,6 +3515,31 @@ body:has(.bk-embedded) {
 .bk-join:hover {
   background: var(--accent-tint);
 }
+/* The way back to a programme, on the confirmation screen.
+   Tinted rather than ruled off like .bk-add below it: this is the one thing
+   on the screen worth keeping, and a person scanning for "what do I save?"
+   should find it without reading. Mineral, not ochre — it is a route, not a
+   moment of emphasis. */
+.bk-programme-link {
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--accent-tint);
+}
+.bk-programme-link-label {
+  margin: 0 0 6px;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.bk-programme-link-note {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
 .bk-add {
   margin-top: 24px;
   padding-top: 20px;

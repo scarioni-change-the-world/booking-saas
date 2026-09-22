@@ -27,6 +27,20 @@ type Option =
   | ({ kind: 'package' } & Entitlement)
   | ({ kind: 'single' } & SingleType);
 
+/**
+ * The service an option books against.
+ *
+ * Both members of the union have an `id`, and they mean different things: a
+ * package's is the entitlement's, a one-off's is the event type's. Reading
+ * `option.id` for availability therefore typechecked and asked the server
+ * for a service whose id was really a grant's — so every package redemption
+ * answered "Unknown event type" and showed no times at all. Asking through
+ * this function instead makes the two cases impossible to confuse.
+ */
+export function serviceIdOf(option: Option): string {
+  return option.kind === 'package' ? option.eventTypeId : option.id;
+}
+
 interface BatchResult {
   startsAt: string;
   status: 'booked' | 'unavailable' | 'no_sessions_left';
@@ -185,7 +199,7 @@ export default function ClientBooking({ slug, token }: Props) {
 
   useEffect(() => {
     if ((step === 'pick-times' || step === 'pick-time-single') && option) {
-      void loadAvailability(option.id);
+      void loadAvailability(serviceIdOf(option));
     }
   }, [step, option, loadAvailability]);
 

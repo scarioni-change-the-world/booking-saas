@@ -3,6 +3,7 @@ import { baseUrl } from './base-url';
 import { buildIcs, buildIcsCalendar } from './ics';
 import { mapUrlForInvite } from './maps';
 import { describeLocation } from './service-location';
+import { clientBookingUrl } from './client-email';
 import { emailProvider } from './email';
 import { renderTemplate, type TemplateTokens, type TemplateLink } from './email/templates';
 import type { TenantScope } from './db';
@@ -428,6 +429,9 @@ export async function sendBookingPackConfirmedEmail(
   tenant: TenantRow,
   scope: TenantScope,
   bookings: BookingRow[],
+  /** The buyer's own access token, when a client record was set up for
+   *  them. See the link it becomes, below. */
+  clientToken?: string | null,
 ): Promise<EmailStatus> {
   const [first] = bookings;
   if (!first) return 'not_configured';
@@ -467,10 +471,30 @@ export async function sendBookingPackConfirmedEmail(
         packSize: String(first.pack_size ?? bookings.length),
         tenantName: tenant.name,
       },
-      bookings.map((booking, index) => ({
-        label: `${index + 1}. ${formatDateTime(booking.starts_at, tenant.timezone)} — change or cancel`,
-        url: manageUrl(booking.manage_token),
-      })),
+      [
+        ...bookings.map((booking, index) => ({
+          label: `${index + 1}. ${formatDateTime(booking.starts_at, tenant.timezone)} — change or cancel`,
+          url: manageUrl(booking.manage_token),
+        })),
+        /* The way back to the programme itself, as opposed to one
+           appointment in it.
+        
+           Without it a buyer who cancels an appointment is owed a session
+           and has nowhere to spend it: every link they hold is a manage
+           link for one booking, and the balance lives on a page only an
+           admin could send them. The door they can find instead is the
+           public booking page, which does not know them, asks the
+           questionnaire again, and sells them a second programme. That is
+           what happened the first time anyone tried it. */
+        ...(clientToken
+          ? [
+              {
+                label: 'Book any appointment you are still owed',
+                url: clientBookingUrl(tenant.slug, clientToken),
+              },
+            ]
+          : []),
+      ],
     );
 
     await provider.send({

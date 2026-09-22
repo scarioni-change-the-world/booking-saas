@@ -88,14 +88,19 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
        than quietly booking ten separate appointments. */
     const packSlots = requireSlotsIfPresent(body);
 
-    const bookings = packSlots
+    const created = packSlots
       ? await createBookingPack(tenant, scope, { ...common, slots: packSlots })
-      : [
-          await createBooking(tenant, scope, {
-            ...common,
-            startsAt: requireString(body, 'startsAt', { maxLength: 40 }),
-          }),
-        ];
+      : {
+          bookings: [
+            await createBooking(tenant, scope, {
+              ...common,
+              startsAt: requireString(body, 'startsAt', { maxLength: 40 }),
+            }),
+          ],
+          clientToken: null,
+        };
+
+    const { bookings, clientToken } = created;
 
     // The confirmation email (with .ics and the manage link) and the
     // owner notification already went out from inside createBooking /
@@ -120,7 +125,20 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
        first appointment. Removing it would break the confirmation screen
        for every single booking, and a pack's first appointment is the one
        that screen leads with anyway. */
-    return ok({ booking: shaped[0]!, bookings: shaped }, 201);
+    /* Buying a programme makes somebody a client with a balance, so the
+       confirmation hands them their own link rather than leaving it to an
+       admin to send. Every other link in this response manages one
+       appointment; this is the only one that reaches the programme. */
+    return ok(
+      {
+        booking: shaped[0]!,
+        bookings: shaped,
+        programmeLink: clientToken
+          ? `/t/${encodeURIComponent(slug)}/client/${encodeURIComponent(clientToken)}`
+          : null,
+      },
+      201,
+    );
   } catch (error) {
     return handleError(error);
   }
