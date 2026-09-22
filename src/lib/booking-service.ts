@@ -448,8 +448,13 @@ export async function createBookingPack(
      says so. */
   let client: ClientRow | null = null;
   let entitlement: ClientEntitlementRow | null = null;
+  /* Read before the grant, never after: the moment grantEntitlement tops up
+     an existing row the two balances are one number, and nothing read from
+     the table afterwards can say what was outstanding beforehand. */
+  let owedBefore = 0;
   try {
     client = await findOrCreateClient(scope, input.name, input.email);
+    owedBefore = await sessionsOwed(scope, client.id);
     entitlement = await grantEntitlement(
       scope,
       client.id,
@@ -478,6 +483,12 @@ export async function createBookingPack(
       entitlement_id: entitlement?.id ?? null,
       sync_status: 'pending' as const,
       pack_id: packId,
+      /* Only on the first appointment: this is a fact about the purchase,
+         not about each session in it, and repeating it on all ten would
+         have a business reading the same warning ten times. Null unless it
+         is above zero — a zero would be a claim, null is the absence of
+         one. See migration 0026. */
+      prior_sessions_owed: owedBefore > 0 && iso === slots[0] ? owedBefore : null,
       // Copied, not referenced: what the client bought must not change when
       // the business later edits the service. See migration 0025.
       pack_size: eventType.pack_size,
@@ -981,6 +992,31 @@ export async function listClientEntitlements(
     usedSessions: r.used_sessions,
     remaining: r.total_sessions - r.used_sessions,
   }));
+}
+
+/**
+ * What this client is still owed, across every package they hold.
+ *
+ * Summed rather than read per service, because somebody owed two sessions
+ * of coaching who books a workshop programme is in exactly the situation
+ * worth noticing — that they had something outstanding and started
+ * something new instead of spending it.
+ *
+ * Best effort by construction: it is called inside the same try/catch that
+ * sets up the client record, and a programme's appointments must never be
+ * lost over a count made about them.
+ */
+async function sessionsOwed(scope: TenantScope, clientId: string): Promise<number> {
+  const { data, error } = await scope
+    .select('client_entitlements')
+    .eq('client_id', clientId);
+  if (error) throw error;
+
+  const rows = (data as unknown as ClientEntitlementRow[]) ?? [];
+  return rows.reduce(
+    (total, row) => total + Math.max(0, row.total_sessions - row.used_sessions),
+    0,
+  );
 }
 
 /**

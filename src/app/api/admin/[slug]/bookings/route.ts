@@ -93,6 +93,17 @@ interface ProgrammeStanding {
   size: number;
   booked: number;
   remaining: number;
+  /**
+   * Sessions this client was already owed when they bought this programme,
+   * or null when they owed nothing — which is almost always.
+   *
+   * A property of the programme rather than of one appointment in it: it is
+   * written once, on the first booking of the pack (migration 0026), but a
+   * business scanning their diary by date meets whichever appointment falls
+   * next, and a flag they can only see on one row of three is a flag they
+   * will miss.
+   */
+  priorSessionsOwed: number | null;
 }
 
 /**
@@ -112,12 +123,15 @@ async function programmeStandings(
   if (packIds.length === 0) return new Map();
 
   const { data, error } = await scope
-    .select('bookings', 'pack_id, pack_size, status, entitlement_id')
+    .select('bookings', 'pack_id, pack_size, status, entitlement_id, prior_sessions_owed')
     .in('pack_id', packIds);
   if (error) throw error;
 
   const members = (data ?? []) as unknown as Array<
-    Pick<BookingWithJoins, 'pack_id' | 'pack_size' | 'status' | 'entitlement_id'>
+    Pick<
+      BookingWithJoins,
+      'pack_id' | 'pack_size' | 'status' | 'entitlement_id' | 'prior_sessions_owed'
+    >
   >;
 
   const entitlementIds = [
@@ -153,7 +167,10 @@ async function programmeStandings(
         ? balances.get(entitlementId)!
         : Math.max(0, size - booked);
 
-    standings.set(packId, { size, booked, remaining });
+    const priorSessionsOwed =
+      own.find((m) => m.prior_sessions_owed !== null)?.prior_sessions_owed ?? null;
+
+    standings.set(packId, { size, booked, remaining, priorSessionsOwed });
   }
 
   return standings;

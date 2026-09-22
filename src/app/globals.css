@@ -3999,6 +3999,20 @@ body:has(.bk-embedded) {
   font-weight: 600;
 }
 
+/* Bought a programme while still owed sessions from one.
+   Ochre, like the reconsidered mark and for the same reason: this is a
+   thing worth a second look, not a fault. Red would be a verdict, and the
+   business asked to be told, not to have the booking refused. Scarce by
+   construction — almost no programme carries it. */
+.owed-mark {
+  font-size: 0.78rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+  white-space: nowrap;
+}
+
 /* ── Somebody who answered again ────────────────────────────────────── */
 
 /*

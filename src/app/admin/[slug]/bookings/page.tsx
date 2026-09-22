@@ -41,7 +41,12 @@ interface Booking {
    * email — see the bookings route for why not on client_id. */
   isClient: boolean;
   /** Set when this appointment is one of a programme — see the row marker. */
-  pack: { size: number; booked: number; remaining: number } | null;
+  pack: {
+    size: number;
+    booked: number;
+    remaining: number;
+    priorSessionsOwed: number | null;
+  } | null;
   /** Set when this booking was made on a second attempt, after the person
    * had already been sent elsewhere. */
   reconsidered: Reconsideration | null;
@@ -290,6 +295,22 @@ export default function BookingsPage() {
                       )}
                     </span>
                   )}
+                  {/* Bought while they already owed sessions.
+                   *
+                   * Said, never blocked, on the business's own instruction.
+                   * There is no payment in this product, so a second
+                   * programme is either a real second purchase or somebody
+                   * who could not find their own link — and refusing the
+                   * booking would turn away the first to protect against
+                   * the second. The business can tell which; the software
+                   * cannot. */}
+                  {b.pack?.priorSessionsOwed ? (
+                    <span className="owed-mark">
+                      {b.pack.priorSessionsOwed === 1
+                        ? 'Booked while 1 session was still owed'
+                        : `Booked while ${b.pack.priorSessionsOwed} sessions were still owed`}
+                    </span>
+                  ) : null}
                 </div>
 
                 <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>

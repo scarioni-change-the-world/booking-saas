@@ -209,6 +209,10 @@ export interface BookingRow {
      already bought. */
   pack_id: string | null;
   pack_size: number | null;
+  /** What this client was still owed when they booked this programme. Set
+   *  only on the first appointment of a pack, and only when above zero —
+   *  see migration 0026. */
+  prior_sessions_owed: number | null;
   calendar_event_id: string | null;
   meeting_url: string | null;
   sync_status: SyncStatus;
