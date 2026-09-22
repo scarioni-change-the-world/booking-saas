@@ -3808,3 +3808,86 @@ body:has(.bk-embedded) {
   color: var(--ink);
   font-weight: 600;
 }
+
+/* ── Somebody who answered again ────────────────────────────────────── */
+
+/*
+ * Ochre, never red. Red is a verdict, and this is not one: a person who
+ * misread a question looks identical in the data to somebody working out
+ * what to say, and the software cannot tell them apart. It reports, shows
+ * what moved, and leaves the judgement where it belongs.
+ *
+ * Collapsed by default for the same reason — most rows do not need this
+ * opened, and a list where several rows shout is a list nobody reads.
+ */
+.reconsidered {
+  margin-top: 10px;
+}
+.reconsidered summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  cursor: pointer;
+  list-style: none;
+}
+.reconsidered summary::-webkit-details-marker {
+  display: none;
+}
+.reconsidered-mark {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+  white-space: nowrap;
+}
+.reconsidered-gap {
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+.reconsidered-body {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--canvas);
+}
+.reconsidered-note {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.reconsidered-changes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.reconsidered-prompt {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--faint);
+}
+.reconsidered-values {
+  margin: 3px 0 0;
+  font-size: 0.92rem;
+}
+/* Struck through, so the direction of the change reads without the arrow
+   having to be understood. */
+.reconsidered-before {
+  text-decoration: line-through;
+  color: var(--ghost);
+}
+.reconsidered-after {
+  font-weight: 600;
+}
+.reconsidered-changes li[data-decisive] .reconsidered-after {
+  color: var(--emphasis-ink);
+}
+.reconsidered-why {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--emphasis-ink);
+}

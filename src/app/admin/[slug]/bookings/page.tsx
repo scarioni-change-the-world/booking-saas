@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { InitialsMark, PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
+import type { Reconsideration } from '@/lib/reconsideration';
 
 type View = 'upcoming' | 'past' | 'cancelled';
 type SyncStatus = 'pending' | 'synced' | 'failed' | 'not_configured';
@@ -40,6 +42,9 @@ interface Booking {
   isClient: boolean;
   /** Set when this appointment is one of a programme — see the row marker. */
   pack: { size: number; booked: number; remaining: number } | null;
+  /** Set when this booking was made on a second attempt, after the person
+   * had already been sent elsewhere. */
+  reconsidered: Reconsideration | null;
 }
 
 const TABS: { view: View; label: string }[] = [
@@ -332,6 +337,11 @@ export default function BookingsPage() {
                     </span>
                   )}
                 </div>
+
+                {/* Above the note and outside the expander: a booking made
+                    by somebody who had been turned away an hour earlier is
+                    the thing on this row worth seeing without clicking. */}
+                {b.reconsidered && <ReconsideredMark reconsidered={b.reconsidered} />}
 
                 {b.notes && (
                   <p style={{ margin: '12px 0 0', fontSize: '0.88rem', color: 'var(--muted)' }}>

@@ -137,7 +137,14 @@ export type SerializedOutcomePath = ReturnType<typeof serializeOutcomePath>;
  */
 export interface BookingWithJoins extends BookingRow {
   event_types: { name: string } | null;
-  qualification_responses: { answers: AnsweredQuestion[]; outcome_path_type: OutcomePathType } | null;
+  qualification_responses: {
+    id: string;
+    email: string | null;
+    event_type_id: string | null;
+    completed_at: string | null;
+    answers: AnsweredQuestion[];
+    outcome_path_type: OutcomePathType;
+  } | null;
 }
 
 export function serializeBooking(row: BookingWithJoins) {

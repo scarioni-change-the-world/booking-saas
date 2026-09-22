@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
+import type { Reconsideration } from '@/lib/reconsideration';
 
 type PathType = 'meeting' | 'other';
 type Status = 'meeting' | 'other' | 'in-progress';
@@ -21,6 +23,7 @@ interface AnsweredQuestion {
 interface ResponseItem {
   id: string;
   email: string | null;
+  reconsidered: Reconsideration | null;
   startedAt: string;
   completedAt: string | null;
   outcomePathType: PathType | null;
@@ -217,6 +220,12 @@ export default function ResponsesPage() {
                         </div>
                         <span className={`response-status-pill ${status}`}>{STATUS_LABEL[status]}</span>
                       </button>
+
+                      {/* Outside the toggle button, not inside it: this is a
+                          disclosure of its own, and nesting one interactive
+                          control in another makes both harder to operate
+                          from a keyboard. */}
+                      {r.reconsidered && <ReconsideredMark reconsidered={r.reconsidered} />}
 
                       {expanded && (
                         <div className="response-answers">

@@ -2,8 +2,12 @@ import { handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeBooking, type BookingWithJoins } from '@/lib/admin-serializers';
 import { BookingError } from '@/lib/booking-service';
+import { asAttempt } from '@/lib/qualification-response-service';
+import { findReconsideration, type Reconsideration } from '@/lib/reconsideration';
+import type { QualificationResponseRow } from '@/lib/db/types';
 
-const EMBED = '*, event_types(name), qualification_responses(answers, outcome_path_type)';
+const EMBED =
+  '*, event_types(name), qualification_responses(id, email, event_type_id, completed_at, answers, outcome_path_type)';
 
 /**
  * The three lists a tenant actually wants to look at, kept mutually
@@ -65,11 +69,19 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
        take two of them out of the order they are looked for in. */
     const packs = await programmeStandings(scope, rows);
 
+    /* Which of these bookings were made on a second attempt, after the
+       person had already been sent elsewhere. Surfaced here as well as on
+       Enquiries because this is the list where it matters most: a booking
+       in the diary is a commitment, and the business deserves to know it
+       was made by somebody who had been turned away an hour earlier. */
+    const reconsiderations = await reconsiderationsFor(scope, rows);
+
     return ok({
       bookings: rows.map((row) => ({
         ...serializeBooking(row),
         isClient: clientEmails.has(row.email.toLowerCase()),
         pack: row.pack_id ? (packs.get(row.pack_id) ?? null) : null,
+        reconsidered: reconsiderations.get(row.id) ?? null,
       })),
     });
   } catch (error) {
@@ -145,4 +157,56 @@ async function programmeStandings(
   }
 
   return standings;
+}
+
+/**
+ * The bookings on this page that were made on a second attempt, keyed by
+ * booking id.
+ *
+ * One history query for the whole page — see historyFor's reasoning in
+ * qualification-response-service.ts. A booking with no questionnaire behind
+ * it simply is not in the map.
+ */
+async function reconsiderationsFor(
+  scope: Awaited<ReturnType<typeof requireTenantAdmin>>['scope'],
+  rows: BookingWithJoins[],
+): Promise<Map<string, Reconsideration>> {
+  const withResponses = rows.filter((row) => row.qualification_responses);
+  if (withResponses.length === 0) return new Map();
+
+  const emails = [
+    ...new Set(
+      withResponses
+        .map((row) => row.qualification_responses!.email)
+        .filter((email): email is string => !!email),
+    ),
+  ];
+  if (emails.length === 0) return new Map();
+
+  const { data, error } = await scope
+    .select('qualification_responses')
+    .in('email', emails)
+    .not('completed_at', 'is', null);
+  if (error) throw error;
+
+  const history = ((data ?? []) as unknown as QualificationResponseRow[]).map(asAttempt);
+
+  const found = new Map<string, Reconsideration>();
+  for (const row of withResponses) {
+    const response = row.qualification_responses!;
+    const reconsidered = findReconsideration(
+      {
+        id: response.id,
+        email: response.email,
+        eventTypeId: response.event_type_id,
+        completedAt: response.completed_at,
+        outcomePathType: response.outcome_path_type,
+        answers: Array.isArray(response.answers) ? response.answers : [],
+      },
+      history,
+    );
+    if (reconsidered) found.set(row.id, reconsidered);
+  }
+
+  return found;
 }

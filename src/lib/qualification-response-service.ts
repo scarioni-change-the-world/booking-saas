@@ -1,4 +1,5 @@
 import { BookingError } from './booking-service';
+import { findReconsideration, type Attempt, type Reconsideration } from './reconsideration';
 import type { TenantScope } from './db';
 import type { OutcomePathType, QualificationResponseRow } from './db/types';
 
@@ -129,6 +130,10 @@ export interface ResponseListItem {
   completedAt: string | null;
   outcomePathType: OutcomePathType | null;
   answers: unknown;
+  /** Set when this person had already been sent elsewhere and answered
+   * again — see src/lib/reconsideration.ts for why this is surfaced rather
+   * than prevented. */
+  reconsidered: Reconsideration | null;
 }
 
 /** The most recent responses since `sinceIso`, newest first, capped at
@@ -147,6 +152,8 @@ export async function listRecentResponses(
   if (error) throw error;
 
   const rows = (data ?? []) as unknown as QualificationResponseRow[];
+  const history = await historyFor(scope, rows);
+
   return rows.map((r) => ({
     id: r.id,
     email: r.email,
@@ -154,7 +161,48 @@ export async function listRecentResponses(
     completedAt: r.completed_at,
     outcomePathType: r.outcome_path_type,
     answers: r.answers,
+    reconsidered: findReconsideration(asAttempt(r), history),
   }));
+}
+
+/** A stored response as the reconsideration rules read one. */
+export function asAttempt(row: QualificationResponseRow): Attempt {
+  return {
+    id: row.id,
+    email: row.email,
+    eventTypeId: row.event_type_id,
+    completedAt: row.completed_at,
+    outcomePathType: row.outcome_path_type,
+    answers: Array.isArray(row.answers) ? (row.answers as Attempt['answers']) : [],
+  };
+}
+
+/**
+ * Every completed attempt by the people on this page, however long ago.
+ *
+ * Deliberately not limited to the same window as the list. The whole point
+ * is the attempt *before* the one being looked at, and a refusal in January
+ * followed by a second go in March is exactly the case worth seeing — a
+ * 30-day history would miss it and report the March attempt as innocent.
+ *
+ * One query for the page rather than one per row: a hundred enquiries is a
+ * handful of distinct addresses, and per-row lookups would be a hundred
+ * round trips to answer a question about a dozen people.
+ */
+async function historyFor(
+  scope: TenantScope,
+  rows: QualificationResponseRow[],
+): Promise<Attempt[]> {
+  const emails = [...new Set(rows.map((r) => r.email).filter((e): e is string => !!e))];
+  if (emails.length === 0) return [];
+
+  const { data, error } = await scope
+    .select('qualification_responses')
+    .in('email', emails)
+    .not('completed_at', 'is', null);
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as QualificationResponseRow[]).map(asAttempt);
 }
 
 /**
