@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAutoResize } from './useAutoResize';
 import { DateNavigator } from './booking/DateNavigator';
+import {
+  downloadCalendar,
+  downloadIcs,
+  googleCalendarUrl,
+  type CalendarEvent,
+} from './booking/calendar-actions';
 import { groupSlots } from './booking/slots';
 import type { DaySlots } from './types';
 
@@ -52,7 +58,13 @@ export function serviceIdOf(option: Option): string {
 interface BatchResult {
   startsAt: string;
   status: 'booked' | 'unavailable' | 'no_sessions_left';
-  booking: { startsAt: string; manageToken: string; meetingUrl: string | null } | null;
+  booking: {
+    startsAt: string;
+    endsAt: string;
+    manageToken: string;
+    meetingUrl: string | null;
+    confirmationEmailSent: boolean;
+  } | null;
 }
 
 interface SingleBooking {
@@ -183,6 +195,52 @@ export default function ClientBooking({ slug, token }: Props) {
       cancelled = true;
     };
   }, [base, token]);
+
+  /**
+   * "Book another one" from the confirmation.
+   *
+   * Re-reads the balance from the server rather than subtracting locally:
+   * the number on screen came back with the last batch, but a business can
+   * grant or spend sessions elsewhere, and a second visit built on a stale
+   * count is how somebody gets offered a session they no longer have.
+   */
+  async function bookMore() {
+    setError(null);
+    setResults(null);
+    setSelected([]);
+    setDays([]);
+    setExpandedPeriods({});
+    setStep('loading');
+    try {
+      const result = await getJson<{
+        client: { name: string };
+        entitlements: Entitlement[];
+        singleEventTypes: SingleType[];
+      }>(`${base}/client/${encodeURIComponent(token)}`);
+
+      const withBalance = result.entitlements.filter((e) => e.remaining > 0);
+      setEntitlements(withBalance);
+      setSingleTypes(result.singleEventTypes);
+
+      // Straight back into the package they were already spending, when it
+      // still has something on it. Anything else is a step for its own sake.
+      const same =
+        option?.kind === 'package'
+          ? withBalance.find((e) => e.id === option.id)
+          : undefined;
+
+      if (same) {
+        chooseOption({ kind: 'package', ...same });
+      } else if (withBalance.length + result.singleEventTypes.length === 0) {
+        setStep('nothing-to-book');
+      } else {
+        setOption(null);
+        setStep('pick-option');
+      }
+    } catch {
+      setStep('not-found');
+    }
+  }
 
   function chooseOption(chosen: Option) {
     setOption(chosen);
@@ -513,41 +571,139 @@ export default function ClientBooking({ slug, token }: Props) {
 
       {step === 'done' && results && (
         <section>
-          <h1 className="bk-heading">
-            {results.filter((r) => r.status === 'booked').length} of {results.length} booked
-          </h1>
+          {(() => {
+            const booked = results.filter((r) => r.status === 'booked');
+            const missed = results.filter((r) => r.status !== 'booked');
+            const serviceName = option?.kind === 'package' ? option.eventTypeName : 'Session';
+            const minutes = option?.durationMinutes ?? 30;
+            const events: CalendarEvent[] = booked
+              .filter((r) => r.booking)
+              .map((r) => ({
+                title: `${serviceName} — ${clientName}`,
+                startsAt: r.booking!.startsAt,
+                durationMinutes: minutes,
+                location: r.booking!.meetingUrl ?? undefined,
+                uid: r.booking!.manageToken,
+              }));
+            const anyEmailSent = booked.some((r) => r.booking?.confirmationEmailSent);
 
-          <ol className="bk-pack-confirmed">
-            {results.map((r, index) => (
-              <li key={r.startsAt}>
-                <span className="bk-pack-n">{index + 1}</span>
-                <span className="bk-pack-when">
-                  {dayFormat.format(new Date(r.startsAt))} at{' '}
-                  {timeFormat.format(new Date(r.startsAt))}
-                </span>
-                <span
-                  className={`bk-result${r.status === 'booked' ? ' is-booked' : ' is-missed'}`}
-                >
-                  {r.status === 'booked' ? 'Booked' : 'Not available'}
-                </span>
-              </li>
-            ))}
-          </ol>
+            return (
+              <>
+                <h1 className="bk-heading">
+                  {missed.length === 0
+                    ? booked.length === 1
+                      ? "You're booked."
+                      : "You're all booked in."
+                    : `${booked.length} of ${results.length} booked`}
+                </h1>
 
-          {results.some((r) => r.status !== 'booked') && (
-            <p className="bk-after">
-              A couple of times went while you were booking — nothing was charged against your
-              package for those. You still have {remaining} session{remaining === 1 ? '' : 's'}{' '}
-              left to use.
-            </p>
-          )}
+                {missed.length > 0 && (
+                  <p className="bk-lede">
+                    A couple of times went while you were choosing. Nothing was charged
+                    against your package for those.
+                  </p>
+                )}
 
-          {results.every((r) => r.status === 'booked') && remaining > 0 && (
-            <p className="bk-after">
-              You still have {remaining} session{remaining === 1 ? '' : 's'} left on this package
-              — use this same link any time to book more.
-            </p>
-          )}
+                <ol className="bk-pack-confirmed">
+                  {results.map((r, index) => (
+                    <li key={r.startsAt}>
+                      <span className="bk-pack-n">{index + 1}</span>
+                      <span className="bk-pack-when">
+                        {dayFormat.format(new Date(r.startsAt))} at{' '}
+                        {timeFormat.format(new Date(r.startsAt))}
+                      </span>
+                      {r.booking ? (
+                        /* Every booking gets its own way back. Without these
+                           the screen was a receipt with no handle on it: the
+                           appointments existed and nothing on the page could
+                           reach them. */
+                        <a className="bk-textlink" href={`/manage/${r.booking.manageToken}`}>
+                          Change
+                        </a>
+                      ) : (
+                        <span className="bk-result is-missed">Not available</span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+
+                {booked.some((r) => r.booking?.meetingUrl) && booked.length === 1 && (
+                  <a className="bk-join" href={booked[0]!.booking!.meetingUrl!}>
+                    Join the video call
+                  </a>
+                )}
+
+                {events.length > 0 && (
+                  <div className="bk-add">
+                    <p className="bk-add-label">
+                      {events.length > 1
+                        ? 'Add them to your calendar'
+                        : 'Add it to your calendar'}
+                    </p>
+                    <div className="bk-add-actions">
+                      {events.length > 1 ? (
+                        <button
+                          type="button"
+                          className="bk-textlink"
+                          onClick={() => downloadCalendar(events)}
+                        >
+                          Download all {events.length} appointments
+                        </button>
+                      ) : (
+                        <>
+                          <a
+                            className="bk-textlink"
+                            href={googleCalendarUrl(events[0]!)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Google Calendar
+                          </a>
+                          <button
+                            type="button"
+                            className="bk-textlink"
+                            onClick={() => downloadIcs(events[0]!)}
+                          >
+                            Apple, Outlook or other
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Said only when an email really went. Promising a
+                    confirmation that never left is the worst version of this
+                    screen — it is the person who believes it who turns up to
+                    nothing, because they trusted the inbox over the time. */}
+                {anyEmailSent && (
+                  <p className="bk-after">
+                    We&apos;ve sent {booked.length === 1 ? 'a confirmation' : 'confirmations'} to
+                    your inbox with everything you need. Nothing arrived? Check your spam
+                    folder.
+                  </p>
+                )}
+
+                <p className="bk-after">
+                  {remaining > 0 ? (
+                    <>
+                      You have {remaining} session{remaining === 1 ? '' : 's'} left on this
+                      package.{' '}
+                      <button type="button" className="bk-textlink" onClick={bookMore}>
+                        Book {remaining === 1 ? 'it' : 'another'} now
+                      </button>{' '}
+                      — or come back to this same link any time.
+                    </>
+                  ) : (
+                    <>
+                      That was the last session on this package. Keep this link — anything your
+                      business adds to it later shows up here.
+                    </>
+                  )}
+                </p>
+              </>
+            );
+          })()}
         </section>
       )}
 

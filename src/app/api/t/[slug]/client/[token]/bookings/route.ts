@@ -59,6 +59,12 @@ export async function POST(
               endsAt: r.booking.ends_at,
               manageToken: r.booking.manage_token,
               meetingUrl: r.booking.meeting_url,
+              /* A boolean, not the enum — same reasoning as the public
+                 booking route. The screen must only promise an email that
+                 actually left the building: the person who believes it is
+                 the one who arrives at no appointment, because they trusted
+                 the inbox instead of noting the time. */
+              confirmationEmailSent: r.booking.email_status === 'sent',
             }
           : null,
       })),
