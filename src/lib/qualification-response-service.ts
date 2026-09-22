@@ -130,6 +130,9 @@ export interface ResponseListItem {
   completedAt: string | null;
   outcomePathType: OutcomePathType | null;
   answers: unknown;
+  /** Which service they were answering about — null when that service has
+   * since been removed. */
+  eventTypeId: string | null;
   /** Set when this person had already been sent elsewhere and answered
    * again — see src/lib/reconsideration.ts for why this is surfaced rather
    * than prevented. */
@@ -161,6 +164,7 @@ export async function listRecentResponses(
     completedAt: r.completed_at,
     outcomePathType: r.outcome_path_type,
     answers: r.answers,
+    eventTypeId: r.event_type_id,
     reconsidered: findReconsideration(asAttempt(r), history),
   }));
 }

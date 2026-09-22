@@ -321,18 +321,37 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       {phase === 'other' && otherPath && (
         <section>
           <h1 className="bk-heading">Thank you for sharing that.</h1>
-          <p className="bk-lede">
-            At this point, this may be more helpful than a meeting.
-          </p>
 
-          <div className="bk-resource">
-            <p className="bk-resource-body">{otherPath.message}</p>
-            {otherPath.url && (
-              <a className="btn-primary btn-full bk-resource-link" href={otherPath.url}>
-                {otherPath.label ?? 'Open it'}
-              </a>
-            )}
-          </div>
+          {/* A business that never wrote an alternative message used to get
+              an empty grey card here, under a sentence — "this may be more
+              helpful than a meeting" — whose "this" pointed at nothing. Both
+              halves are conditional now: the lede only introduces something
+              when there is something to introduce, and the card only exists
+              when it has content. The fallback says plainly what happened
+              rather than promising a follow-up nobody committed to. */}
+          {otherPath.message.trim() === '' && !otherPath.url ? (
+            <p className="bk-lede">
+              From your answers, {config?.name ?? 'they'} don&apos;t think a meeting is
+              the right next step just now.
+            </p>
+          ) : (
+            <>
+              <p className="bk-lede">
+                At this point, this may be more helpful than a meeting.
+              </p>
+
+              <div className="bk-resource">
+                {otherPath.message.trim() !== '' && (
+                  <p className="bk-resource-body">{otherPath.message}</p>
+                )}
+                {otherPath.url && (
+                  <a className="btn-primary btn-full bk-resource-link" href={otherPath.url}>
+                    {otherPath.label ?? 'Open it'}
+                  </a>
+                )}
+              </div>
+            </>
+          )}
 
           {/* A way back, not an appeal. Nothing here explains how the answers
               were read — that is the business's reasoning, not the client's

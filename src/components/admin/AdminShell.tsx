@@ -14,10 +14,12 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  * Same order and same items on desktop and mobile — see the note in
  * globals.css on why mobile doesn't fold anything under a "More" tab.
  *
- * Intake sits in the daily group, not the setup-once one it started in:
- * once it grew a Responses tab (screening/responses), it stopped being a
- * pure builder — watching how the questionnaire is converting is exactly
- * the kind of thing worth checking often, same as Meetings or Clients.
+ * Enquiries sits in the daily group and Questions below the divider, which
+ * is the split those two always wanted: watching how the questionnaire is
+ * converting is worth checking often, same as Meetings or Clients, while
+ * writing the questions is a pure builder nobody opens twice in a week.
+ * They were one entry until the reading half outgrew being a tab on the
+ * writing half.
  * Sessions stayed below the divider on its own merits: it is a catalogue
  * of what's bookable, genuinely configured once and rarely revisited, like
  * Settings next to it.
@@ -40,6 +42,13 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  *
  *   Meetings -> Bookings   the brief's word for the thing itself
  *   Intake   -> Enquiries  "intake" is a form someone fills in at a clinic
+ *
+ * Enquiries and Questions are two entries rather than one, and which side of
+ * the divider they fall on is the point: writing the questions is something
+ * a business finishes, and sits with Services and Settings; reading what
+ * came back is something they return to weekly, and sits with the screens
+ * they check. Filing the second under the first framed a month of evidence
+ * as the last step of a setup wizard.
  *   Sessions -> Services   what a business sells, not what the table is called
  *
  * Two of the brief's suggested destinations are deliberately absent.
@@ -54,8 +63,9 @@ const NAV = [
   { href: 'bookings', label: 'Bookings' },
   { href: 'clients', label: 'Clients' },
   { href: 'availability', label: 'Availability' },
-  { href: 'screening', label: 'Enquiries' },
+  { href: 'enquiries', label: 'Enquiries' },
   { href: 'sessions', label: 'Services', divider: true },
+  { href: 'screening', label: 'Questions' },
   { href: 'settings', label: 'Settings' },
 ];
 
@@ -71,7 +81,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // startsWith, not ===: Intake is now a section with its own sub-routes
-  // (screening/next-steps, screening/responses) via a step-tab layout, and
+  // (screening/next-steps) via a step-tab layout, and
   // the sidebar entry should stay highlighted across all of them. The
   // trailing slash on the prefix keeps "screening" from matching a
   // future "screening-x" segment.

@@ -7,15 +7,15 @@ import { PageHeader } from '@/components/ui';
 const TABS = [
   { href: '', label: 'Questions' },
   { href: 'next-steps', label: 'Next steps' },
-  { href: 'responses', label: 'Responses' },
 ];
 
 /**
- * Intake is a three-step builder — write the questions, decide what each
- * answer does, see who answered — not three unrelated pages, so it gets a
- * shared tab bar instead of three sidebar entries. The sidebar's "Intake"
- * link still points at the first step (screening/page.tsx); this layout
- * wraps that page and its next-steps/responses siblings.
+ * Two steps, not three: write the questions, decide what each answer does.
+ *
+ * Reading what came back used to be the third tab here, which quietly said
+ * that a month of evidence was the last thing you configure. It has its own
+ * section now (admin/[slug]/enquiries) — different rhythm, different place.
+ * A builder is something you finish; analysis is something you return to.
  */
 export default function ScreeningLayout({ children }: { children: React.ReactNode }) {
   const { slug } = useParams<{ slug: string }>();
@@ -28,9 +28,9 @@ export default function ScreeningLayout({ children }: { children: React.ReactNod
           brief rules out marketing headlines inside routine workflows, and
           the eyebrow now matches the sidebar, which says Enquiries. */}
       <PageHeader
-        eyebrow="Enquiries"
+        eyebrow="Questions"
         title="What people answer before booking"
-        description="Write the questions, decide where each answer leads, and read what came back."
+        description="Write the questions, and decide where each answer leads. What came back is under Enquiries."
       />
       <StepTabs base={`/admin/${slug}/screening`} tabs={TABS} />
       {children}

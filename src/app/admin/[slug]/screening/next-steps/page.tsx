@@ -147,7 +147,16 @@ function LogicPreview({
         <div className="preview-card">
           <div className="preview-wordmark">intro</div>
           {otherPath.message.trim() === '' ? (
-            <p className="preview-empty">What the other path says will preview here as you type.</p>
+            /* Not "preview here as you type" any more. That read as an empty
+               form waiting to be filled, when it is in fact a live screen
+               somebody is being shown right now — and until this is written
+               they are shown nothing but a thank-you. The stake is worth
+               stating plainly. */
+            <p className="preview-empty">
+              {otherPath.redirectUrl
+                ? 'Nothing written yet, so people on this path see only the link below.'
+                : 'Nothing written yet. People sent down this path are told a meeting is not the next step, and nothing else.'}
+            </p>
           ) : (
             <>
               <p style={{ margin: '0 0 14px', whiteSpace: 'pre-wrap', fontSize: '0.92rem' }}>

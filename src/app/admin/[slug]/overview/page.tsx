@@ -245,19 +245,19 @@ export default function OverviewPage() {
               label="Finished the questions"
               value={completionRate(data.last30Days.started, data.last30Days.completed)}
               note="Last 30 days"
-              href={`/admin/${slug}/screening/responses`}
+              href={`/admin/${slug}/enquiries`}
             />
             <Stat
               label="Went on to book"
               value={data.last30Days.meeting}
               note="Last 30 days"
-              href={`/admin/${slug}/screening/responses?show=meeting`}
+              href={`/admin/${slug}/enquiries?show=meeting`}
             />
             <Stat
               label="Sent somewhere else"
               value={data.last30Days.other}
               note="Last 30 days"
-              href={`/admin/${slug}/screening/responses?show=other`}
+              href={`/admin/${slug}/enquiries?show=other`}
             />
           </div>
 
