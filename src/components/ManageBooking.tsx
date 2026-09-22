@@ -1,8 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { accentStyle, initials } from './brand';
+import { DateNavigator } from './booking/DateNavigator';
+import { groupSlots } from './booking/slots';
 import type { DaySlots } from './types';
+
+/** Matches the public booking flow — see ClientBooking for why. */
+const SLOTS_BEFORE_MORE = 8;
 
 interface BookingView {
   startsAt: string;
@@ -51,6 +56,8 @@ export default function ManageBooking({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'view' | 'reschedule' | 'cancel' | 'rebook'>('view');
+  /** Which "Show N more" links have been opened, keyed by day and period. */
+  const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({});
   const [days, setDays] = useState<DaySlots[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
@@ -125,19 +132,38 @@ export default function ManageBooking({ token }: { token: string }) {
   const formatInstantDay = (iso: string) => dayFormat.format(new Date(iso));
   const formatTime = (iso: string) => timeFormat.format(new Date(iso));
 
-  if (error && !payload) {
-    return (
-      <main className="widget">
-        <div className="notice notice-error">{error}</div>
+  /* The frame the public booking flow stands in. This screen is reached
+     from a confirmation email, so for many clients it is the second thing
+     they ever see of the business — arriving at a different-looking product
+     is the moment a booking page stops feeling like one. */
+  const shell = (children: ReactNode, accent?: CSSProperties) => (
+    <div className="bk bk-standalone" style={accent}>
+      <main className="bk-page">
+        <div className="bk-solo">
+          <div className="bk-panel">
+            <div className="bk-steps">{children}</div>
+          </div>
+        </div>
+        <p className="bk-credit">
+          Powered by <span className="bk-wordmark">intro</span>
+        </p>
       </main>
+    </div>
+  );
+
+  if (error && !payload) {
+    return shell(
+      <p className="bk-error" role="alert">
+        {error}
+      </p>,
     );
   }
 
   if (!payload) {
-    return (
-      <main className="widget">
-        <p className="status">Loading…</p>
-      </main>
+    return shell(
+      <p className="bk-status" role="status">
+        Loading…
+      </p>,
     );
   }
 
@@ -157,10 +183,10 @@ export default function ManageBooking({ token }: { token: string }) {
 
   const activeDay = days.find((d) => d.date === selectedDate) ?? null;
 
-  return (
-    <main className="widget" style={accentStyle(tenant.branding.accentColor)}>
-      <div className="brand-row">
-        <div className="brand-mark">
+  return shell(
+    <>
+      <div className="bk-identity">
+        <div className="bk-avatar">
           {tenant.branding.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
             <img src={tenant.branding.logoUrl} alt="" />
@@ -168,35 +194,37 @@ export default function ManageBooking({ token }: { token: string }) {
             initials(tenant.name)
           )}
         </div>
-        <span className="brand-name">{tenant.name}</span>
+        <p className="bk-business">{tenant.name}</p>
       </div>
 
       {error && (
-        <div className="notice notice-error" role="alert">
+        <p className="bk-error" role="alert">
           {error}
-        </div>
+        </p>
       )}
 
       {booking.status === 'confirmed' ? (
-        <div className="hero">
-          <div className="eyebrow">{formatInstantDay(booking.startsAt)}</div>
-          <div className="when">{formatTime(booking.startsAt)}</div>
-          <div className="what">{booking.eventTypeName ?? 'Your booking'}</div>
+        <div className="bk-confirmed">
+          <p className="bk-confirmed-when">{formatInstantDay(booking.startsAt)}</p>
+          <p className="bk-confirmed-time">{formatTimeRange(booking.startsAt)}</p>
+          <p className="bk-confirmed-what">{booking.eventTypeName ?? 'Your booking'}</p>
         </div>
       ) : (
-        <div className="card">
-          <h2>{booking.eventTypeName ?? 'Your booking'}</h2>
-          <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
+        /* Cancelled. Stated plainly on a flat surface rather than in the
+           filled card a live booking gets — the card means "this is
+           happening", and a cancelled booking wearing it reads as still on.
+           No red: the client asked for this. */
+        <div className="bk-cancelled">
+          <h1 className="bk-heading">{booking.eventTypeName ?? 'Your booking'}</h1>
+          <p className="bk-lede">
             {formatInstantDay(booking.startsAt)} at {formatTime(booking.startsAt)}
           </p>
-          <p className="status" style={{ margin: '10px 0 0' }}>
-            Cancelled
-          </p>
+          <p className="bk-cancelled-mark">Cancelled</p>
         </div>
       )}
 
       {booking.meetingUrl && booking.status === 'confirmed' && (
-        <a className="hero-link" href={booking.meetingUrl} style={{ marginBottom: 14 }}>
+        <a className="bk-join" href={booking.meetingUrl}>
           Join the video call
         </a>
       )}
@@ -206,13 +234,13 @@ export default function ManageBooking({ token }: { token: string }) {
           appointment of a three-session programme simply lost it: the client
           had paid for three, held two, and had nowhere to go. */}
       {pack && mode === 'view' && (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <h2 style={{ marginTop: 0 }}>Your programme</h2>
-          <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
+        <div className="bk-programme">
+          <h2 className="bk-programme-title">Your programme</h2>
+          <p className="bk-programme-count">
             {pack.booked} of {pack.size} appointments booked.
           </p>
 
-          <ol className="pack-standing">
+          <ol className="bk-programme-list">
             {pack.appointments.map((appointment) => (
               <li
                 key={`${appointment.startsAt}-${appointment.status}`}
@@ -229,7 +257,7 @@ export default function ManageBooking({ token }: { token: string }) {
 
           {pack.remaining > 0 && (
             <>
-              <p style={{ margin: '14px 0 0' }}>
+              <p className="bk-programme-owed">
                 {pack.remaining === 1
                   ? 'You have one appointment still to book.'
                   : `You have ${pack.remaining} appointments still to book.`}
@@ -237,7 +265,6 @@ export default function ManageBooking({ token }: { token: string }) {
               <button
                 type="button"
                 className="btn-primary btn-full"
-                style={{ marginTop: 12 }}
                 onClick={() => void openPicker('rebook')}
               >
                 {pack.remaining === 1 ? 'Book it now' : 'Book the next one'}
@@ -248,95 +275,113 @@ export default function ManageBooking({ token }: { token: string }) {
       )}
 
       {booking.status === 'confirmed' && mode === 'view' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button type="button" className="btn-secondary btn-full" onClick={() => void openPicker('reschedule')}>
-            Reschedule
-          </button>
+        <div className="bk-manage-actions">
           <button
             type="button"
-            className="btn-link"
-            style={{ alignSelf: 'center' }}
-            onClick={() => setMode('cancel')}
+            className="btn-secondary btn-full"
+            onClick={() => void openPicker('reschedule')}
           >
+            Reschedule
+          </button>
+          <button type="button" className="bk-textlink" onClick={() => setMode('cancel')}>
             Cancel this booking
           </button>
         </div>
       )}
 
       {(mode === 'reschedule' || mode === 'rebook') && (
-        <>
-          <h2 style={{ marginTop: 24 }}>
+        <section>
+          <h1 className="bk-heading">
             {mode === 'rebook' ? 'Book your replacement appointment' : 'Pick a new time'}
-          </h2>
-          {busy && <p className="status">Loading times…</p>}
+          </h1>
+
+          {busy && (
+            <p className="bk-status" role="status">
+              Finding available times…
+            </p>
+          )}
           {!busy && days.length === 0 && (
-            <p className="notice notice-muted">No other times are available right now.</p>
+            <p className="bk-empty">No other times are available right now.</p>
           )}
 
           {days.length > 0 && (
             <>
-              <div className="date-strip">
-                {days.map((day) => {
-                  const date = new Date(`${day.date}T12:00:00`);
-                  const has = day.slots.length > 0;
-                  const active = day.date === selectedDate;
-                  return (
-                    <button
-                      key={day.date}
-                      type="button"
-                      className={`date-chip${active ? ' active' : ''}${has ? '' : ' empty'}`}
-                      disabled={!has || busy}
-                      onClick={() => setSelectedDate(day.date)}
-                    >
-                      <span className="dow">{dowFormat.format(date)}</span>
-                      <span className="num">{date.getDate()}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <DateNavigator
+                days={days}
+                selectedDate={selectedDate}
+                onSelect={setSelectedDate}
+                dowFormat={dowFormat}
+              />
 
               {activeDay && (
-                <>
-                  <p className="day-label">{formatDay(activeDay.date)}</p>
-                  <div className="slots">
-                    {activeDay.slots.map((iso) => (
-                      <button
-                        key={iso}
-                        type="button"
-                        className="slot"
-                        disabled={busy}
-                        onClick={() =>
-                          act({
-                            action: mode === 'rebook' ? 'book-replacement' : 'reschedule',
-                            startsAt: iso,
-                          })
-                        }
-                      >
-                        {formatTimeRange(iso)}
-                      </button>
-                    ))}
-                  </div>
-                </>
+                <div className="bk-times">
+                  <h2 className="bk-day">{formatDay(activeDay.date)}</h2>
+
+                  {groupSlots(activeDay.slots).map((group) => {
+                    const key = `${activeDay.date}:${group.period}`;
+                    const expanded = expandedPeriods[key] ?? false;
+                    const shown = expanded
+                      ? group.slots
+                      : group.slots.slice(0, SLOTS_BEFORE_MORE);
+                    const hidden = group.slots.length - shown.length;
+
+                    return (
+                      <div className="bk-period" key={group.period}>
+                        <h3 className="bk-period-label">{group.label}</h3>
+                        <div className="bk-slots">
+                          {shown.map((iso) => (
+                            <button
+                              key={iso}
+                              type="button"
+                              className="bk-slot"
+                              disabled={busy}
+                              onClick={() =>
+                                act({
+                                  action: mode === 'rebook' ? 'book-replacement' : 'reschedule',
+                                  startsAt: iso,
+                                })
+                              }
+                            >
+                              {formatTimeRange(iso)}
+                            </button>
+                          ))}
+                        </div>
+                        {hidden > 0 && (
+                          <button
+                            type="button"
+                            className="bk-textlink bk-more"
+                            onClick={() =>
+                              setExpandedPeriods((prev) => ({ ...prev, [key]: true }))
+                            }
+                          >
+                            Show {hidden} more
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </>
           )}
 
-          <div className="actions" style={{ justifyContent: 'center' }}>
-            <button type="button" className="btn-link" onClick={() => setMode('view')}>
+          <p className="bk-after">
+            <button type="button" className="bk-textlink" onClick={() => setMode('view')}>
               {mode === 'rebook' ? 'Not now' : 'Keep my current time'}
             </button>
-          </div>
-        </>
+          </p>
+        </section>
       )}
 
       {mode === 'cancel' && (
         <form
+          className="bk-form"
           onSubmit={(event) => {
             event.preventDefault();
             void act({ action: 'cancel', reason });
           }}
         >
-          <h2 style={{ marginTop: 24 }}>Cancel this booking</h2>
+          <h1 className="bk-heading">Cancel this booking</h1>
           <div className="field">
             <label htmlFor="reason">Let us know why (optional)</label>
             <textarea
@@ -348,15 +393,14 @@ export default function ManageBooking({ token }: { token: string }) {
           <button type="submit" className="btn-primary btn-full" disabled={busy}>
             {busy ? 'Cancelling…' : 'Cancel booking'}
           </button>
-          <div className="actions" style={{ justifyContent: 'center' }}>
-            <button type="button" className="btn-link" onClick={() => setMode('view')}>
+          <p className="bk-after">
+            <button type="button" className="bk-textlink" onClick={() => setMode('view')}>
               Keep it
             </button>
-          </div>
+          </p>
         </form>
       )}
-
-      <p className="footer-credit">Powered by intro</p>
-    </main>
+    </>,
+    accentStyle(tenant.branding.accentColor),
   );
 }

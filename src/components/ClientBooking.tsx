@@ -1,8 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAutoResize } from './useAutoResize';
+import { DateNavigator } from './booking/DateNavigator';
+import { groupSlots } from './booking/slots';
 import type { DaySlots } from './types';
+
+/* How many times a period shows before "Show N more". Matches the public
+   booking flow: this screen and that one are the same product, and a
+   client who books through both should not be able to tell which is
+   which. */
+const SLOTS_BEFORE_MORE = 8;
 
 interface Entitlement {
   id: string;
@@ -122,6 +130,8 @@ export default function ClientBooking({ slug, token }: Props) {
 
   // Package redemption — several slots at once.
   const [selected, setSelected] = useState<string[]>([]);
+  /** Which "Show N more" links have been opened, keyed by day and period. */
+  const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({});
   const [results, setResults] = useState<BatchResult[] | null>(null);
   const [remaining, setRemaining] = useState(0);
 
@@ -275,337 +285,459 @@ export default function ClientBooking({ slug, token }: Props) {
     setStep('pick-option');
   }
 
-  if (step === 'loading') {
-    return (
-      <main className="widget">
-        <p className="status">Loading…</p>
+  /* The same frame the public booking flow stands in — panel, page,
+     credit. This screen used to carry a layout of its own, which meant a
+     client who booked once through the questionnaire and again through
+     their own link saw two different products. */
+  const shell = (children: ReactNode) => (
+    <div className="bk bk-standalone">
+      <main className="bk-page">
+        <div className="bk-solo">
+          <div className="bk-panel">
+            <div className="bk-steps">{children}</div>
+          </div>
+        </div>
+        <p className="bk-credit">
+          Powered by <span className="bk-wordmark">intro</span>
+        </p>
       </main>
+    </div>
+  );
+
+  if (step === 'loading') {
+    return shell(
+      <p className="bk-status" role="status">
+        Loading…
+      </p>,
     );
   }
 
   if (step === 'not-found') {
-    return (
-      <main className="widget">
-        <div className="notice notice-error" role="alert">
-          This link isn't valid. Check it against the one you were sent, or ask for a new one.
-        </div>
-      </main>
+    return shell(
+      <p className="bk-error" role="alert">
+        This link isn&apos;t valid. Check it against the one you were sent, or ask for a new
+        one.
+      </p>,
     );
   }
 
   if (step === 'nothing-to-book') {
-    return (
-      <main className="widget">
-        <h2>Hi {clientName.split(' ')[0]}</h2>
-        <p className="notice notice-muted">
-          There's nothing to book on this link right now — every package session may already be
-          used, or nothing has been set up yet. Reach out if that doesn't sound right.
+    return shell(
+      <section>
+        <h1 className="bk-heading">Hi {clientName.split(' ')[0]}</h1>
+        <p className="bk-empty">
+          There&apos;s nothing to book on this link right now — every package session may
+          already be used, or nothing has been set up yet. Reach out if that doesn&apos;t sound
+          right.
         </p>
-      </main>
+      </section>,
     );
   }
 
-  return (
-    <main className="widget">
+  return shell(
+    <>
       {error && (
-        <div className="notice notice-error" role="alert">
+        <p className="bk-error" role="alert">
           {error}
-        </div>
+        </p>
       )}
 
       {step === 'pick-option' && (
-        <>
-          <h2>Hi {clientName.split(' ')[0]}, what would you like to book?</h2>
-          <div className="type-list">
+        <section>
+          <h1 className="bk-heading">
+            Hi {clientName.split(' ')[0]}, what would you like to book?
+          </h1>
+          <ul className="bk-service-list">
             {entitlements.map((e) => (
-              <button
-                key={`package-${e.id}`}
-                type="button"
-                className="type"
-                onClick={() => chooseOption({ kind: 'package', ...e })}
-              >
-                <strong>{e.eventTypeName}</strong>
-                <span>{e.remaining} of {e.totalSessions} sessions left</span>
-              </button>
+              <li key={`package-${e.id}`}>
+                <button
+                  type="button"
+                  className="bk-service-option"
+                  onClick={() => chooseOption({ kind: 'package', ...e })}
+                >
+                  <span className="bk-service-option-main">
+                    <span className="bk-service-option-name">{e.eventTypeName}</span>
+                    <span className="bk-service-option-facts">
+                      {e.remaining} of {e.totalSessions} sessions left · {e.durationMinutes}{' '}
+                      minutes
+                    </span>
+                  </span>
+                  <span className="bk-service-option-go" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+              </li>
             ))}
             {singleTypes.map((t) => (
-              <button
-                key={`single-${t.id}`}
-                type="button"
-                className="type"
-                onClick={() => chooseOption({ kind: 'single', ...t })}
-              >
-                <strong>{t.name}</strong>
-                <span>{t.durationMinutes} min</span>
-              </button>
+              <li key={`single-${t.id}`}>
+                <button
+                  type="button"
+                  className="bk-service-option"
+                  onClick={() => chooseOption({ kind: 'single', ...t })}
+                >
+                  <span className="bk-service-option-main">
+                    <span className="bk-service-option-name">{t.name}</span>
+                    <span className="bk-service-option-facts">{t.durationMinutes} minutes</span>
+                  </span>
+                  <span className="bk-service-option-go" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+              </li>
             ))}
-          </div>
-        </>
+          </ul>
+        </section>
       )}
 
       {step === 'pick-times' && option?.kind === 'package' && (
-        <>
-          <h2>{option.eventTypeName}</h2>
+        <section>
+          <h1 className="bk-heading">{option.eventTypeName}</h1>
 
-          <div className="session-dots" aria-hidden="true">
+          <div className="bk-session-dots" aria-hidden="true">
             {Array.from({ length: option.totalSessions }).map((_, i) => {
               const isUsed = i < option.usedSessions;
               const isPicking = !isUsed && i < option.usedSessions + selected.length;
               return (
-                <span key={i} className={`session-dot${isUsed ? ' used' : ''}${isPicking ? ' picking' : ''}`} />
+                <span
+                  key={i}
+                  className={`bk-session-dot${isUsed ? ' is-used' : ''}${
+                    isPicking ? ' is-picking' : ''
+                  }`}
+                />
               );
             })}
           </div>
 
-          <p className="lede">
+          <p className="bk-lede">
             {selected.length > 0 ? (
               <>
-                <strong>{selected.length}</strong> selected — {option.remaining - selected.length} left
-                after this.
+                <strong>{selected.length}</strong> selected — {option.remaining - selected.length}{' '}
+                left after this.
               </>
             ) : (
               <>
-                You have <strong>{option.remaining}</strong> of {option.totalSessions} sessions left.
-                Select as many times as you like, across as many days as you like.
+                You have <strong>{option.remaining}</strong> of {option.totalSessions} sessions
+                left. Select as many times as you like, across as many days as you like.
               </>
             )}
           </p>
 
-          {busy && days.length === 0 && <p className="status">Loading times…</p>}
+          {busy && days.length === 0 && (
+            <p className="bk-status" role="status">
+              Finding available times…
+            </p>
+          )}
 
           {!busy && days.length === 0 && (
-            <p className="notice notice-muted">No times are available in the next few weeks.</p>
+            <p className="bk-empty">No times are available in the next few weeks.</p>
           )}
 
           {days.length > 0 && (
-            <>
-              <div className="date-strip">
-                {days.map((day) => {
-                  const date = new Date(`${day.date}T12:00:00`);
-                  const has = day.slots.length > 0;
-                  const active = day.date === selectedDate;
-                  return (
-                    <button
-                      key={day.date}
-                      type="button"
-                      className={`date-chip${active ? ' active' : ''}${has ? '' : ' empty'}`}
-                      disabled={!has}
-                      onClick={() => setSelectedDate(day.date)}
-                    >
-                      <span className="dow">{dowFormat.format(date)}</span>
-                      <span className="num">{date.getDate()}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeDay && (
-                <>
-                  <p className="day-label">{formatDay(activeDay.date)}</p>
-                  <div className="slots multi">
-                    {activeDay.slots.map((iso) => {
-                      const isSelected = selected.includes(iso);
-                      const atCap = !isSelected && selected.length >= option.remaining;
-                      return (
-                        <button
-                          key={iso}
-                          type="button"
-                          className={`slot${isSelected ? ' selected' : ''}`}
-                          disabled={atCap}
-                          style={atCap ? { opacity: 0.4 } : undefined}
-                          onClick={() => toggleSlot(iso)}
-                        >
-                          {formatTimeRange(iso, option.durationMinutes)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </>
+            <TimesPicker
+              days={days}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              activeDay={activeDay}
+              dowFormat={dowFormat}
+              formatDay={formatDay}
+              formatTimeRange={formatTimeRange}
+              durationMinutes={option.durationMinutes}
+              isPicked={(iso) => selected.includes(iso)}
+              isFull={(iso) => !selected.includes(iso) && selected.length >= option.remaining}
+              onPick={toggleSlot}
+              expandedPeriods={expandedPeriods}
+              onExpand={(key) => setExpandedPeriods((prev) => ({ ...prev, [key]: true }))}
+            />
           )}
 
-          <p className="tz">Times shown in your timezone ({viewerZone}).</p>
+          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+
+          {/* Sticky at the foot, for the same reason the public pack step
+              has one: picking several sessions means scrolling, and a count
+              that scrolls away stops being a count. */}
+          <div className="bk-pack-bar">
+            <div>
+              <p className="bk-pack-count" aria-live="polite">
+                {selected.length} selected
+              </p>
+              {selected.length > 0 && (
+                <ol className="bk-pack-list">
+                  {selected.map((iso) => (
+                    <li key={iso}>
+                      <span>
+                        {formatDay(iso.slice(0, 10))}, {timeFormat.format(new Date(iso))}
+                      </span>
+                      <button
+                        type="button"
+                        className="bk-pack-remove"
+                        onClick={() => toggleSlot(iso)}
+                      >
+                        Remove
+                        <span className="sr-only">
+                          {' '}
+                          {formatDay(iso.slice(0, 10))} at {timeFormat.format(new Date(iso))}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn-primary btn-full"
+              disabled={selected.length === 0 || busy}
+              onClick={submitBatch}
+            >
+              {selected.length === 0
+                ? 'Pick at least one time'
+                : `Book ${selected.length} session${selected.length === 1 ? '' : 's'}`}
+            </button>
+          </div>
 
           {multipleOptions && (
-            <div className="actions" style={{ justifyContent: 'center' }}>
-              <button type="button" className="btn-link" onClick={backToOptions}>
+            <p className="bk-after">
+              <button type="button" className="bk-textlink" onClick={backToOptions}>
                 Choose something else
               </button>
-            </div>
+            </p>
           )}
-
-          <button
-            type="button"
-            className="btn-primary btn-full"
-            disabled={selected.length === 0 || busy}
-            onClick={submitBatch}
-            style={{ marginTop: 14 }}
-          >
-            {selected.length === 0
-              ? 'Pick at least one time'
-              : `Book ${selected.length} session${selected.length === 1 ? '' : 's'}`}
-          </button>
-        </>
+        </section>
       )}
 
-      {step === 'booking' && <p className="status">Booking…</p>}
+      {step === 'booking' && (
+        <p className="bk-status" role="status">
+          Booking…
+        </p>
+      )}
 
       {step === 'done' && results && (
-        <>
-          <h2>
+        <section>
+          <h1 className="bk-heading">
             {results.filter((r) => r.status === 'booked').length} of {results.length} booked
-          </h2>
+          </h1>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
-            {results.map((r) => (
-              <div
-                key={r.startsAt}
-                className="card"
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '13px 16px',
-                }}
-              >
-                <span>
-                  {dayFormat.format(new Date(r.startsAt))} at {timeFormat.format(new Date(r.startsAt))}
+          <ol className="bk-pack-confirmed">
+            {results.map((r, index) => (
+              <li key={r.startsAt}>
+                <span className="bk-pack-n">{index + 1}</span>
+                <span className="bk-pack-when">
+                  {dayFormat.format(new Date(r.startsAt))} at{' '}
+                  {timeFormat.format(new Date(r.startsAt))}
                 </span>
                 <span
-                  className="notice"
-                  style={{
-                    margin: 0,
-                    padding: '3px 10px',
-                    background: r.status === 'booked' ? 'var(--status-live-tint)' : 'var(--status-attention-tint)',
-                    color: r.status === 'booked' ? 'var(--status-live-ink)' : 'var(--status-attention-ink)',
-                  }}
+                  className={`bk-result${r.status === 'booked' ? ' is-booked' : ' is-missed'}`}
                 >
                   {r.status === 'booked' ? 'Booked' : 'Not available'}
                 </span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
 
           {results.some((r) => r.status !== 'booked') && (
-            <p className="notice notice-muted" style={{ marginTop: 14 }}>
+            <p className="bk-after">
               A couple of times went while you were booking — nothing was charged against your
-              package for those. You still have {remaining} session{remaining === 1 ? '' : 's'} left
-              to use.
+              package for those. You still have {remaining} session{remaining === 1 ? '' : 's'}{' '}
+              left to use.
             </p>
           )}
 
           {results.every((r) => r.status === 'booked') && remaining > 0 && (
-            <p className="notice notice-muted" style={{ marginTop: 14 }}>
-              You still have {remaining} session{remaining === 1 ? '' : 's'} left on this package —
-              use this same link any time to book more.
+            <p className="bk-after">
+              You still have {remaining} session{remaining === 1 ? '' : 's'} left on this package
+              — use this same link any time to book more.
             </p>
           )}
-        </>
+        </section>
       )}
 
       {step === 'pick-time-single' && option?.kind === 'single' && (
-        <>
-          <h2>{option.name}</h2>
+        <section>
+          <h1 className="bk-heading">{option.name}</h1>
 
-          {busy && days.length === 0 && <p className="status">Loading times…</p>}
+          {busy && days.length === 0 && (
+            <p className="bk-status" role="status">
+              Finding available times…
+            </p>
+          )}
 
           {!busy && days.length === 0 && (
-            <p className="notice notice-muted">No times are available in the next few weeks.</p>
+            <p className="bk-empty">No times are available in the next few weeks.</p>
           )}
 
           {days.length > 0 && (
-            <>
-              <div className="date-strip">
-                {days.map((day) => {
-                  const date = new Date(`${day.date}T12:00:00`);
-                  const has = day.slots.length > 0;
-                  const active = day.date === selectedDate;
-                  return (
-                    <button
-                      key={day.date}
-                      type="button"
-                      className={`date-chip${active ? ' active' : ''}${has ? '' : ' empty'}`}
-                      disabled={!has}
-                      onClick={() => setSelectedDate(day.date)}
-                    >
-                      <span className="dow">{dowFormat.format(date)}</span>
-                      <span className="num">{date.getDate()}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeDay && (
-                <>
-                  <p className="day-label">{formatDay(activeDay.date)}</p>
-                  <div className="slots">
-                    {activeDay.slots.map((iso) => (
-                      <button
-                        key={iso}
-                        type="button"
-                        className={`slot${singleSlot === iso ? ' selected' : ''}`}
-                        onClick={() => setSingleSlot(iso)}
-                      >
-                        {formatTimeRange(iso, option.durationMinutes)}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
+            <TimesPicker
+              days={days}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              activeDay={activeDay}
+              dowFormat={dowFormat}
+              formatDay={formatDay}
+              formatTimeRange={formatTimeRange}
+              durationMinutes={option.durationMinutes}
+              isPicked={(iso) => singleSlot === iso}
+              isFull={() => false}
+              onPick={setSingleSlot}
+              expandedPeriods={expandedPeriods}
+              onExpand={(key) => setExpandedPeriods((prev) => ({ ...prev, [key]: true }))}
+            />
           )}
 
-          <p className="tz">Times shown in your timezone ({viewerZone}).</p>
-
-          {multipleOptions && (
-            <div className="actions" style={{ justifyContent: 'center' }}>
-              <button type="button" className="btn-link" onClick={backToOptions}>
-                Choose something else
-              </button>
-            </div>
-          )}
+          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
 
           <button
             type="button"
             className="btn-primary btn-full"
             disabled={!singleSlot || busy}
             onClick={submitSingle}
-            style={{ marginTop: 14 }}
           >
             {singleSlot ? 'Confirm booking' : 'Pick a time'}
           </button>
-        </>
+
+          {multipleOptions && (
+            <p className="bk-after">
+              <button type="button" className="bk-textlink" onClick={backToOptions}>
+                Choose something else
+              </button>
+            </p>
+          )}
+        </section>
       )}
 
-      {step === 'booking-single' && <p className="status">Booking…</p>}
+      {step === 'booking-single' && (
+        <p className="bk-status" role="status">
+          Booking…
+        </p>
+      )}
 
       {step === 'done-single' && confirmed && (
-        <>
-          <h2>You&apos;re booked</h2>
-          <div className="hero">
-            <div className="eyebrow">{dayFormat.format(new Date(confirmed.startsAt))}</div>
-            <div className="when">{timeFormat.format(new Date(confirmed.startsAt))}</div>
-            {option?.kind === 'single' && <div className="what">{option.name}</div>}
+        <section>
+          <h1 className="bk-heading">You&apos;re booked.</h1>
+
+          <div className="bk-confirmed">
+            <p className="bk-confirmed-when">{dayFormat.format(new Date(confirmed.startsAt))}</p>
+            <p className="bk-confirmed-time">
+              {timeFormat.format(new Date(confirmed.startsAt))}
+            </p>
+            {option?.kind === 'single' && (
+              <p className="bk-confirmed-what">{option.name}</p>
+            )}
+            <p className="bk-confirmed-zone">{viewerZone}</p>
           </div>
 
           {confirmed.meetingUrl && (
-            <a className="hero-link" href={confirmed.meetingUrl}>
+            <a className="bk-join" href={confirmed.meetingUrl}>
               Join the video call
             </a>
           )}
 
-          <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: 16 }}>
+          <p className="bk-after">
             Keep this link to reschedule or cancel:{' '}
-            <a className="btn-link" href={`/manage/${confirmed.manageToken}`}>
+            <a className="bk-textlink" href={`/manage/${confirmed.manageToken}`}>
               manage your booking
             </a>
             .
           </p>
-        </>
+        </section>
       )}
+    </>,
+  );
+}
 
-      <p className="footer-credit">Powered by intro</p>
-    </main>
+/**
+ * Choosing a day and a time.
+ *
+ * One component for both jobs this page does — redeeming several sessions
+ * from a package, and booking a single one — because they differ only in
+ * how many times may be lit at once. It is also the same arrangement the
+ * public booking flow uses (DateNavigator, then times grouped by period),
+ * for the plain reason that a client who books through both should not be
+ * able to tell they are different screens.
+ */
+function TimesPicker({
+  days,
+  selectedDate,
+  onSelectDate,
+  activeDay,
+  dowFormat,
+  formatDay,
+  formatTimeRange,
+  durationMinutes,
+  isPicked,
+  isFull,
+  onPick,
+  expandedPeriods,
+  onExpand,
+}: {
+  days: DaySlots[];
+  selectedDate: string | null;
+  onSelectDate: (date: string) => void;
+  activeDay: DaySlots | null;
+  dowFormat: Intl.DateTimeFormat;
+  formatDay: (date: string) => string;
+  formatTimeRange: (iso: string, minutes: number) => string;
+  durationMinutes: number;
+  isPicked: (iso: string) => boolean;
+  /** True when pressing this would silently do nothing — the package has no
+   *  sessions left to put against it. Said with a disabled state. */
+  isFull: (iso: string) => boolean;
+  onPick: (iso: string) => void;
+  expandedPeriods: Record<string, boolean>;
+  onExpand: (key: string) => void;
+}) {
+  return (
+    <>
+      <DateNavigator
+        days={days}
+        selectedDate={selectedDate}
+        onSelect={onSelectDate}
+        dowFormat={dowFormat}
+      />
+
+      {activeDay && (
+        <div className="bk-times">
+          <h2 className="bk-day">{formatDay(activeDay.date)}</h2>
+
+          {groupSlots(activeDay.slots).map((group) => {
+            const key = `${activeDay.date}:${group.period}`;
+            const expanded = expandedPeriods[key] ?? false;
+            const shown = expanded ? group.slots : group.slots.slice(0, SLOTS_BEFORE_MORE);
+            const hidden = group.slots.length - shown.length;
+
+            return (
+              <div className="bk-period" key={group.period}>
+                <h3 className="bk-period-label">{group.label}</h3>
+                <div className="bk-slots">
+                  {shown.map((iso) => {
+                    const picked = isPicked(iso);
+                    return (
+                      <button
+                        key={iso}
+                        type="button"
+                        className={`bk-slot${picked ? ' is-selected' : ''}`}
+                        disabled={isFull(iso)}
+                        aria-pressed={picked}
+                        onClick={() => onPick(iso)}
+                      >
+                        {formatTimeRange(iso, durationMinutes)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {hidden > 0 && (
+                  <button
+                    type="button"
+                    className="bk-textlink bk-more"
+                    onClick={() => onExpand(key)}
+                  >
+                    Show {hidden} more
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }

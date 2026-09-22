@@ -2779,6 +2779,17 @@ button.text-action {
   gap: 44px;
   align-items: start;
 }
+/* One column, centred.
+   The manage screen and a client's own link have no identity aside to sit
+   beside, so they are not a two-column layout with a column missing —
+   reusing .bk-columns for them dropped the panel into the 36% slot meant
+   for the aside and left two thirds of the page empty. */
+.bk-solo {
+  width: 100%;
+  max-width: 600px;
+  margin-inline: auto;
+}
+
 /* The identity column stays put while the steps change beside it — that is
    its whole job, so it sticks rather than scrolling away on a long slot
    list. */
@@ -3751,6 +3762,155 @@ body:has(.bk-embedded) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* ── Managing a booking ─────────────────────────────────────────────── */
+
+/* The rebook and reschedule steps open directly under the booking's own
+   card, and a heading flush against a filled panel reads as part of it. */
+.bk-confirmed + section > .bk-heading,
+.bk-cancelled + section > .bk-heading {
+  margin-top: 22px;
+}
+
+/* A booking that is no longer happening.
+   Flat, not the filled Mineral card a live booking gets: that card means
+   "this is on", and a cancelled booking wearing it is the screen
+   contradicting itself. No red anywhere — the client asked for this, and
+   an error colour would tell them something went wrong. */
+.bk-cancelled {
+  padding: 18px 20px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.bk-cancelled .bk-heading,
+.bk-cancelled .bk-lede {
+  margin-top: 0;
+}
+.bk-cancelled .bk-lede {
+  margin-bottom: 0;
+}
+.bk-cancelled-mark {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Where a programme stands, on one of its appointments. */
+.bk-programme {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.bk-programme-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.bk-programme-count {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.bk-programme-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+.bk-programme-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.9rem;
+}
+/* Struck through and dimmed, but still listed: an appointment that was
+   cancelled is part of the history of this programme, and removing the row
+   would leave a client counting to a number that no longer adds up. */
+.bk-programme-list li[data-cancelled='true'] > span {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+.bk-programme-list li em {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.bk-programme-owed {
+  margin: 14px 0 12px;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.bk-manage-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.bk-manage-actions .btn-secondary {
+  width: 100%;
+}
+
+/* A programme's balance, drawn.
+   One dot per session the package was sold as: filled for the ones already
+   spent, outlined for the ones still owed, and tinted for the ones about to
+   be. It says "three of ten" before the sentence underneath does, which is
+   the order people read a screen in. Mineral throughout — this is a
+   quantity, not a verdict, so none of the status colours belong here. */
+.bk-session-dots {
+  display: flex;
+  gap: 7px;
+  margin: 0 0 16px;
+}
+.bk-session-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+}
+.bk-session-dot.is-used {
+  background: var(--accent);
+}
+.bk-session-dot.is-picking {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+
+/* Whether one appointment in a batch landed.
+   "Not available" is the only place on this screen a status colour is
+   earned: a time that went while the client was choosing is a fact about
+   the world, not a judgement of them, and attention-amber says that
+   without saying anything went wrong. */
+.bk-result {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.bk-result.is-booked {
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+}
+.bk-result.is-missed {
+  background: var(--status-attention-tint);
+  color: var(--status-attention-ink);
 }
 
 .bk-pack-confirmed {
