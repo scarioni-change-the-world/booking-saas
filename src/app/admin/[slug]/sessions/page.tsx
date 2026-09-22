@@ -425,9 +425,10 @@ export default function SessionsPage() {
                               />
                             </div>
                             <p style={{ fontSize: '0.8rem', color: 'var(--faint)', margin: '8px 0 0' }}>
-                              This declares how the pack is meant to be sold — granting the actual
-                              sessions to a client still happens from their page on Clients, which
-                              will suggest this number as a starting point.
+                              Someone booking this from your booking page picks all{' '}
+                              {form.packSize || 'these'} times at once, and is saved as a client
+                              with that balance automatically. You can also grant sessions by hand
+                              from Clients — for a programme sold in person, say.
                             </p>
                           </div>
                         )}
