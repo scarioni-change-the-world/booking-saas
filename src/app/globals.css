@@ -458,7 +458,14 @@ textarea {
  * floating blob and ties it to the hairline rules elsewhere. And the label
  * is 600 at .9rem rather than 500 at inherited size: smaller and firmer,
  * so a button reads as a control rather than as a sentence. */
-button {
+button,
+/* An anchor wearing a button's class is a button as far as anyone using it
+   is concerned, so it gets the box too. Without this it inherited only the
+   colours and rendered as underlined text beside real buttons doing the
+   same job — two controls with one label looking like two different kinds
+   of thing. */
+a.btn-primary,
+a.btn-secondary {
   font: inherit;
   font-size: 0.9rem;
   font-weight: 600;
@@ -467,6 +474,13 @@ button {
   border: 1px solid transparent;
   padding: 12px 18px;
   min-height: 48px;
+}
+a.btn-primary,
+a.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 /* The digital brand kit's "Primary dark button": Ink at rest, not Soft
    Mineral — a primary button is a distinct thing from an active/selected
@@ -4184,4 +4198,245 @@ body:has(.bk-embedded) {
     width: 100%;
     text-align: left;
   }
+}
+
+/* ── Setting a service up ───────────────────────────────────────────────
+ *
+ * The screen that says out loud what the product used to leave silent: a
+ * service created from the Services list is offered to nobody, does not
+ * appear on the booking page, and looked finished while being none of
+ * those things.
+ */
+
+/* Whether anyone can reach this service. Teal when live, because that is
+   this product's fixed meaning for "connected, reachable, on" and a tenant
+   cannot recolour it — the same reason a confirmed slot is teal on a
+   client's screen. Quiet and grey when not: a service nobody is offered yet
+   is a draft, not a fault, and an alarm colour here would be wrong on the
+   first screen a person sees after creating one. */
+.setup-state {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 22px;
+  padding: 13px 16px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.setup-state p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.setup-state-mark {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ghost);
+}
+.setup-state.is-live .setup-state-mark {
+  background: var(--status-live);
+}
+.setup-state.is-live p {
+  color: var(--ink);
+}
+
+.setup-stages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setup-stage {
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.setup-stage-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+}
+.setup-stage-main {
+  flex: 1;
+  min-width: 0;
+}
+.setup-stage-action {
+  flex: 0 0 auto;
+}
+
+/* The stage's number, or a tick once there is nothing left to decide.
+   Mineral when done, plain when not — a count of steps is not a status, and
+   colouring every unfinished number would make the whole list look wrong on
+   the day it is supposed to be most encouraging. */
+.setup-stage-n {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--faint);
+  background: var(--side);
+}
+.setup-stage.is-done .setup-stage-n {
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+
+.setup-stage-label {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.setup-stage-purpose {
+  margin: 3px 0 0;
+  font-size: 0.87rem;
+  color: var(--faint);
+}
+
+/* What is still unset, and what it costs. Ochre when it stops the service
+   working, grey when it only makes it thinner — the same distinction the
+   model draws, and the reason "incomplete" is never said on its own. Never
+   red: none of this is an error, and a colour that shouts on a half-built
+   service is a colour people learn to ignore. */
+.setup-stage-note {
+  margin: 8px 0 0;
+  font-size: 0.87rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.setup-stage.is-blocking .setup-stage-note {
+  color: var(--emphasis-ink);
+  font-weight: 500;
+}
+.setup-stage.is-blocking {
+  border-color: var(--emphasis);
+}
+
+.setup-stage-body {
+  padding: 4px 18px 20px;
+  border-top: 1px solid var(--rule);
+}
+.setup-stage-body .field:first-child {
+  margin-top: 16px;
+}
+
+.setup-audience {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 12px;
+  padding: 13px 15px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.setup-audience:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+}
+.setup-audience input {
+  margin-top: 2px;
+}
+.setup-audience span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.setup-audience strong {
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+.setup-audience small {
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+
+@media (max-width: 640px) {
+  .setup-stage-head {
+    flex-wrap: wrap;
+  }
+  .setup-stage-action {
+    width: 100%;
+    padding-left: 40px;
+  }
+  .setup-stage-action .btn-secondary,
+  .setup-stage-action a {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* What is still unset on a service, on its row in the list.
+   Sits under the row rather than inside it: the row is a button that opens
+   the editor, and a link inside a button is a control nobody can operate
+   from a keyboard. Ochre only on the text that names a blocker — see
+   .setup-stage-note for why never red. */
+.service-setup-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 9px 18px 12px;
+  border-top: 1px dashed var(--rule);
+}
+.service-setup-line p {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--emphasis-ink);
+}
+.service-setup-line .btn-link {
+  flex: 0 0 auto;
+  font-size: 0.83rem;
+}
+
+/* A gap that belongs to the whole business rather than to one service —
+   opening hours, or what people sent elsewhere are told. Above the list,
+   once, for the reason in the markup: five services sharing one set of
+   hours is one fact, and saying it five times is how a list stops being
+   read. Ochre when it stops everything, quiet when it does not. */
+.shared-gap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.shared-gap.is-blocking {
+  border-color: var(--emphasis);
+  background: var(--emphasis-tint);
+}
+.shared-gap p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.shared-gap.is-blocking p {
+  color: var(--emphasis-ink);
+  font-weight: 500;
+}
+.shared-gap .btn-link {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
 }

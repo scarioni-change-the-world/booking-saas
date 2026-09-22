@@ -14,6 +14,7 @@ import {
   toMoneyInput,
 } from '@/lib/money';
 import { LOCATION_OPTIONS, describeLocation } from '@/lib/service-location';
+import { businessStages, ownStages, setupStages, summarise } from '@/lib/service-setup';
 import type { ServiceLocationKind } from '@/lib/db/types';
 
 /** Up to this many active session types per tenant — a soft, UI-only guide
@@ -25,6 +26,51 @@ const SOFT_CAP = 5;
 type BookingMode = 'single' | 'pack';
 
 const PACK_PRESETS = [5, 8, 10];
+
+type ServiceWithCounts = SerializedEventType & { ownQuestionCount: number };
+
+interface SharedSetupFacts {
+  globalQuestionCount: number;
+  availabilityRuleCount: number;
+  hasOtherPathMessage: boolean;
+  hasOtherPathUrl: boolean;
+}
+
+interface SetupPayload extends SharedSetupFacts {
+  services: ServiceWithCounts[];
+}
+
+function factsFor(service: ServiceWithCounts, shared: SharedSetupFacts) {
+  return {
+      name: service.name,
+      description: service.description,
+      durationMinutes: service.durationMinutes,
+      priceMinor: service.priceMinor,
+      locationKind: service.locationKind,
+      locationDetail: service.locationDetail,
+      bookingMode: service.bookingMode,
+      packSize: service.packSize,
+      availableToProspects: service.availableToProspects,
+      availableToExistingClients: service.availableToExistingClients,
+    ownQuestionCount: service.ownQuestionCount,
+    ...shared,
+  };
+}
+
+/**
+ * One row's setup line, or null when there is nothing left to say about
+ * this service in particular.
+ *
+ * Only the stages this service decides for itself. Opening hours are
+ * tenant-wide, so without this filter every row on the page led with the
+ * same sentence about them and buried what was actually different between
+ * them — five services saying one fact five times. The business-wide half
+ * is said once, above the list.
+ */
+function unsetLine(service: ServiceWithCounts, shared: SharedSetupFacts | null): string | null {
+  if (!shared) return null;
+  return summarise(ownStages(setupStages(factsFor(service, shared))));
+}
 
 interface FormState {
   name: string;
@@ -97,7 +143,7 @@ export default function SessionsPage() {
   const { slug } = useParams<{ slug: string }>();
   const base = `/api/admin/${slug}/event-types`;
 
-  const [types, setTypes] = useState<SerializedEventType[]>([]);
+  const [types, setTypes] = useState<ServiceWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -116,16 +162,28 @@ export default function SessionsPage() {
      three services down was silently off-screen — the form simply did not
      save and said nothing, which is the worst thing a form can do. */
   const [priceError, setPriceError] = useState<string | null>(null);
+  /* The tenant-wide half of what setup needs: one question set, one set of
+     opening hours, one message for the other path, shared by every row. */
+  const [shared, setShared] = useState<SharedSetupFacts | null>(null);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
+      /* service-setup rather than event-types: it returns the same rows
+         plus the handful of counts this page needs to say what is still
+         unset on each of them. One request either way. */
       const [result, settings] = await Promise.all([
-        adminFetchJson<{ eventTypes: SerializedEventType[] }>(base),
+        adminFetchJson<SetupPayload>(`/api/admin/${slug}/service-setup`),
         adminFetchJson<{ settings: SerializedSettings }>(`/api/admin/${slug}/settings`),
       ]);
-      setTypes(result.eventTypes);
+      setTypes(result.services);
+      setShared({
+        globalQuestionCount: result.globalQuestionCount,
+        availabilityRuleCount: result.availabilityRuleCount,
+        hasOtherPathMessage: result.hasOtherPathMessage,
+        hasOtherPathUrl: result.hasOtherPathUrl,
+      });
       setCurrency(settings.settings.currency);
     } catch (cause) {
       setError((cause as Error).message);
@@ -138,6 +196,22 @@ export default function SessionsPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable for the life of this page
   }, [slug]);
+
+  /* Derived per row rather than stored: a service is as set up as its own
+     fields say it is, whether they were filled in through the setup screen
+     or by editing the row directly underneath this line. */
+  const setupLine = (service: ServiceWithCounts) => unsetLine(service, shared);
+
+  /* Derived from any one service, because these stages do not depend on
+     which — they are the business's, not the service's. Blocking ones
+     first: a business with no hours has nothing to offer, whatever else is
+     set on any row below. */
+  const businessGaps =
+    shared && types[0]
+      ? businessStages(setupStages(factsFor(types[0], shared)))
+          .filter((stage) => !stage.done)
+          .sort((a, b) => Number(b.blocking) - Number(a.blocking))
+      : [];
 
   const activeCount = types.filter((t) => t.active).length;
   const atCap = activeCount >= SOFT_CAP;
@@ -252,6 +326,20 @@ export default function SessionsPage() {
         description="Each service has its own duration, booking rules and — if you want — its own questions."
       />
 
+      {/* The things that are true of every service at once — opening hours,
+          and what people sent elsewhere are told. Said here rather than on
+          each row, because one set of hours shared by five services is one
+          fact, and printing it five times is how a list teaches somebody to
+          stop reading it. */}
+      {businessGaps.map((stage) => (
+        <div key={stage.id} className={`shared-gap${stage.blocking ? ' is-blocking' : ''}`}>
+          <p>{stage.note}</p>
+          <a className="btn-link" href={`/admin/${slug}/${stage.href}`}>
+            {stage.id === 'availability' ? 'Set your hours →' : 'Write it →'}
+          </a>
+        </div>
+      ))}
+
       {error && (
         <div className="notice notice-error" role="alert">
           {error}
@@ -287,23 +375,6 @@ export default function SessionsPage() {
                           Archived
                         </span>
                       )}
-                      {/* Both audience toggles start off, so a session created
-                          and saved without touching them is live, valid, and
-                          bookable by nobody — the public page just says there
-                          is nothing available, which reads as a fault in the
-                          page rather than a setting in here. Archived already
-                          earns a badge for the same outcome; this deserves one
-                          too. */}
-                      {type.active &&
-                        !type.availableToProspects &&
-                        !type.availableToExistingClients && (
-                          <span
-                            className="notice notice-error"
-                            style={{ padding: '2px 9px', marginLeft: 10 }}
-                          >
-                            Not offered to anyone
-                          </span>
-                        )}
                     </span>
                     <span className="service-row-meta">
                       {[
@@ -319,6 +390,25 @@ export default function SessionsPage() {
                     </span>
                     <ChevronIcon />
                   </button>
+
+                  {/* What is still unset on this service, and a way to it.
+                   *
+                   * This row used to carry a red "Not offered to anyone"
+                   * badge, which was right about the fact and wrong about
+                   * the tone: a service nobody is offered yet is a draft,
+                   * not an error, and red is the colour this product
+                   * reserves for something being broken. It also said only
+                   * that one thing, when a half-built service is usually
+                   * missing several. The sentence comes from the same model
+                   * the setup screen uses, so the two cannot disagree. */}
+                  {type.active && setupLine(type) && (
+                    <div className="service-setup-line">
+                      <p>{setupLine(type)}</p>
+                      <a className="btn-link" href={`/admin/${slug}/sessions/${type.id}/setup`}>
+                        Finish setting up →
+                      </a>
+                    </div>
+                  )}
 
                   {expanded && (
                     <div className="service-row-body">
