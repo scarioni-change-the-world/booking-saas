@@ -3,7 +3,7 @@ import { atLocalTime } from './availability';
 
 /**
  * Small, pure helpers behind the ad hoc hour-blocking feature — the admin
- * dashboard's "block time" grid (Availability page) and its API route.
+ * dashboard's "block time" grid (a day opened from the Week) and its API route.
  *
  * Kept separate from availability.ts because this is a different job: that
  * module decides what a *prospect* can book; this one turns a tenant's

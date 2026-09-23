@@ -224,7 +224,8 @@ export default function OverviewPage() {
               {data.needsAttentionCount === 1
                 ? 'One meeting needs a look'
                 : `${data.needsAttentionCount} meetings need a look`}{' '}
-              — their calendar sync failed. Check the Meetings page for details.
+              — their calendar sync failed. They are outlined in red on the{' '}
+              <a href={`/admin/${slug}/week`}>Week</a>.
             </div>
           )}
 

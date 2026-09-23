@@ -77,7 +77,7 @@ export interface DaySlots {
  * Exported (not just an internal step of generateSlots) so the dashboard's ad
  * hoc hour-blocking grid can ask "what does this day normally look like?"
  * without a second copy of this rule — see the blocked-slots admin route and
- * the Availability page.
+ * the Week screen's grid.
  */
 export function windowsForDate(
   date: DateTime,

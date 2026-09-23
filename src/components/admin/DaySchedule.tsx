@@ -290,6 +290,15 @@ function DayStrip({
 interface Props {
   slug: string;
   rules: Rule[];
+  /** The date to show. When set, the parent owns which date this is — the
+   *  Week picks a day by its column header — and this follows it. */
+  date?: string;
+  /** Leave out the date controls and the strip of days: the Week around
+   *  this already is the way to move between dates. */
+  compact?: boolean;
+  /** Called after anything on this date changes, so a parent drawing the
+   *  same hours can redraw them. */
+  onChanged?: () => void;
 }
 
 /**
@@ -306,11 +315,16 @@ interface Props {
  * confirmed action (its own inline form): rarer, more consequential, and
  * already gated to admins server-side, unlike day-to-day blocking.
  */
-export default function DaySchedule({ slug, rules }: Props) {
+export default function DaySchedule({ slug, rules, date: controlledDate, compact = false, onChanged }: Props) {
   const blocksBase = `/api/admin/${slug}/blocked-slots`;
   const overridesBase = `/api/admin/${slug}/date-overrides`;
 
-  const [date, setDate] = useState(todayIso());
+  const [date, setDate] = useState(controlledDate ?? todayIso());
+
+  useEffect(() => {
+    if (controlledDate && controlledDate !== date) setDate(controlledDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- follows the parent only
+  }, [controlledDate]);
   const [overrides, setOverrides] = useState<Override[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
@@ -378,6 +392,7 @@ export default function DaySchedule({ slug, rules }: Props) {
       await action();
       await load();
       setUndo({ message, snapshot });
+      onChanged?.();
     } catch (cause) {
       setError((cause as Error).message);
       await load();
@@ -439,6 +454,7 @@ export default function DaySchedule({ slug, rules }: Props) {
       });
       setBlocks(result.blocks);
       setUndo(null);
+      onChanged?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -462,6 +478,7 @@ export default function DaySchedule({ slug, rules }: Props) {
       });
       setEditingReasonId(null);
       await load();
+      onChanged?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -481,6 +498,7 @@ export default function DaySchedule({ slug, rules }: Props) {
       setExceptionForm(null);
       setExceptionNote('');
       await load();
+      onChanged?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -511,6 +529,7 @@ export default function DaySchedule({ slug, rules }: Props) {
       setExceptionForm(null);
       setExceptionNote('');
       await load();
+      onChanged?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -525,6 +544,7 @@ export default function DaySchedule({ slug, rules }: Props) {
     try {
       await adminFetchJson(`${overridesBase}/${currentOverride.id}`, { method: 'DELETE' });
       await load();
+      onChanged?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -533,7 +553,8 @@ export default function DaySchedule({ slug, rules }: Props) {
   }
 
   return (
-    <div className="card">
+    <div className={compact ? 'day-schedule-compact' : 'card'}>
+      {!compact && (
       <div
         style={{
           display: 'flex',
@@ -562,8 +583,9 @@ export default function DaySchedule({ slug, rules }: Props) {
           </button>
         </div>
       </div>
+      )}
 
-      <DayStrip date={date} overrides={overrides} onSelect={setDate} />
+      {!compact && <DayStrip date={date} overrides={overrides} onSelect={setDate} />}
 
       {isPast && (
         <p style={{ fontSize: '0.8rem', color: 'var(--faint)', margin: '-8px 0 16px' }}>

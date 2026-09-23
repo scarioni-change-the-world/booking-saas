@@ -54,15 +54,17 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  * Two of the brief's suggested destinations are deliberately absent.
  * "Messages" has no page behind it — email templates live inside Settings,
  * and inventing a nav item for a place that does not exist is the one thing
- * the brief tells us not to do. And "Calendar" stays "Availability", because
- * that page sets which hours a business works; it is not a calendar view,
- * and calling it one would send people there looking for their week. The
- * brief's own preferred-word list has "availability" in it. */
+ * the brief tells us not to do.
+ *
+ * "Week" replaced two entries, Bookings and Availability. They were two
+ * screens about the same seven days — when you are open, and what is in it
+ * — and neither could show the one thing a business looks for, which is
+ * where the week is full and where it is empty. See docs/roadmap.md: this is
+ * the first of the three places the app is becoming. */
 const NAV = [
   { href: 'overview', label: 'Overview' },
-  { href: 'bookings', label: 'Bookings' },
+  { href: 'week', label: 'Week' },
   { href: 'clients', label: 'Clients' },
-  { href: 'availability', label: 'Availability' },
   { href: 'enquiries', label: 'Enquiries' },
   { href: 'sessions', label: 'Services', divider: true },
   { href: 'screening', label: 'Questions' },

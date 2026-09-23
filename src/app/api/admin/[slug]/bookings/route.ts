@@ -16,6 +16,11 @@ const EMBED =
  *   upcoming  — confirmed, still ahead of now, soonest first
  *   past      — confirmed, already happened, most recent first
  *   cancelled — cancelled at any time, most recently cancelled first
+ *
+ * And a fourth, for the Week: `range`, confirmed bookings starting between
+ * `from` and `to`, in time order. Confirmed only — a cancelled appointment
+ * no longer occupies the hour, and drawing it on the grid would make a
+ * free slot look taken. The cancelled list is still one click away.
  */
 export async function GET(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -24,15 +29,35 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
 
     const url = new URL(request.url);
     const view = url.searchParams.get('view') ?? 'upcoming';
-    if (view !== 'upcoming' && view !== 'past' && view !== 'cancelled') {
-      throw new BookingError('"view" must be upcoming, past, or cancelled', 400);
+    if (view !== 'upcoming' && view !== 'past' && view !== 'cancelled' && view !== 'range') {
+      throw new BookingError('"view" must be upcoming, past, cancelled, or range', 400);
     }
 
     const nowIso = new Date().toISOString();
     const base = scope.select('bookings', EMBED);
 
-    const { data, error } =
-      view === 'upcoming'
+    let range: { from: string; to: string } | null = null;
+    if (view === 'range') {
+      const from = url.searchParams.get('from');
+      const to = url.searchParams.get('to');
+      if (!from || !to || Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to))) {
+        throw new BookingError('A range needs "from" and "to" as dates and times', 400);
+      }
+      // A week is the widest thing anything asks for; this bounds the query
+      // so a hand-typed URL cannot ask for ten years of bookings at once.
+      if (Date.parse(to) - Date.parse(from) > 45 * 24 * 60 * 60 * 1000) {
+        throw new BookingError('A range can be at most 45 days', 400);
+      }
+      range = { from: new Date(from).toISOString(), to: new Date(to).toISOString() };
+    }
+
+    const { data, error } = range
+      ? await base
+          .eq('status', 'confirmed')
+          .gte('starts_at', range.from)
+          .lt('starts_at', range.to)
+          .order('starts_at', { ascending: true })
+      : view === 'upcoming'
         ? await base.eq('status', 'confirmed').gte('starts_at', nowIso).order('starts_at', { ascending: true })
         : view === 'past'
           ? await base.eq('status', 'confirmed').lt('starts_at', nowIso).order('starts_at', { ascending: false })

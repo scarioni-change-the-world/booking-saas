@@ -223,7 +223,7 @@ describe('where the work happens', () => {
   it('sends the big ones to the screens that already exist', () => {
     const stages = setupStages(complete);
     expect(stages.find((s) => s.id === 'questions')!.href).toBe('screening?service=svc-1');
-    expect(stages.find((s) => s.id === 'availability')!.href).toBe('availability');
+    expect(stages.find((s) => s.id === 'availability')!.href).toBe('week');
     expect(stages.find((s) => s.id === 'messages')!.href).toBe('screening/next-steps');
   });
 });

@@ -196,7 +196,7 @@ function availabilityStage(facts: ServiceFacts): Stage {
     done: has,
     note: has ? '' : 'No opening hours anywhere, so nothing can be booked.',
     blocking: !has,
-    href: 'availability',
+    href: 'week',
     scope: 'business',
   };
 }
