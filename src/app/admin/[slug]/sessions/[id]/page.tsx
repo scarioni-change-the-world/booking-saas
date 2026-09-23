@@ -26,21 +26,27 @@ interface SetupPayload {
 const PACK_PRESETS = [5, 8, 10];
 
 /**
- * Setting a service up, in the order each decision informs the next.
+ * A service: everything about it, in the order each decision informs the
+ * next.
  *
- * Not a wizard, on purpose. A wizard owns you until you finish it, and the
- * second service anybody creates does not need to be walked through
- * anything. So: every stage is open at once, any of them can be done in any
- * order, leaving halfway loses nothing, and the same fields stay editable
- * from the Services list afterwards. What this page adds is the order, the
- * reason for each stage, and — the part that was actually missing — a
- * screen that says out loud that a new service is offered to nobody.
+ * THE ONLY PLACE A SERVICE IS EDITED. There was briefly a second one — the
+ * Services list expanded a row into a full editor — and two surfaces
+ * writing the same columns is how they drift: the same field with two
+ * labels, one of them validated, one of them quietly wrong. The list is now
+ * a list. This is the service.
+ *
+ * Not a wizard either, though it is ordered. A wizard owns you until you
+ * finish it, and the second service anybody creates does not need walking
+ * through anything. So every stage is open at once, any of them can be done
+ * in any order, leaving halfway loses nothing, and coming back a year later
+ * to change the price lands on the same screen that set it. The order is
+ * advice about what to decide first, not a gate.
  *
  * Nothing here is stored. Every stage's state is derived from the service's
  * own fields (see service-setup.ts), so this page cannot disagree with the
  * thing it describes.
  */
-export default function ServiceSetupPage() {
+export default function ServicePage() {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const base = `/api/admin/${slug}`;
 
@@ -49,6 +55,7 @@ export default function ServiceSetupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<StageId | null>(null);
+  const [retiring, setRetiring] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -127,7 +134,12 @@ export default function ServiceSetupPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Set up"
+        /* The eyebrow changes because the page's job does. On a service
+           straight out of + Add this is a setup screen; a year later it is
+           where you change the price. Same screen, and it should not keep
+           calling itself a wizard once there is nothing left to walk
+           through. */
+        eyebrow={outstanding === 0 ? 'Service' : 'Set up'}
         title={service.name}
         description={
           outstanding === 0
@@ -176,6 +188,39 @@ export default function ServiceSetupPage() {
           </StageRow>
         ))}
       </ol>
+
+      {/* Archiving lives at the foot of the service it archives, which is
+          where somebody looking for it will be. "Delete" is not offered and
+          never has been: a service with a booking against it cannot be
+          removed without orphaning history, so archiving is what deleting
+          has always meant here — said in the word that is true. */}
+      <div className="service-retire">
+        <div>
+          <p className="service-retire-label">
+            {service.active ? 'Stop offering this service' : 'This service is archived'}
+          </p>
+          <p className="service-retire-note">
+            {service.active
+              ? 'It comes off your booking page. Everything already booked stays exactly as it is, and you can bring it back at any time.'
+              : 'It is off your booking page. Past bookings are untouched.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={retiring}
+          onClick={async () => {
+            setRetiring(true);
+            try {
+              await patch({ active: !service.active });
+            } finally {
+              setRetiring(false);
+            }
+          }}
+        >
+          {retiring ? 'Saving…' : service.active ? 'Archive' : 'Restore'}
+        </button>
+      </div>
     </>
   );
 }

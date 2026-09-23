@@ -471,12 +471,15 @@ a.btn-secondary {
   font-weight: 600;
   cursor: pointer;
   border-radius: var(--radius);
-  border: 1px solid transparent;
+  /* Width and style only, never the `border` shorthand: these selectors
+     carry an element as well as a class, so a shorthand here outranks
+     .btn-secondary's own border-color and painted every anchor's edge
+     transparent — a button-shaped hole next to a real button doing the
+     same job. Colour stays where it belongs, on the class. */
+  border-width: 1px;
+  border-style: solid;
   padding: 12px 18px;
   min-height: 48px;
-}
-a.btn-primary,
-a.btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1768,32 +1771,28 @@ a.btn-secondary {
   display: flex;
   flex-direction: column;
 }
-.service-row {
-  border-bottom: 1px solid var(--border);
-}
-.service-row:last-child {
-  border-bottom: none;
-}
-.service-row-summary {
+
+/* A row is a link to the service, and nothing else.
+   It used to be a button that expanded a second copy of the service's whole
+   editor; two surfaces writing the same columns is how they drift, so the
+   list is a list now. One target, so there is no question of what clicking
+   a row does. */
+.service-row-link {
   display: flex;
   align-items: center;
   gap: 16px;
-  width: 100%;
-  padding: 16px 6px;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
+  padding: 15px 6px;
+  border-bottom: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
   transition: background 0.15s;
 }
-.service-row-summary:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
+.service-row-link:last-child {
+  border-bottom: none;
 }
-.service-row.expanded .service-row-summary {
-  background: var(--side);
+.service-row-link:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 .service-row-num {
   font-family: var(--font-heading);
@@ -1803,11 +1802,24 @@ a.btn-secondary {
   flex: 0 0 auto;
   width: 20px;
 }
+.service-row-body-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
 .service-row-name {
   font-weight: 600;
   font-size: 1rem;
-  flex: 1;
-  min-width: 0;
+}
+/* What is still unset on this service. Ochre and quiet: a half-built
+   service is a draft, not a fault — see .setup-stage-note for why this is
+   never red. */
+.service-row-unset {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--emphasis-ink);
 }
 .service-row-meta {
   font-size: 0.8rem;
@@ -1817,20 +1829,52 @@ a.btn-secondary {
 .service-row-chevron {
   flex: 0 0 auto;
   color: var(--faint);
-  transition: transform 0.15s;
-}
-.service-row.expanded .service-row-chevron {
-  transform: rotate(180deg);
 }
 @media (prefers-reduced-motion: reduce) {
-  .service-row-summary,
-  .service-row-chevron {
+  .service-row-link {
     transition: none;
   }
 }
-.service-row-body {
-  padding: 2px 6px 24px 42px;
+@media (max-width: 640px) {
+  .service-row-link {
+    flex-wrap: wrap;
+  }
+  .service-row-meta {
+    width: 100%;
+    padding-left: 36px;
+  }
 }
+
+/* Retiring a service, at the foot of its own page.
+   "Delete" is not offered and never has been: a service with a booking
+   against it cannot be removed without orphaning history, so archiving is
+   what deleting has always meant here. */
+.service-retire {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin-top: 26px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--side);
+}
+.service-retire-label {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.service-retire-note {
+  margin: 4px 0 0;
+  max-width: 62ch;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* The inline "create a service" row — a name field and a button, not a
    full form, matching the reference's minimal add-by-name flow. The new
    row lands expanded (see SessionsPage) so duration/buffers/audience get
@@ -4380,48 +4424,6 @@ body:has(.bk-embedded) {
   }
 }
 
-/* What is still unset on a service, on its row in the list.
-   Sits under the row rather than inside it: the row is a button that opens
-   the editor, and a link inside a button is a control nobody can operate
-   from a keyboard. Ochre only on the text that names a blocker — see
-   .setup-stage-note for why never red. */
-.service-setup-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 9px 18px 12px;
-  border-top: 1px dashed var(--rule);
-}
-.service-setup-line p {
-  margin: 0;
-  font-size: 0.83rem;
-  line-height: 1.45;
-  color: var(--emphasis-ink);
-}
-.service-setup-line .btn-link {
-  flex: 0 0 auto;
-  font-size: 0.83rem;
-}
-
-/* A gap that belongs to the whole business rather than to one service —
-   opening hours, or what people sent elsewhere are told. Above the list,
-   once, for the reason in the markup: five services sharing one set of
-   hours is one fact, and saying it five times is how a list stops being
-   read. Ochre when it stops everything, quiet when it does not. */
-.shared-gap {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  margin-bottom: 14px;
-  padding: 12px 16px;
-  border: 1px solid var(--soft-border);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
 .shared-gap.is-blocking {
   border-color: var(--emphasis);
   background: var(--emphasis-tint);
