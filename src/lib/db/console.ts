@@ -1,6 +1,7 @@
 import { BookingError } from '../booking-service';
 import { __unsafeServiceClient } from './client';
 import type { MemberRole, TenantPlan, TenantRow, TenantStatus } from './types';
+import { classifyError, type TenantFacts } from '../tenant-health';
 
 /**
  * The console's own data access — every query here is deliberately unscoped,
@@ -294,4 +295,123 @@ export async function removeTenantMember(tenantId: string, userId: string): Prom
     .eq('user_id', userId);
 
   if (error) throw error;
+}
+
+/**
+ * The health of every business on the platform, as shape rather than
+ * content.
+ *
+ * Every column read here is a count, a flag, a timestamp or an error
+ * string that is classified and discarded before it leaves this function.
+ * No names, no email addresses, no question wording, no answers, no client
+ * list. See src/lib/tenant-health.ts for why that constraint is cheap and
+ * what it is protecting.
+ *
+ * Six queries for the whole platform rather than six per business: a
+ * support screen that costs a round trip per tenant stops being opened.
+ */
+export async function loadPlatformHealth(sinceIso: string): Promise<Map<string, TenantFacts>> {
+  const client = __unsafeServiceClient();
+
+  const [tenants, services, rules, questions, bookings, responses] = await Promise.all([
+    client.from('tenants').select('id, created_at'),
+    client
+      .from('event_types')
+      .select('tenant_id, available_to_prospects, available_to_existing_clients')
+      .eq('active', true),
+    client.from('availability_rules').select('tenant_id'),
+    client.from('qualification_questions').select('tenant_id'),
+    client
+      .from('bookings')
+      .select('tenant_id, created_at, email_status, email_error, sync_status, sync_error')
+      .gte('created_at', sinceIso),
+    client.from('qualification_responses').select('tenant_id, started_at').gte('started_at', sinceIso),
+  ]);
+
+  for (const result of [tenants, services, rules, questions, bookings, responses]) {
+    if (result.error) throw result.error;
+  }
+
+  const facts = new Map<string, TenantFacts>();
+  for (const row of (tenants.data ?? []) as Array<{ id: string; created_at: string }>) {
+    facts.set(row.id, {
+      activeServices: 0,
+      servicesOfferedToNobody: 0,
+      availabilityRuleCount: 0,
+      questionCount: 0,
+      emailsFailed: 0,
+      emailErrorClasses: [],
+      syncsFailed: 0,
+      syncErrorClasses: [],
+      lastBookingAt: null,
+      lastEnquiryAt: null,
+      createdAt: row.created_at,
+    });
+  }
+
+  const bump = (id: string, change: (f: TenantFacts) => TenantFacts) => {
+    const current = facts.get(id);
+    if (current) facts.set(id, change(current));
+  };
+
+  for (const s of (services.data ?? []) as Array<{
+    tenant_id: string;
+    available_to_prospects: boolean;
+    available_to_existing_clients: boolean;
+  }>) {
+    const hidden = !s.available_to_prospects && !s.available_to_existing_clients;
+    bump(s.tenant_id, (f) => ({
+      ...f,
+      activeServices: f.activeServices + 1,
+      servicesOfferedToNobody: f.servicesOfferedToNobody + (hidden ? 1 : 0),
+    }));
+  }
+
+  for (const r of (rules.data ?? []) as Array<{ tenant_id: string }>) {
+    bump(r.tenant_id, (f) => ({ ...f, availabilityRuleCount: f.availabilityRuleCount + 1 }));
+  }
+
+  for (const q of (questions.data ?? []) as Array<{ tenant_id: string }>) {
+    bump(q.tenant_id, (f) => ({ ...f, questionCount: f.questionCount + 1 }));
+  }
+
+  for (const b of (bookings.data ?? []) as Array<{
+    tenant_id: string;
+    created_at: string;
+    email_status: string | null;
+    email_error: string | null;
+    sync_status: string | null;
+    sync_error: string | null;
+  }>) {
+    bump(b.tenant_id, (f) => {
+      const emailFailed = b.email_status === 'failed';
+      const syncFailed = b.sync_status === 'failed';
+      return {
+        ...f,
+        emailsFailed: f.emailsFailed + (emailFailed ? 1 : 0),
+        /* Classified here and the message dropped on the floor. This is the
+           only line in the file where anything free-text is touched, and
+           nothing derived from it survives the call. */
+        emailErrorClasses: emailFailed
+          ? [...f.emailErrorClasses, classifyError(b.email_error)]
+          : f.emailErrorClasses,
+        syncsFailed: f.syncsFailed + (syncFailed ? 1 : 0),
+        syncErrorClasses: syncFailed
+          ? [...f.syncErrorClasses, classifyError(b.sync_error)]
+          : f.syncErrorClasses,
+        lastBookingAt:
+          !f.lastBookingAt || b.created_at > f.lastBookingAt ? b.created_at : f.lastBookingAt,
+      };
+    });
+  }
+
+  for (const r of (responses.data ?? []) as Array<{ tenant_id: string; started_at: string }>) {
+    bump(r.tenant_id, (f) => ({
+      ...f,
+      lastEnquiryAt:
+        !f.lastEnquiryAt || r.started_at > f.lastEnquiryAt ? r.started_at : f.lastEnquiryAt,
+    }));
+  }
+
+  return facts;
 }

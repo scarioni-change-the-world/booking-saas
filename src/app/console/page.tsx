@@ -3,6 +3,25 @@
 import { useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
 
+interface Finding {
+  severity: 'stopped' | 'watch';
+  headline: string;
+  detail?: string;
+}
+
+interface HealthRow {
+  id: string;
+  slug: string;
+  name: string;
+  findings: Finding[];
+  activity: { lastBookingAt: string | null; lastEnquiryAt: string | null; activeServices: number } | null;
+}
+
+interface HealthPayload {
+  windowDays: number;
+  tenants: HealthRow[];
+}
+
 interface Tenant {
   id: string;
   slug: string;
@@ -31,6 +50,7 @@ const EMPTY_FORM = { slug: '', name: '', timezone: '', ownerEmail: '' };
 
 export default function ConsolePage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [health, setHealth] = useState<HealthPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,8 +92,14 @@ export default function ConsolePage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await adminFetchJson<{ tenants: Tenant[] }>('/api/console/tenants');
+      const [result, healthResult] = await Promise.all([
+        adminFetchJson<{ tenants: Tenant[] }>('/api/console/tenants'),
+        /* Non-critical: the list is still worth showing without it, so a
+           failure here leaves the panel out rather than the page. */
+        adminFetchJson<HealthPayload>('/api/console/health').catch(() => null),
+      ]);
       setTenants(result.tenants);
+      setHealth(healthResult);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -124,6 +150,18 @@ export default function ConsolePage() {
           {error}
         </div>
       )}
+
+      {/* What needs looking at, before the list of everybody.
+       *
+       * Counts, dates and fixed phrases — no client, no address, no
+       * question, no answer. That is not a limitation worked around: every
+       * support case worth chasing is a shape, and none of them need a
+       * name. Reading somebody's client list to discover they have no
+       * opening hours would be both a violation and a waste of time.
+       *
+       * Absent when nothing is wrong. A panel that says "all fine" every
+       * day is a panel nobody reads on the day it doesn't. */}
+      {health && <HealthPanel health={health} />}
 
       {creating && (
         <form className="card" onSubmit={submitCreate} style={{ marginBottom: 14 }}>
@@ -254,5 +292,84 @@ export default function ConsolePage() {
         })}
       </div>
     </>
+  );
+}
+
+/** "3 days ago", or "never". Dates, not contents. */
+function sinceLabel(iso: string | null): string {
+  if (!iso) return 'never';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
+
+function HealthPanel({ health }: { health: HealthPayload }) {
+  const needsLook = health.tenants.filter((t) => t.findings.length > 0);
+
+  if (needsLook.length === 0) {
+    return (
+      <div className="health-panel is-quiet">
+        <p>
+          Nothing needs looking at. {health.tenants.length}{' '}
+          {health.tenants.length === 1 ? 'business' : 'businesses'}, none of them stuck.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="health-panel">
+      <div className="health-panel-head">
+        <h2>Needs a look</h2>
+        <p>
+          {needsLook.length} of {health.tenants.length}, worst first. Configuration and
+          delivery only — never anybody&apos;s clients or answers.
+        </p>
+      </div>
+
+      <ul className="health-list">
+        {needsLook.map((tenant) => {
+          const stopped = tenant.findings.some((f) => f.severity === 'stopped');
+          return (
+            <li key={tenant.id} className={`health-row${stopped ? ' is-stopped' : ''}`}>
+              <div className="health-row-head">
+                <a className="health-row-name" href={`/console/${tenant.id}`}>
+                  {tenant.name}
+                </a>
+                {/* Their booking page is public, so this is the one place a
+                    support person can look at what a client sees without
+                    asking anybody's permission for anything. */}
+                <a
+                  className="health-row-visit"
+                  href={`/t/${tenant.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  See their booking page →
+                </a>
+              </div>
+
+              <ul className="health-findings">
+                {tenant.findings.map((finding) => (
+                  <li key={finding.headline} className={`is-${finding.severity}`}>
+                    <strong>{finding.headline}</strong>
+                    {finding.detail && <span>{finding.detail}</span>}
+                  </li>
+                ))}
+              </ul>
+
+              {tenant.activity && (
+                <p className="health-row-activity">
+                  Last booking {sinceLabel(tenant.activity.lastBookingAt)} · last enquiry{' '}
+                  {sinceLabel(tenant.activity.lastEnquiryAt)} · {tenant.activity.activeServices}{' '}
+                  {tenant.activity.activeServices === 1 ? 'service' : 'services'}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
