@@ -257,6 +257,9 @@ export async function sendBookingConfirmedEmail(
   tenant: TenantRow,
   scope: TenantScope,
   booking: BookingRow,
+  /** The booker's own access token, when they have a client record. See
+   *  the link it becomes, below. */
+  clientToken?: string | null,
 ): Promise<EmailStatus> {
   // Returned so the caller can tell the person who just booked the truth.
   // The confirmation screen used to state that an email was on its way
@@ -270,6 +273,23 @@ export async function sendBookingConfirmedEmail(
   const status = await sendClientEmail(tenant, scope, booking, 'booking_confirmed', {
     includeIcs: true,
     includeManageLink: true,
+    /* The way back, as distinct from the way to change this one
+       appointment.
+       
+       The manage link above is about this booking and dies with it. This is
+       the person's own door to the business, and without it somebody who
+       books once and returns a year later has nowhere to go but the public
+       page, where the questions treat them as a stranger. Only when they
+       have a client record — which, since booking now creates one, is
+       everybody. */
+    extraLinks: clientToken
+      ? [
+          {
+            label: `Book with ${tenant.name} again`,
+            url: clientBookingUrl(tenant.slug, clientToken),
+          },
+        ]
+      : undefined,
   });
 
   const settings = await loadTenantSettings(scope);

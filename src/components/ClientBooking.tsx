@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAutoResize } from './useAutoResize';
+import { DEFAULT_CURRENCY, formatMoney } from '@/lib/money';
 import { DateNavigator } from './booking/DateNavigator';
 import {
   downloadCalendar,
@@ -34,12 +35,22 @@ interface SingleType {
   durationMinutes: number;
 }
 
+/** A programme this client can buy — not one they already hold. */
+interface PackType {
+  id: string;
+  name: string;
+  durationMinutes: number;
+  packSize: number;
+  priceMinor: number | null;
+}
+
 /** One thing this client can pick from — either a package to redeem from or
  * a one-off session to book outright. Distinguished by `kind` rather than
  * two parallel lists everywhere downstream needs to branch on. */
 type Option =
   | ({ kind: 'package' } & Entitlement)
-  | ({ kind: 'single' } & SingleType);
+  | ({ kind: 'single' } & SingleType)
+  | ({ kind: 'programme' } & PackType);
 
 /**
  * The service an option books against.
@@ -53,6 +64,22 @@ type Option =
  */
 export function serviceIdOf(option: Option): string {
   return option.kind === 'package' ? option.eventTypeId : option.id;
+}
+
+/**
+ * How many times this option lets you pick, and whether you must pick them
+ * all.
+ *
+ * A package you hold is spent at your own pace — one session today, three
+ * next month — so anything from one up to the balance is a valid choice. A
+ * programme you are buying is sold as a whole: ten appointments booked
+ * together is what a pack IS here (one INSERT, one exclusion constraint,
+ * all or none), so the button stays shut until all of them are chosen.
+ */
+export function pickRule(option: Option): { cap: number; exact: boolean } {
+  if (option.kind === 'package') return { cap: option.remaining, exact: false };
+  if (option.kind === 'programme') return { cap: option.packSize, exact: true };
+  return { cap: 1, exact: true };
 }
 
 interface BatchResult {
@@ -135,6 +162,9 @@ export default function ClientBooking({ slug, token }: Props) {
   const [clientName, setClientName] = useState('');
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [singleTypes, setSingleTypes] = useState<SingleType[]>([]);
+  /** Programmes offered to existing clients — ones to buy, not ones held. */
+  const [packTypes, setPackTypes] = useState<PackType[]>([]);
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [option, setOption] = useState<Option | null>(null);
 
   const [days, setDays] = useState<DaySlots[]>([]);
@@ -163,6 +193,8 @@ export default function ClientBooking({ slug, token }: Props) {
           client: { name: string };
           entitlements: Entitlement[];
           singleEventTypes: SingleType[];
+          packEventTypes: PackType[];
+          currency: string;
         }>(`${base}/client/${encodeURIComponent(token)}`);
         if (cancelled) return;
 
@@ -170,10 +202,17 @@ export default function ClientBooking({ slug, token }: Props) {
         const withBalance = result.entitlements.filter((e) => e.remaining > 0);
         setEntitlements(withBalance);
         setSingleTypes(result.singleEventTypes);
+        setPackTypes(result.packEventTypes ?? []);
+        setCurrency(result.currency ?? DEFAULT_CURRENCY);
 
+        /* Order is the argument. What they already paid for comes first,
+           then a single session, then a new programme — cheapest
+           commitment to largest, and a balance they are owed above
+           anything that asks them to buy again. */
         const options: Option[] = [
           ...withBalance.map((e): Option => ({ kind: 'package', ...e })),
           ...result.singleEventTypes.map((t): Option => ({ kind: 'single', ...t })),
+          ...(result.packEventTypes ?? []).map((t): Option => ({ kind: 'programme', ...t })),
         ];
 
         if (options.length === 0) {
@@ -216,11 +255,14 @@ export default function ClientBooking({ slug, token }: Props) {
         client: { name: string };
         entitlements: Entitlement[];
         singleEventTypes: SingleType[];
+        packEventTypes: PackType[];
+        currency: string;
       }>(`${base}/client/${encodeURIComponent(token)}`);
 
       const withBalance = result.entitlements.filter((e) => e.remaining > 0);
       setEntitlements(withBalance);
       setSingleTypes(result.singleEventTypes);
+      setPackTypes(result.packEventTypes ?? []);
 
       // Straight back into the package they were already spending, when it
       // still has something on it. Anything else is a step for its own sake.
@@ -231,7 +273,10 @@ export default function ClientBooking({ slug, token }: Props) {
 
       if (same) {
         chooseOption({ kind: 'package', ...same });
-      } else if (withBalance.length + result.singleEventTypes.length === 0) {
+      } else if (
+        withBalance.length + result.singleEventTypes.length + (result.packEventTypes?.length ?? 0) ===
+        0
+      ) {
         setStep('nothing-to-book');
       } else {
         setOption(null);
@@ -244,7 +289,7 @@ export default function ClientBooking({ slug, token }: Props) {
 
   function chooseOption(chosen: Option) {
     setOption(chosen);
-    setStep(chosen.kind === 'package' ? 'pick-times' : 'pick-time-single');
+    setStep(chosen.kind === 'single' ? 'pick-time-single' : 'pick-times');
   }
 
   const loadAvailability = useCallback(
@@ -272,12 +317,46 @@ export default function ClientBooking({ slug, token }: Props) {
   }, [step, option, loadAvailability]);
 
   function toggleSlot(iso: string) {
-    if (!option || option.kind !== 'package') return;
+    if (!option || option.kind === 'single') return;
+    const { cap } = pickRule(option);
     setSelected((prev) => {
       if (prev.includes(iso)) return prev.filter((s) => s !== iso);
-      if (prev.length >= option.remaining) return prev; // at the cap
+      if (prev.length >= cap) return prev; // at the cap
       return [...prev, iso];
     });
+  }
+
+  /** Buying a programme: every appointment at once, or none. */
+  async function submitProgramme() {
+    if (!option || option.kind !== 'programme') return;
+    if (selected.length !== option.packSize) return;
+    setBusy(true);
+    setStep('booking');
+    setError(null);
+    try {
+      const result = await postJson<{ bookings: BatchResult['booking'][] }>(
+        `${base}/client/${encodeURIComponent(token)}/programmes`,
+        { eventTypeId: option.id, slots: selected },
+      );
+      /* Shaped into the same results the redemption path produces, so the
+         confirmation screen has one thing to render rather than two. The
+         server books all of them or none, so every one of these is
+         'booked'. */
+      setResults(
+        (result.bookings ?? []).map((booking) => ({
+          startsAt: booking!.startsAt,
+          status: 'booked' as const,
+          booking,
+        })),
+      );
+      setRemaining(0);
+      setStep('done');
+    } catch (cause) {
+      setError((cause as Error).message);
+      setStep('pick-times');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function submitBatch() {
@@ -333,7 +412,7 @@ export default function ClientBooking({ slug, token }: Props) {
   };
 
   const activeDay = days.find((d) => d.date === selectedDate) ?? null;
-  const multipleOptions = entitlements.length + singleTypes.length > 1;
+  const multipleOptions = entitlements.length + singleTypes.length + packTypes.length > 1;
 
   function backToOptions() {
     setOption(null);
@@ -443,7 +522,119 @@ export default function ClientBooking({ slug, token }: Props) {
                 </button>
               </li>
             ))}
+            {/* Buying again. Last in the list on purpose: a balance they
+                already hold, and a single session, both ask less of them
+                than committing to another programme. */}
+            {packTypes.map((t) => (
+              <li key={`programme-${t.id}`}>
+                <button
+                  type="button"
+                  className="bk-service-option"
+                  onClick={() => chooseOption({ kind: 'programme', ...t })}
+                >
+                  <span className="bk-service-option-main">
+                    <span className="bk-service-option-name">{t.name}</span>
+                    <span className="bk-service-option-facts">
+                      {t.packSize} appointments · {t.durationMinutes} minutes each
+                    </span>
+                  </span>
+                  {t.priceMinor !== null && (
+                    <span className="bk-service-option-price">
+                      {formatMoney(t.priceMinor, currency)}
+                      <span className="bk-service-option-per">per session</span>
+                    </span>
+                  )}
+                  <span className="bk-service-option-go" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+              </li>
+            ))}
           </ul>
+        </section>
+      )}
+
+      {step === 'pick-times' && option?.kind === 'programme' && (
+        <section>
+          <h1 className="bk-heading">Choose your {option.packSize} times</h1>
+          <p className="bk-lede">
+            Pick every appointment now and they are all booked together. You can change any one
+            of them afterwards without affecting the rest.
+          </p>
+
+          {busy && days.length === 0 && (
+            <p className="bk-status" role="status">
+              Finding available times…
+            </p>
+          )}
+
+          {!busy && days.length === 0 && (
+            <p className="bk-empty">No times are available in the next few weeks.</p>
+          )}
+
+          {days.length > 0 && (
+            <TimesPicker
+              days={days}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              activeDay={activeDay}
+              dowFormat={dowFormat}
+              formatDay={formatDay}
+              formatTimeRange={formatTimeRange}
+              durationMinutes={option.durationMinutes}
+              isPicked={(iso) => selected.includes(iso)}
+              isFull={(iso) => !selected.includes(iso) && selected.length >= option.packSize}
+              onPick={toggleSlot}
+              expandedPeriods={expandedPeriods}
+              onExpand={(key) => setExpandedPeriods((prev) => ({ ...prev, [key]: true }))}
+            />
+          )}
+
+          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+
+          <div className="bk-pack-bar">
+            <div>
+              <p className="bk-pack-count" aria-live="polite">
+                {selected.length} of {option.packSize} chosen
+              </p>
+              {selected.length > 0 && (
+                <ol className="bk-pack-list">
+                  {selected.map((iso) => (
+                    <li key={iso}>
+                      <span>
+                        {formatDay(iso.slice(0, 10))}, {timeFormat.format(new Date(iso))}
+                      </span>
+                      <button
+                        type="button"
+                        className="bk-pack-remove"
+                        onClick={() => toggleSlot(iso)}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn-primary btn-full"
+              disabled={selected.length !== option.packSize || busy}
+              onClick={submitProgramme}
+            >
+              {selected.length === option.packSize
+                ? `Book all ${option.packSize}`
+                : `Choose ${option.packSize - selected.length} more`}
+            </button>
+          </div>
+
+          {multipleOptions && (
+            <p className="bk-after">
+              <button type="button" className="bk-textlink" onClick={backToOptions}>
+                Choose something else
+              </button>
+            </p>
+          )}
         </section>
       )}
 

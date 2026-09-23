@@ -265,6 +265,25 @@ export async function createBooking(
   const startsAt = DateTime.fromISO(input.startsAt, { zone: 'utc' });
   const endsAt = startsAt.plus({ minutes: eventType.duration_minutes });
 
+  /* Booking is what makes somebody a client, not buying ten sessions.
+     
+     Only a programme created a clients row before, which meant a person who
+     booked a single appointment had no record, no private link, and
+     therefore no way back: months later, wanting to work with the same
+     photographer again, their only door was the public page, where they
+     answered the screening questions as a stranger. Everybody who books
+     now gets the record and the link.
+
+     What is on that link is still entirely the business's decision — a
+     service reaches an existing client only if they ticked "Offered to
+     existing clients" for it. So this grants a way back, not a way past
+     the questions.
+
+     Best effort, deliberately, and for the same reason as the programme
+     version: the appointment is what the person came for, and failing to
+     file the paperwork around it must not lose the booking. */
+  let client: ClientRow | null = input.clientId ? null : await findClientQuietly(scope, input);
+
   const { data, error } = await scope.insert('bookings', {
     event_type_id: eventType.id,
     manage_token: generateManageToken(),
@@ -274,7 +293,7 @@ export async function createBooking(
     email: input.email,
     notes: input.notes ?? null,
     qualification_response_id: input.qualificationResponseId ?? null,
-    client_id: input.clientId ?? null,
+    client_id: input.clientId ?? client?.id ?? null,
     sync_status: 'pending',
   });
 
@@ -294,13 +313,48 @@ export async function createBooking(
   // once the calendar side of it actually exists (or has definitively
   // failed to) means the email a client receives never shows a stale
   // "no meeting link yet" for a booking that was synced a moment later.
-  const emailStatus = await sendBookingConfirmedEmail(tenant, scope, synced);
+  /* An existing client booking through their own link already holds it, so
+     re-reading their row to put the same address in their inbox would be a
+     query to tell them something they clicked on. */
+  if (!client && input.clientId) client = await loadClientQuietly(scope, input.clientId);
+
+  const emailStatus = await sendBookingConfirmedEmail(
+    tenant,
+    scope,
+    synced,
+    client?.access_token ?? null,
+  );
 
   // The row in the database now carries this, written by the send itself —
   // but `synced` was read before that update, so it still holds 'pending'.
   // Returning the real outcome saves the caller a re-read, and is what lets
   // the confirmation screen say whether an email is actually coming.
   return { ...synced, email_status: emailStatus };
+}
+
+/** findOrCreateClient, but a failure is logged and swallowed. */
+async function findClientQuietly(
+  scope: TenantScope,
+  input: { name: string; email: string },
+): Promise<ClientRow | null> {
+  try {
+    return await findOrCreateClient(scope, input.name, input.email);
+  } catch (cause) {
+    console.error('[bookings] could not set up the client record for a booking:', cause);
+    return null;
+  }
+}
+
+async function loadClientQuietly(
+  scope: TenantScope,
+  clientId: string,
+): Promise<ClientRow | null> {
+  try {
+    const { data } = await scope.select('clients').eq('id', clientId).maybeSingle();
+    return (data as unknown as ClientRow | null) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**

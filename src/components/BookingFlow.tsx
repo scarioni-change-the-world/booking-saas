@@ -120,6 +120,26 @@ export default function BookingFlow({ slug, mode }: Props) {
           </div>
         </div>
 
+        {/* The door for somebody who has been here before.
+         *
+         * Everything above this line assumes a stranger: the questions
+         * exist to find out who somebody is, and they are exactly the wrong
+         * thing to put in front of a client of three years who wants to
+         * book again. Their own link skips all of it — but it arrived by
+         * email once, and a year later they are on this page because it is
+         * the one they can find.
+         *
+         * Only while they are still at the start. Offering "have you been
+         * here before?" to somebody halfway through choosing a time is an
+         * invitation to abandon what they are doing, and on the
+         * confirmation screen it would be nonsense. */}
+        {(journey.phase === 'service' || journey.phase === 'email') && (
+          <p className="bk-returning">
+            Worked with {journey.config?.name ?? 'us'} before?{' '}
+            <a href={`/t/${slug}/client`}>Get your booking link</a> and skip the questions.
+          </p>
+        )}
+
         {/* The only place intro speaks on this page, and it speaks quietly.
             Lowercase always; the wordmark treatment is reserved for here and
             never lent to the business's own name above. */}
