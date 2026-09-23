@@ -12,6 +12,7 @@ import {
 
 /** A service with everything decided. Tests take this and remove one thing. */
 const complete: ServiceFacts = {
+  id: 'svc-1',
   name: 'Career coaching',
   description: 'A first conversation about where you want to get to.',
   durationMinutes: 50,
@@ -31,6 +32,7 @@ const complete: ServiceFacts = {
 
 /** What "+ Add" actually produces: a name, and defaults for everything else. */
 const justCreated: ServiceFacts = {
+  id: 'svc-2',
   name: 'Website design',
   description: null,
   durationMinutes: 30,
@@ -220,7 +222,7 @@ describe('where the work happens', () => {
 
   it('sends the big ones to the screens that already exist', () => {
     const stages = setupStages(complete);
-    expect(stages.find((s) => s.id === 'questions')!.href).toBe('screening');
+    expect(stages.find((s) => s.id === 'questions')!.href).toBe('screening?service=svc-1');
     expect(stages.find((s) => s.id === 'availability')!.href).toBe('availability');
     expect(stages.find((s) => s.id === 'messages')!.href).toBe('screening/next-steps');
   });
@@ -297,5 +299,22 @@ describe('what belongs to the business rather than the service', () => {
   it('still reports the business-wide gap on the service page, where all six show', () => {
     const stages = setupStages({ ...complete, availabilityRuleCount: 0 });
     expect(summarise(stages)).toContain('No opening hours');
+  });
+});
+
+describe('where the Questions stage sends you', () => {
+  it('points at this service, not at the whole question set', () => {
+    const stages = setupStages({ ...complete, id: 'svc-9' });
+    expect(stages.find((s) => s.id === 'questions')!.href).toBe('screening?service=svc-9');
+  });
+
+  it('points there whether or not the service has any questions yet', () => {
+    const none = setupStages({ ...complete, ownQuestionCount: 0, globalQuestionCount: 0 });
+    expect(none.find((s) => s.id === 'questions')!.href).toBe('screening?service=svc-1');
+  });
+
+  it('escapes an id rather than pasting it into a URL', () => {
+    const stages = setupStages({ ...complete, id: 'a b&c' });
+    expect(stages.find((s) => s.id === 'questions')!.href).toBe('screening?service=a%20b%26c');
   });
 });

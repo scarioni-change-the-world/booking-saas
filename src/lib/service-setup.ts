@@ -21,6 +21,9 @@
 export type StageId = 'service' | 'questions' | 'rules' | 'availability' | 'messages' | 'review';
 
 export interface ServiceFacts {
+  /** Needed so the Questions stage can link at this service rather than at
+   *  the whole question set. See questionsStage. */
+  id: string;
   name: string;
   description: string | null;
   durationMinutes: number;
@@ -126,7 +129,7 @@ function questionsStage(facts: ServiceFacts): Stage {
       done: false,
       note: 'Nobody is asked anything. This service is a calendar with a booking form in front of it.',
       blocking: false,
-      href: 'screening',
+      href: `screening?service=${encodeURIComponent(facts.id)}`,
       scope: 'service',
     };
   }
@@ -141,7 +144,11 @@ function questionsStage(facts: ServiceFacts): Stage {
         ? `Asked the ${facts.globalQuestionCount} questions every service asks. Nothing specific to this one.`
         : '',
     blocking: false,
-    href: 'screening',
+    /* At this service, not at the question set. The screen shows the
+       shared questions and this one's own together — which is the order a
+       client meets them in — but it arrives already knowing which service
+       you came from, rather than asking you to find it in a dropdown. */
+    href: `screening?service=${encodeURIComponent(facts.id)}`,
     scope: 'service',
   };
 }

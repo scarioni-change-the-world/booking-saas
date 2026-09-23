@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
 
@@ -232,6 +232,17 @@ function estimateMinutes(count: number): number {
 interface EventTypeOption {
   id: string;
   name: string;
+  /**
+   * Whether new enquiries are offered this at all.
+   *
+   * Kept rather than filtered on. The picker used to drop everything that
+   * was not prospect-facing, which made the documented setup order
+   * impossible to follow: questions are the second thing you decide about
+   * a service and going live is the last, so a service you are in the
+   * middle of setting up was never in the list you were sent to. It is
+   * listed now, and the page says plainly that nobody is being asked yet.
+   */
+  availableToProspects: boolean;
 }
 
 interface Draft {
@@ -401,7 +412,10 @@ function AiSetupCard({
         that one — leave it as &quot;No particular one&quot; and they&apos;ll apply to every service.
       </p>
 
-      {eventTypes.length > 1 && (
+      {/* > 0, not > 1: the paragraph above promises "pick a service below",
+          and above a single service the control it promises was not
+          rendered — the copy describing a thing that is not on screen. */}
+      {eventTypes.length > 0 && (
         <div className="field">
           <label htmlFor="ai-event-type">Which service is this for?</label>
           <select id="ai-event-type" value={eventTypeId} onChange={(e) => setEventTypeId(e.target.value)}>
@@ -729,10 +743,16 @@ export default function ScreeningQuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Which service's own questions are showing alongside the shared ones —
-  // '' means just the shared list (migration 0016). Hidden entirely for a
-  // single-service tenant, where the distinction is moot.
-  const [viewServiceId, setViewServiceId] = useState('');
+  /* Which service's own questions are showing alongside the shared ones —
+     '' means just the shared list (migration 0016).
+
+     Seeded from the URL so a service's own page can send you here already
+     pointed at it, rather than at a dropdown you have to find yourself.
+     Read once on mount, like the Enquiries filter: after that the picker
+     owns it, and rewriting the address bar on every change would fill the
+     back button with dead entries between here and the service. */
+  const search = useSearchParams();
+  const [viewServiceId, setViewServiceId] = useState(search.get('service') ?? '');
 
   // Only one create form open at a time, and it knows which of the two
   // sections it belongs to — 'global' saves with no eventTypeId, 'service'
@@ -768,8 +788,12 @@ export default function ScreeningQuestionsPage() {
       .then((result) =>
         setEventTypes(
           result.eventTypes
-            .filter((t) => t.active && t.availableToProspects)
-            .map((t) => ({ id: t.id, name: t.name })),
+            .filter((t) => t.active)
+            .map((t) => ({
+              id: t.id,
+              name: t.name,
+              availableToProspects: t.availableToProspects,
+            })),
         ),
       )
       .catch(() => {
@@ -777,6 +801,16 @@ export default function ScreeningQuestionsPage() {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable for the life of this page
   }, [slug]);
+
+  /* A link can outlive the service it points at — a bookmark, or a service
+     archived since. Without this the page kept the dead id and rendered
+     "Asked only for " with nothing after it, over an empty list. Waits for
+     the services to arrive before judging, so the seeded id is not wiped
+     before there is anything to check it against. */
+  useEffect(() => {
+    if (eventTypes.length === 0 || !viewServiceId) return;
+    if (!eventTypes.some((t) => t.id === viewServiceId)) setViewServiceId('');
+  }, [eventTypes, viewServiceId]);
 
   function startCreate(scope: 'global' | 'service') {
     setForm(EMPTY_FORM);
@@ -874,7 +908,8 @@ export default function ScreeningQuestionsPage() {
 
   const globalQuestions = questions.filter((q) => q.eventTypeId === null);
   const serviceQuestions = viewServiceId ? questions.filter((q) => q.eventTypeId === viewServiceId) : [];
-  const viewServiceName = eventTypes.find((t) => t.id === viewServiceId)?.name ?? '';
+  const viewService = eventTypes.find((t) => t.id === viewServiceId) ?? null;
+  const viewServiceName = viewService?.name ?? '';
   // What a prospect booking the viewed service would actually be asked —
   // shared questions, then that service's own, same order the widget uses.
   const previewQuestions = viewServiceId ? [...globalQuestions, ...serviceQuestions] : globalQuestions;
@@ -974,7 +1009,7 @@ export default function ScreeningQuestionsPage() {
               </p>
             )}
 
-            <div className="surface surface-flush" style={{ marginBottom: eventTypes.length > 1 ? 26 : 0 }}>
+            <div className="surface surface-flush" style={{ marginBottom: eventTypes.length > 0 ? 26 : 0 }}>
               {globalQuestions.map((q, i) => (
                 <QuestionRow
                   key={q.id}
@@ -986,7 +1021,12 @@ export default function ScreeningQuestionsPage() {
               ))}
             </div>
 
-            {eventTypes.length > 1 && (
+            {/* Shown for one service as readily as for five. It used to
+                appear only above one, on the reasoning that the distinction
+                is moot for a single-service business — but a business with
+                one service that wants to ask it something specific had no
+                way to say so, and no way to discover there was one. */}
+            {eventTypes.length > 0 && (
               <>
                 <div className="field" style={{ maxWidth: 320 }}>
                   <label htmlFor="view-service">Also show one service&apos;s own questions</label>
@@ -1030,6 +1070,21 @@ export default function ScreeningQuestionsPage() {
                     <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 10px' }}>
                       Shown after the shared questions above, only when someone books this service.
                     </p>
+
+                    {/* Writing questions for a service nobody is offered yet
+                        is the normal case, not a mistake: questions are the
+                        second thing you decide and going live is the last.
+                        Said so it does not look like the questions are not
+                        working. */}
+                    {viewService && !viewService.availableToProspects && (
+                      <p className="notice notice-muted" style={{ marginBottom: 12 }}>
+                        Nobody is being asked these yet — {viewServiceName} isn&apos;t offered to
+                        new enquiries.{' '}
+                        <a href={`/admin/${slug}/sessions/${viewServiceId}`}>
+                          Finish setting it up →
+                        </a>
+                      </p>
+                    )}
 
                     {creatingScope === 'service' && (
                       <form

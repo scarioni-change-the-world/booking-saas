@@ -30,6 +30,7 @@ interface SetupPayload extends SharedSetupFacts {
 
 function factsFor(service: ServiceWithCounts, shared: SharedSetupFacts) {
   return {
+    id: service.id,
     name: service.name,
     description: service.description,
     durationMinutes: service.durationMinutes,
