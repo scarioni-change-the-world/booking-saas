@@ -30,6 +30,9 @@ interface ResponseItem {
   completedAt: string | null;
   outcomePathType: PathType | null;
   answers: AnsweredQuestion[];
+  /** Already a client when they started answering — repeat business, not a
+   *  new enquiry. */
+  returning: boolean;
 }
 
 interface Funnel {
@@ -37,6 +40,7 @@ interface Funnel {
   completed: number;
   meeting: number;
   other: number;
+  returning: number;
 }
 
 interface QuestionInsight {
@@ -59,11 +63,12 @@ interface ServiceInsight {
 /* "Aligned" and "Other path" survived the vocabulary sweep by being in an
    array of labels rather than in markup. Same words the Overview figures
    use, so a figure and the list it opens agree. */
-const FILTERS: { key: 'all' | Status; label: string }[] = [
+const FILTERS: { key: 'all' | Status | 'returning'; label: string }[] = [
   { key: 'all', label: 'Everyone' },
   { key: 'meeting', label: 'Went on to book' },
   { key: 'other', label: 'Sent somewhere else' },
   { key: 'in-progress', label: 'Still answering' },
+  { key: 'returning', label: 'Already worked with you' },
 ];
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -110,8 +115,11 @@ export default function EnquiriesPage() {
      dozen dead entries in the back button between here and Overview. */
   const search = useSearchParams();
   const requested = search.get('show');
-  const [filter, setFilter] = useState<'all' | Status>(
-    requested === 'meeting' || requested === 'other' || requested === 'in-progress'
+  const [filter, setFilter] = useState<'all' | Status | 'returning'>(
+    requested === 'meeting' ||
+      requested === 'other' ||
+      requested === 'in-progress' ||
+      requested === 'returning'
       ? requested
       : 'all',
   );
@@ -147,10 +155,14 @@ export default function EnquiriesPage() {
 
   const inProgress = funnel ? funnel.started - funnel.completed : 0;
 
-  const filtered = useMemo(
-    () => (filter === 'all' ? responses : responses.filter((r) => statusOf(r) === filter)),
-    [responses, filter],
-  );
+  const filtered = useMemo(() => {
+    if (filter === 'all') return responses;
+    /* 'returning' cuts across the other three rather than sitting beside
+       them — somebody who came back also went on to book, or did not — so
+       it filters on its own axis. */
+    if (filter === 'returning') return responses.filter((r) => r.returning);
+    return responses.filter((r) => statusOf(r) === filter);
+  }, [responses, filter]);
 
   return (
     <div>
@@ -161,7 +173,7 @@ export default function EnquiriesPage() {
       <PageHeader
         eyebrow="Enquiries"
         title="What the questions are telling you"
-        description="The last 30 days: who answered, which questions are turning people away, and how each service is doing."
+        description="The last 30 days. The figures below count new enquiries — people you had not worked with before — because that is what the questions are for. Anyone who came back is counted on their own."
       />
 
       {error && (
@@ -195,6 +207,16 @@ export default function EnquiriesPage() {
             <div className="stat-block" style={{ flex: '1 1 140px' }}>
               <span className="stat-block-value">{inProgress}</span>
               <span className="stat-block-label">Still answering</span>
+            </div>
+            {/* Not part of the funnel, and shown beside it rather than
+                inside it. Somebody you have already worked with answering
+                the questions again is repeat business — a good number, and
+                a different one. Counting them as fresh acquisition made
+                every conversion rate on this page read better than the
+                truth. */}
+            <div className="stat-block" style={{ flex: '1 1 140px' }}>
+              <span className="stat-block-value">{funnel.returning}</span>
+              <span className="stat-block-label">Already worked with you</span>
             </div>
           </div>
 
@@ -329,6 +351,13 @@ export default function EnquiriesPage() {
                             Started {relativeTime(r.startedAt)}
                           </div>
                         </div>
+                        {r.returning && (
+                          /* Says which of these numbers this row is not
+                             part of. Quiet — this is a good thing that
+                             happened, just not the thing the figures
+                             above are counting. */
+                          <span className="returning-mark">Worked with you before</span>
+                        )}
                         <span className={`response-status-pill ${status}`}>{STATUS_LABEL[status]}</span>
                       </button>
 

@@ -22,7 +22,13 @@ interface Overview {
   upcomingCount: number;
   thisWeekCount: number;
   needsAttentionCount: number;
-  last30Days: { started: number; completed: number; meeting: number; other: number };
+  last30Days: {
+    started: number;
+    completed: number;
+    meeting: number;
+    other: number;
+    returning: number;
+  };
   nextUp: NextUpBooking[];
   calendarStatus: 'not_connected' | 'active' | 'needs_reconnect' | 'revoked';
 }
@@ -241,24 +247,41 @@ export default function OverviewPage() {
           <div className="stat-row">
             <Stat label="Upcoming" value={data.upcomingCount} />
             <Stat label="This week" value={data.thisWeekCount} />
+            {/* "New enquiries" rather than plain "Last 30 days", because
+                these three now exclude people you had already worked with.
+                Without the word, somebody comparing "Went on to book" with
+                their own diary would find it short and have no way to know
+                why — and a figure you cannot reconcile is one you stop
+                trusting. The returning half is on Enquiries, counted on its
+                own. */}
             <Stat
               label="Finished the questions"
               value={completionRate(data.last30Days.started, data.last30Days.completed)}
-              note="Last 30 days"
+              note="New enquiries · 30 days"
               href={`/admin/${slug}/enquiries`}
             />
             <Stat
               label="Went on to book"
               value={data.last30Days.meeting}
-              note="Last 30 days"
+              note="New enquiries · 30 days"
               href={`/admin/${slug}/enquiries?show=meeting`}
             />
             <Stat
               label="Sent somewhere else"
               value={data.last30Days.other}
-              note="Last 30 days"
+              note="New enquiries · 30 days"
               href={`/admin/${slug}/enquiries?show=other`}
             />
+            {/* Only when there is some. A business with no repeat custom
+                yet does not need a zero explaining an absence. */}
+            {data.last30Days.returning > 0 && (
+              <Stat
+                label="Worked with you before"
+                value={data.last30Days.returning}
+                note="Booked again · 30 days"
+                href={`/admin/${slug}/enquiries?show=returning`}
+              />
+            )}
           </div>
 
           {/* One sentence does not need a panel with a heading repeating the

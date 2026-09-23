@@ -144,3 +144,51 @@ export function share(part: number, whole: number): number {
   if (whole <= 0) return 0;
   return Math.round((part / whole) * 100);
 }
+
+/* ── New, or somebody you already know ─────────────────────────────────── */
+
+/**
+ * When each email first became somebody this business knew, lowercased.
+ *
+ * Built from the clients table, whose rows are created the moment anybody
+ * books (see createBooking) or when an admin adds someone by hand. Either
+ * way it is the point at which a stranger stopped being one.
+ */
+export type KnownSince = ReadonlyMap<string, string>;
+
+export function knownSinceMap(
+  rows: ReadonlyArray<{ email: string; created_at: string }>,
+): KnownSince {
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    const key = row.email.trim().toLowerCase();
+    const seen = map.get(key);
+    // The earliest, if a tenant somehow holds two rows for one address.
+    if (!seen || row.created_at < seen) map.set(key, row.created_at);
+  }
+  return map;
+}
+
+/**
+ * Was this person already a client when they filled the questionnaire in?
+ *
+ * The comparison is against when they answered, not against now, and that
+ * is the whole subtlety. Everybody who books becomes a client, so by the
+ * time anybody reads this screen a successful first-time enquirer is a
+ * client too — asking "are they a client?" would count every conversion as
+ * repeat business. Asking "were they one *before* they started answering?"
+ * separates the stranger who has since joined from the customer of three
+ * years who came back through the front door.
+ *
+ * No email means no way to tell, and the honest answer is new: a response
+ * abandoned before the email step is exactly the anonymous enquiry the
+ * funnel exists to count.
+ */
+export function alreadyKnown(
+  response: { email: string | null; startedAt: string },
+  knownSince: KnownSince,
+): boolean {
+  if (!response.email) return false;
+  const since = knownSince.get(response.email.trim().toLowerCase());
+  return since !== undefined && since < response.startedAt;
+}

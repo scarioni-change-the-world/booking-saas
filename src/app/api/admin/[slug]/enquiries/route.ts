@@ -41,12 +41,21 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       ]),
     );
 
-    const analysed = responses.map((r) => ({
-      eventTypeId: r.eventTypeId,
-      completedAt: r.completedAt,
-      outcomePathType: r.outcomePathType,
-      answers: Array.isArray(r.answers) ? (r.answers as AnswerSnapshot[]) : [],
-    }));
+    /* New enquiries only.
+     *
+     * Both breakdowns exist to tune screening — which question turns
+     * strangers away, which service converts them — and a customer of
+     * three years answering again is not being screened, they are being
+     * inconvenienced. Leaving them in would move the numbers the business
+     * acts on for a reason that has nothing to do with the questions. */
+    const analysed = responses
+      .filter((r) => !r.returning)
+      .map((r) => ({
+        eventTypeId: r.eventTypeId,
+        completedAt: r.completedAt,
+        outcomePathType: r.outcomePathType,
+        answers: Array.isArray(r.answers) ? (r.answers as AnswerSnapshot[]) : [],
+      }));
 
     return ok({
       stats,

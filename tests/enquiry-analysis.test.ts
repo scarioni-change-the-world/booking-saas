@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  analyseQuestions,
-  analyseServices,
-  share,
-  type AnalysedResponse,
-} from '@/lib/enquiry-analysis';
+import { alreadyKnown, analyseQuestions, analyseServices, knownSinceMap, share, type AnalysedResponse } from '@/lib/enquiry-analysis';
 
 const BUDGET = 'What is your budget?';
 const TIMING = 'When would you like to start?';
@@ -162,5 +157,49 @@ describe('share', () => {
   it('is zero rather than NaN when nothing has happened yet', () => {
     expect(share(0, 0)).toBe(0);
     expect(share(5, 0)).toBe(0);
+  });
+});
+
+describe('telling a stranger from somebody you already know', () => {
+  const known = knownSinceMap([
+    { email: 'Maya@Example.com', created_at: '2026-01-10T09:00:00Z' },
+    { email: 'sam@example.com', created_at: '2026-06-01T09:00:00Z' },
+  ]);
+
+  it('matches regardless of how the address was typed', () => {
+    expect(alreadyKnown({ email: 'MAYA@example.com ', startedAt: '2026-08-01T00:00:00Z' }, known))
+      .toBe(true);
+  });
+
+  it('counts somebody who was already a client when they answered', () => {
+    expect(alreadyKnown({ email: 'maya@example.com', startedAt: '2026-08-01T00:00:00Z' }, known))
+      .toBe(true);
+  });
+
+  it('does not count a first-time enquirer who became a client by booking', () => {
+    /* The trap. Everybody who books gets a clients row, so by the time
+       anybody reads this screen a successful first-time enquirer IS a
+       client — and asking "are they a client?" would file every conversion
+       under repeat business. The question is whether they were one before
+       they started answering. */
+    expect(alreadyKnown({ email: 'sam@example.com', startedAt: '2026-05-31T09:00:00Z' }, known))
+      .toBe(false);
+  });
+
+  it('treats an unknown address as new', () => {
+    expect(alreadyKnown({ email: 'nobody@example.com', startedAt: '2026-08-01T00:00:00Z' }, known))
+      .toBe(false);
+  });
+
+  it('treats a response with no email yet as new, because that is what it is', () => {
+    expect(alreadyKnown({ email: null, startedAt: '2026-08-01T00:00:00Z' }, known)).toBe(false);
+  });
+
+  it('keeps the earliest record when an address appears twice', () => {
+    const twice = knownSinceMap([
+      { email: 'a@b.c', created_at: '2026-05-01T00:00:00Z' },
+      { email: 'a@b.c', created_at: '2026-01-01T00:00:00Z' },
+    ]);
+    expect(alreadyKnown({ email: 'a@b.c', startedAt: '2026-03-01T00:00:00Z' }, twice)).toBe(true);
   });
 });

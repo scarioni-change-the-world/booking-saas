@@ -4457,3 +4457,20 @@ body:has(.bk-embedded) {
   flex: 0 0 auto;
   font-size: 0.85rem;
 }
+
+/* Somebody you had already worked with, answering again.
+   Deliberately not a status pill: the three pills say where the
+   questionnaire sent this person, and this says something else entirely —
+   that they were not a stranger when they filled it in. Mineral and quiet,
+   never ochre: the ochre marks on this product are things worth a second
+   look, and a returning customer is just good news standing outside the
+   figures above. */
+.returning-mark {
+  flex: 0 0 auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--pale-mineral);
+  color: var(--accent-ink);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}

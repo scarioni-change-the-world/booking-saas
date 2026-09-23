@@ -1,4 +1,5 @@
 import { BookingError } from './booking-service';
+import { alreadyKnown, knownSinceMap } from './enquiry-analysis';
 import { findReconsideration, type Attempt, type Reconsideration } from './reconsideration';
 import type { TenantScope } from './db';
 import type { OutcomePathType, QualificationResponseRow } from './db/types';
@@ -85,34 +86,63 @@ export async function completeResponse(
   return outcomePathType;
 }
 
-/** How the intake questionnaire is doing since `sinceIso` — the numbers
- * that tell a tenant whether a question is working: how many people even
- * started, how many finished, and of those, how many landed on a meeting
- * versus the other path. Powers both the Overview tile and the fuller
- * breakdown on the Screening page, so the two never quietly disagree. */
+/**
+ * How the intake questionnaire is doing since `sinceIso`.
+ *
+ * These four count NEW ENQUIRIES ONLY — people who were not already
+ * clients when they started answering. `returning` counts the rest.
+ *
+ * The split is the point. Everybody who books becomes a client, and a
+ * client who comes back through the public page answers the questionnaire
+ * again, so without it a business's loyal customers were counted as fresh
+ * acquisition: "28 started answering" quietly included the regular of
+ * three years, and the conversion rate read better than the truth. A
+ * funnel that cannot tell a stranger from a customer is not measuring
+ * anything.
+ *
+ * Powers the Overview tiles and the Enquiries breakdown, so the two never
+ * quietly disagree.
+ */
 export interface FunnelStats {
   started: number;
   completed: number;
   meeting: number;
   other: number;
+  /** People you had already worked with, answering again. */
+  returning: number;
 }
 
 export async function loadFunnelStats(scope: TenantScope, sinceIso: string): Promise<FunnelStats> {
-  const { data, error } = await scope
-    .select('qualification_responses', 'outcome_path_type, completed_at')
-    .gte('started_at', sinceIso);
-  if (error) throw error;
+  const [responses, clients] = await Promise.all([
+    scope
+      .select('qualification_responses', 'outcome_path_type, completed_at, email, started_at')
+      .gte('started_at', sinceIso),
+    // Every client, not only recent ones: somebody who has been a customer
+    // for three years is exactly the person this is here to recognise.
+    scope.select('clients', 'email, created_at'),
+  ]);
+  if (responses.error) throw responses.error;
+  if (clients.error) throw clients.error;
 
-  const rows = (data ?? []) as unknown as Array<
-    Pick<QualificationResponseRow, 'outcome_path_type' | 'completed_at'>
+  const knownSince = knownSinceMap(
+    (clients.data ?? []) as unknown as Array<{ email: string; created_at: string }>,
+  );
+
+  const rows = (responses.data ?? []) as unknown as Array<
+    Pick<QualificationResponseRow, 'outcome_path_type' | 'completed_at' | 'email' | 'started_at'>
   >;
-  const completedRows = rows.filter((r) => r.completed_at !== null);
+
+  const fresh = rows.filter(
+    (r) => !alreadyKnown({ email: r.email, startedAt: r.started_at }, knownSince),
+  );
+  const completedRows = fresh.filter((r) => r.completed_at !== null);
 
   return {
-    started: rows.length,
+    started: fresh.length,
     completed: completedRows.length,
     meeting: completedRows.filter((r) => r.outcome_path_type === 'meeting').length,
     other: completedRows.filter((r) => r.outcome_path_type === 'other').length,
+    returning: rows.length - fresh.length,
   };
 }
 
@@ -137,6 +167,9 @@ export interface ResponseListItem {
    * again — see src/lib/reconsideration.ts for why this is surfaced rather
    * than prevented. */
   reconsidered: Reconsideration | null;
+  /** True when this person was already a client before they started
+   *  answering — repeat business, not a new enquiry. See alreadyKnown. */
+  returning: boolean;
 }
 
 /** The most recent responses since `sinceIso`, newest first, capped at
@@ -155,7 +188,15 @@ export async function listRecentResponses(
   if (error) throw error;
 
   const rows = (data ?? []) as unknown as QualificationResponseRow[];
-  const history = await historyFor(scope, rows);
+  const [history, clients] = await Promise.all([
+    historyFor(scope, rows),
+    scope.select('clients', 'email, created_at'),
+  ]);
+  if (clients.error) throw clients.error;
+
+  const knownSince = knownSinceMap(
+    (clients.data ?? []) as unknown as Array<{ email: string; created_at: string }>,
+  );
 
   return rows.map((r) => ({
     id: r.id,
@@ -166,6 +207,7 @@ export async function listRecentResponses(
     answers: r.answers,
     eventTypeId: r.event_type_id,
     reconsidered: findReconsideration(asAttempt(r), history),
+    returning: alreadyKnown({ email: r.email, startedAt: r.started_at }, knownSince),
   }));
 }
 
