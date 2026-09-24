@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { clientThread, type HistoryBooking } from '@/lib/client-thread';
 import { useAutoResize } from './useAutoResize';
 import { DEFAULT_CURRENCY, formatMoney } from '@/lib/money';
 import { DateNavigator } from './booking/DateNavigator';
@@ -160,6 +161,11 @@ export default function ClientBooking({ slug, token }: Props) {
   const [busy, setBusy] = useState(false);
 
   const [clientName, setClientName] = useState('');
+  /* Their history with the business, drawn as a thread above the choices —
+     see src/lib/client-thread.ts. */
+  const [history, setHistory] = useState<HistoryBooking[]>([]);
+  const [business, setBusiness] = useState('');
+  const [since, setSince] = useState<string | null>(null);
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [singleTypes, setSingleTypes] = useState<SingleType[]>([]);
   /** Programmes offered to existing clients — ones to buy, not ones held. */
@@ -190,7 +196,9 @@ export default function ClientBooking({ slug, token }: Props) {
     (async () => {
       try {
         const result = await getJson<{
-          client: { name: string };
+          client: { name: string; since?: string };
+          business?: string;
+          history?: HistoryBooking[];
           entitlements: Entitlement[];
           singleEventTypes: SingleType[];
           packEventTypes: PackType[];
@@ -199,6 +207,9 @@ export default function ClientBooking({ slug, token }: Props) {
         if (cancelled) return;
 
         setClientName(result.client.name);
+        setHistory(result.history ?? []);
+        setBusiness(result.business ?? '');
+        setSince(result.client.since ?? null);
         const withBalance = result.entitlements.filter((e) => e.remaining > 0);
         setEntitlements(withBalance);
         setSingleTypes(result.singleEventTypes);
@@ -215,9 +226,13 @@ export default function ClientBooking({ slug, token }: Props) {
           ...(result.packEventTypes ?? []).map((t): Option => ({ kind: 'programme', ...t })),
         ];
 
-        if (options.length === 0) {
+        /* Somebody with a history lands on it, even with one thing to book:
+           where they are with the business is the first thing worth showing.
+           Only a first-timer with a single option goes straight to it. */
+        const hasHistory = (result.history ?? []).length > 0;
+        if (options.length === 0 && !hasHistory) {
           setStep('nothing-to-book');
-        } else if (options.length === 1) {
+        } else if (options.length === 1 && !hasHistory) {
           chooseOption(options[0]!);
         } else {
           setStep('pick-option');
@@ -252,7 +267,9 @@ export default function ClientBooking({ slug, token }: Props) {
     setStep('loading');
     try {
       const result = await getJson<{
-        client: { name: string };
+        client: { name: string; since?: string };
+        business?: string;
+        history?: HistoryBooking[];
         entitlements: Entitlement[];
         singleEventTypes: SingleType[];
         packEventTypes: PackType[];
@@ -263,6 +280,7 @@ export default function ClientBooking({ slug, token }: Props) {
       setEntitlements(withBalance);
       setSingleTypes(result.singleEventTypes);
       setPackTypes(result.packEventTypes ?? []);
+      setHistory(result.history ?? []);
 
       // Straight back into the package they were already spending, when it
       // still has something on it. Anything else is a step for its own sake.
@@ -481,30 +499,27 @@ export default function ClientBooking({ slug, token }: Props) {
 
       {step === 'pick-option' && (
         <section>
-          <h1 className="bk-heading">
-            Hi {clientName.split(' ')[0]}, what would you like to book?
-          </h1>
+          {history.length > 0 || entitlements.length > 0 ? (
+            <>
+              <h1 className="bk-heading">Hi {clientName.split(' ')[0]}</h1>
+              <ClientThread
+                business={business}
+                since={since}
+                history={history}
+                entitlements={entitlements}
+                onBookOwed={(e) => chooseOption({ kind: 'package', ...e })}
+                formatWhen={(iso) => `${formatDay(iso.slice(0, 10))}, ${timeFormat.format(new Date(iso))}`}
+              />
+              {(singleTypes.length > 0 || packTypes.length > 0) && (
+                <h2 className="bk-subheading">Or book something new</h2>
+              )}
+            </>
+          ) : (
+            <h1 className="bk-heading">
+              Hi {clientName.split(' ')[0]}, what would you like to book?
+            </h1>
+          )}
           <ul className="bk-service-list">
-            {entitlements.map((e) => (
-              <li key={`package-${e.id}`}>
-                <button
-                  type="button"
-                  className="bk-service-option"
-                  onClick={() => chooseOption({ kind: 'package', ...e })}
-                >
-                  <span className="bk-service-option-main">
-                    <span className="bk-service-option-name">{e.eventTypeName}</span>
-                    <span className="bk-service-option-facts">
-                      {e.remaining} of {e.totalSessions} sessions left · {e.durationMinutes}{' '}
-                      minutes
-                    </span>
-                  </span>
-                  <span className="bk-service-option-go" aria-hidden="true">
-                    →
-                  </span>
-                </button>
-              </li>
-            ))}
             {singleTypes.map((t) => (
               <li key={`single-${t.id}`}>
                 <button
@@ -1086,5 +1101,97 @@ function TimesPicker({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * "You and {business}": their history as one thread, oldest first, ending
+ * on anything they are still owed — each owed balance a dashed spot with
+ * the way to book it right there, rather than an option in a list below.
+ */
+function ClientThread({
+  business,
+  since,
+  history,
+  entitlements,
+  onBookOwed,
+  formatWhen,
+}: {
+  business: string;
+  since: string | null;
+  history: HistoryBooking[];
+  entitlements: Entitlement[];
+  onBookOwed: (e: Entitlement) => void;
+  formatWhen: (iso: string) => string;
+}) {
+  const steps = clientThread(
+    history,
+    entitlements.map((e) => ({
+      entitlementId: e.id,
+      eventTypeName: e.eventTypeName,
+      remaining: e.remaining,
+      totalSessions: e.totalSessions,
+    })),
+    new Date().toISOString(),
+  );
+  const monthYear = (iso: string) =>
+    new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(iso));
+
+  return (
+    <div className="bk-programme">
+      <h2 className="bk-programme-title">You and {business || 'us'}</h2>
+      <p className="bk-programme-count">
+        {since ? `Since ${monthYear(since)} · ` : ''}no questions to answer here
+      </p>
+      <ol className="bk-thread">
+        {steps.map((st, i) => {
+          if (st.kind === 'owed') {
+            const e = entitlements.find((x) => x.id === st.owed.entitlementId)!;
+            return (
+              <li key={`owed-${st.owed.entitlementId}`} className="is-owed">
+                <b>
+                  {st.owed.remaining === 1
+                    ? `One session of ${st.owed.eventTypeName} to book`
+                    : `${st.owed.remaining} sessions of ${st.owed.eventTypeName} to book`}
+                </b>
+                <span>Already yours: {st.owed.totalSessions - st.owed.remaining} of {st.owed.totalSessions} used</span>
+                <button type="button" className="bk-thread-act" onClick={() => onBookOwed(e)}>
+                  Choose a time →
+                </button>
+              </li>
+            );
+          }
+          if (st.kind === 'programme') {
+            return (
+              <li key={`p-${i}`} className={`is-${st.tone}`}>
+                <b>{st.eventTypeName}</b>
+                <span>
+                  {st.done} of {st.size} done
+                  {st.next ? ` · next ${formatWhen(st.next.startsAt)}` : ''}
+                </span>
+                {st.next?.manageToken && (
+                  <a className="bk-thread-link" href={`/manage/${st.next.manageToken}`}>
+                    See the whole programme
+                  </a>
+                )}
+              </li>
+            );
+          }
+          return (
+            <li key={`s-${i}`} className={`is-${st.tone}`}>
+              <b>{st.eventTypeName}</b>
+              <span>
+                {st.tone === 'done' ? monthYear(st.startsAt) : `${st.tone === 'next' ? 'Next · ' : ''}${formatWhen(st.startsAt)}`}
+              </span>
+              {st.manageToken && (
+                <a className="bk-thread-link" href={`/manage/${st.manageToken}`}>
+                  Change or cancel
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

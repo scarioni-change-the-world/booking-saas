@@ -1,6 +1,53 @@
 import { fail, handleError, isResponse, ok, requireTenant } from '@/lib/api';
 import { DEFAULT_CURRENCY } from '@/lib/money';
 import { listClientEntitlements, listEventTypes, resolveClientByToken } from '@/lib/booking-service';
+import type { TenantScope } from '@/lib/db';
+import type { BookingRow } from '@/lib/db/types';
+import type { HistoryBooking } from '@/lib/client-thread';
+import { exactPattern } from '@/lib/like';
+
+const HISTORY_LIMIT = 100;
+
+interface HistoryJoin extends Pick<BookingRow, 'id' | 'starts_at' | 'ends_at' | 'status' | 'pack_id' | 'pack_size' | 'manage_token'> {
+  event_types: { name: string } | null;
+}
+
+/**
+ * Everything this client has booked with the business, for the thread at
+ * the top of their link (src/lib/client-thread.ts).
+ *
+ * By their client record and by their address, because a booking made
+ * before they had a record carries only the address — and it is still
+ * theirs. The token already proves who they are; this shows them their own
+ * appointments and nobody else's.
+ *
+ * A manage link only for what is still to come: the one thing worth doing
+ * with a past appointment is remembering it.
+ */
+async function clientHistory(scope: TenantScope, clientId: string, email: string): Promise<HistoryBooking[]> {
+  const columns = 'id, starts_at, ends_at, status, pack_id, pack_size, manage_token, event_types(name)';
+  const [byRecord, byAddress] = await Promise.all([
+    scope.select('bookings', columns).eq('client_id', clientId).order('starts_at', { ascending: false }).limit(HISTORY_LIMIT),
+    scope.select('bookings', columns).ilike('email', exactPattern(email)).order('starts_at', { ascending: false }).limit(HISTORY_LIMIT),
+  ]);
+  if (byRecord.error) throw byRecord.error;
+  if (byAddress.error) throw byAddress.error;
+
+  const rows = new Map<string, HistoryJoin>();
+  for (const row of [...((byRecord.data ?? []) as unknown as HistoryJoin[]), ...((byAddress.data ?? []) as unknown as HistoryJoin[])]) {
+    rows.set(row.id, row);
+  }
+  const now = new Date().toISOString();
+  return [...rows.values()].map((row) => ({
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    status: row.status,
+    eventTypeName: row.event_types?.name ?? 'A session',
+    packId: row.pack_id,
+    packSize: row.pack_size,
+    manageToken: row.status === 'confirmed' && row.ends_at > now ? row.manage_token : null,
+  }));
+}
 
 /**
  * Resolve a client's own private booking link.
@@ -38,21 +85,24 @@ export async function GET(
     const resolved = await requireTenant(slug);
     if (isResponse(resolved)) return resolved;
 
-    const { scope } = resolved;
+    const { scope, tenant } = resolved;
     const client = await resolveClientByToken(scope, token);
     if (!client) return fail('Not found', 404);
 
-    const [entitlements, clientEventTypes, settings] = await Promise.all([
+    const [entitlements, clientEventTypes, settings, history] = await Promise.all([
       listClientEntitlements(scope, client.id),
       listEventTypes(scope, 'client'),
       // For a programme's published price. A tenant always has this row
       // (migration 0009's trigger); the fallback keeps a price renderable
       // rather than crashing the page if one is ever missing.
       scope.select('tenant_settings').maybeSingle(),
+      clientHistory(scope, client.id, client.email),
     ]);
 
     return ok({
-      client: { name: client.name, email: client.email },
+      client: { name: client.name, email: client.email, since: client.created_at },
+      business: tenant.name,
+      history,
       currency:
         (settings.data as unknown as { currency?: string } | null)?.currency ?? DEFAULT_CURRENCY,
       entitlements,

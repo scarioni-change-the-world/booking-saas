@@ -3843,38 +3843,97 @@ body:has(.bk-embedded) {
   font-size: 0.9rem;
   color: var(--muted);
 }
-.bk-programme-list {
-  margin: 14px 0 0;
+/* A programme, or a client's history, as a thread: a line down the left,
+   a dot per step. Filled for done, ringed for next, dashed for a session
+   still owed — the same three shapes the business sees in People, so both
+   sides of the product draw one story the same way. Words beside every dot
+   carry the state for anyone who cannot tell the shapes apart. */
+.bk-thread {
+  margin: 16px 0 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--rule);
 }
-.bk-programme-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.9rem;
+.bk-thread li {
+  position: relative;
+  padding: 0 0 18px 30px;
 }
-/* Struck through and dimmed, but still listed: an appointment that was
-   cancelled is part of the history of this programme, and removing the row
-   would leave a client counting to a number that no longer adds up. */
-.bk-programme-list li[data-cancelled='true'] > span {
-  color: var(--faint);
-  text-decoration: line-through;
+.bk-thread li::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 14px;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
 }
-.bk-programme-list li em {
-  flex: 0 0 auto;
-  font-style: normal;
-  font-size: 0.78rem;
-  color: var(--faint);
+.bk-thread li:last-child {
+  padding-bottom: 0;
 }
-.bk-programme-owed {
-  margin: 14px 0 12px;
+.bk-thread li:last-child::before {
+  display: none;
+}
+.bk-thread li::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--accent);
+  box-sizing: border-box;
+}
+.bk-thread li.is-next::after,
+.bk-thread li.is-booked::after {
+  background: var(--surface);
+}
+.bk-thread li.is-next::after {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.bk-thread li.is-owed::after {
+  left: 1px;
+  top: 1px;
+  width: 16px;
+  height: 16px;
+  background: var(--surface);
+  border-style: dashed;
+  border-color: var(--emphasis);
+}
+.bk-thread li.is-owed::before,
+.bk-thread li:has(+ li.is-owed)::before {
+  background: var(--border);
+}
+.bk-thread b {
+  display: block;
   font-size: 0.95rem;
   color: var(--ink);
+}
+.bk-thread span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--faint);
+}
+.bk-thread li.is-this b {
+  color: var(--accent-ink);
+}
+.bk-thread-act {
+  display: inline-block;
+  margin-top: 6px;
+  min-height: 0;
+  padding: 7px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bk-thread-act.is-quiet {
+  background: transparent;
+  color: var(--accent-ink);
 }
 
 .bk-manage-actions {
@@ -6224,4 +6283,17 @@ g.is-lit > .fl-edge {
 }
 .rp-bar i.is-over {
   background: var(--status-broken);
+}
+.bk-thread-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--accent-ink);
+}
+.bk-subheading {
+  margin: 26px 0 10px;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
 }

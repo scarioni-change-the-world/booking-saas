@@ -56,8 +56,13 @@ Six rules every screen follows:
    unsaved rule: who would reach the calendar, who would be sent elsewhere,
    real bookings the rule would have turned away, bookings gained at last
    month's rate, and whether the month's open hours had room.
-7. **The client's side** — a programme shown as a thread on the manage page
-   and the private link, with the unbooked session on its spot.
+7. ~~**The client's side**~~ — done. The manage page draws a programme as
+   a thread (done, next, booked) with each owed session as a dashed spot
+   and "Book it" on it. A client's own link opens on "You and {business}":
+   their history as one thread, owed sessions bookable where they sit,
+   new things to book underneath. Fixed on the way: an email lookup that
+   treated "_" as a wildcard could file one person's booking under
+   another's client record.
 8. **Console as small flows** — each business drawn as its own flow, the
    problem where the line breaks. Still shape only, never content.
 9. **Account** — what is left of Settings.

@@ -5,6 +5,7 @@ import { accentStyle, initials } from './brand';
 import { DateNavigator } from './booking/DateNavigator';
 import { groupSlots } from './booking/slots';
 import type { DaySlots } from './types';
+import { programmeThread, sessionName } from '@/lib/client-thread';
 
 /** Matches the public booking flow — see ClientBooking for why. */
 const SLOTS_BEFORE_MORE = 8;
@@ -25,7 +26,7 @@ interface PackView {
   size: number;
   booked: number;
   remaining: number;
-  appointments: Array<{ startsAt: string; status: 'confirmed' | 'cancelled' }>;
+  appointments: Array<{ startsAt: string; endsAt: string; status: 'confirmed' | 'cancelled' }>;
 }
 
 interface Payload {
@@ -229,48 +230,57 @@ export default function ManageBooking({ token }: { token: string }) {
         </a>
       )}
 
-      {/* A programme: where it stands, and — if a cancellation left it short
-          — the way to put that right. Without this, cancelling one
-          appointment of a three-session programme simply lost it: the client
-          had paid for three, held two, and had nowhere to go. */}
+      {/* A programme, as a thread: every session in order — done, next, and
+          booked — and each one still owed drawn as a gap in its place, with
+          the way to book it on that spot. It used to be a list of dates with
+          a count underneath, which told somebody halfway through what they
+          held but not where they were. */}
       {pack && mode === 'view' && (
         <div className="bk-programme">
           <h2 className="bk-programme-title">Your programme</h2>
           <p className="bk-programme-count">
-            {pack.booked} of {pack.size} appointments booked.
+            {pack.size} sessions
+            {pack.remaining > 0 ? ` · ${pack.remaining} still to book` : ''}
           </p>
 
-          <ol className="bk-programme-list">
-            {pack.appointments.map((appointment) => (
-              <li
-                key={`${appointment.startsAt}-${appointment.status}`}
-                data-cancelled={appointment.status === 'cancelled' ? 'true' : undefined}
-              >
-                <span>
-                  {formatInstantDay(appointment.startsAt)} at{' '}
-                  {formatTime(appointment.startsAt)}
-                </span>
-                {appointment.status === 'cancelled' && <em>Cancelled</em>}
-              </li>
-            ))}
+          <ol className="bk-thread">
+            {(() => {
+              const steps = programmeThread(pack.appointments, pack.remaining, new Date().toISOString());
+              const firstOwed = steps.findIndex((st) => st.tone === 'owed');
+              return steps.map((st, i) => {
+                const isThis = st.startsAt === booking.startsAt && booking.status === 'confirmed';
+                return (
+                  <li key={`${st.position}-${st.tone}`} className={`is-${st.tone}${isThis ? ' is-this' : ''}`}>
+                    {st.tone === 'owed' ? (
+                      <>
+                        <b>{sessionName(st.position)}</b>
+                        <span>
+                          {st.cancelledStartsAt
+                            ? `Cancelled from ${formatInstantDay(st.cancelledStartsAt)} — still yours to book`
+                            : 'Still yours to book'}
+                        </span>
+                        {i === firstOwed && (
+                          <button type="button" className="bk-thread-act" onClick={() => void openPicker('rebook')}>
+                            Book it →
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <b>
+                          {formatInstantDay(st.startsAt!)}, {formatTime(st.startsAt!)}
+                        </b>
+                        <span>
+                          {st.tone === 'done' ? 'Done' : st.tone === 'next' ? 'Next' : 'Booked'}
+                          {isThis ? ' · this one' : ''}
+                        </span>
+                      </>
+                    )}
+                  </li>
+                );
+              });
+            })()}
           </ol>
-
-          {pack.remaining > 0 && (
-            <>
-              <p className="bk-programme-owed">
-                {pack.remaining === 1
-                  ? 'You have one appointment still to book.'
-                  : `You have ${pack.remaining} appointments still to book.`}
-              </p>
-              <button
-                type="button"
-                className="btn-primary btn-full"
-                onClick={() => void openPicker('rebook')}
-              >
-                {pack.remaining === 1 ? 'Book it now' : 'Book the next one'}
-              </button>
-            </>
-          )}
         </div>
       )}
 

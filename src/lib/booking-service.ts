@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { exactPattern } from './like';
 import { baseUrl } from './base-url';
 import { DateTime } from 'luxon';
 import {
@@ -380,7 +381,7 @@ async function findOrCreateClient(
 ): Promise<ClientRow> {
   const existing = await scope
     .select('clients')
-    .ilike('email', email)
+    .ilike('email', exactPattern(email))
     .maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data) return existing.data as unknown as ClientRow;
@@ -397,7 +398,7 @@ async function findOrCreateClient(
     if (error.code === '23505') {
       const { data: raced, error: reread } = await scope
         .select('clients')
-        .ilike('email', email)
+        .ilike('email', exactPattern(email))
         .maybeSingle();
       if (reread) throw reread;
       if (raced) return raced as unknown as ClientRow;
@@ -615,7 +616,7 @@ export interface PackStanding {
   /** How many the client is still owed — 0 when the programme is whole. */
   remaining: number;
   /** Every appointment in the programme, earliest first. */
-  appointments: Array<{ startsAt: string; status: BookingRow['status'] }>;
+  appointments: Array<{ startsAt: string; endsAt: string; status: BookingRow['status'] }>;
 }
 
 /**
@@ -638,12 +639,12 @@ export async function packStanding(
   if (!booking.pack_id) return null;
 
   const { data, error } = await scope
-    .select('bookings', 'starts_at, status, pack_size')
+    .select('bookings', 'starts_at, ends_at, status, pack_size')
     .eq('pack_id', booking.pack_id)
     .order('starts_at', { ascending: true });
   if (error) throw error;
 
-  const rows = (data ?? []) as unknown as Array<Pick<BookingRow, 'starts_at' | 'status' | 'pack_size'>>;
+  const rows = (data ?? []) as unknown as Array<Pick<BookingRow, 'starts_at' | 'ends_at' | 'status' | 'pack_size'>>;
   if (rows.length === 0) return null;
 
   // Every row of a pack carries the same size, written once (migration 0025).
@@ -677,7 +678,7 @@ export async function packStanding(
     size,
     booked,
     remaining,
-    appointments: rows.map((row) => ({ startsAt: row.starts_at, status: row.status })),
+    appointments: rows.map((row) => ({ startsAt: row.starts_at, endsAt: row.ends_at, status: row.status })),
   };
 }
 
