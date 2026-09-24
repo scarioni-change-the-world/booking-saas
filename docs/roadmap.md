@@ -51,8 +51,11 @@ Six rules every screen follows:
    chosen from a row of service cards. "Try your booking page" opens the
    real page beside it in a test run — admin-only, nothing stored, held or
    emailed — and the route lights up step by step.
-6. **See a change before saving it** — replay last month's answers against
-   a new routing rule, including whether the week had room.
+6. ~~**See a change before saving it**~~ — done. Editing a question on
+   Questions replays the last 30 days of new enquiries' answers against the
+   unsaved rule: who would reach the calendar, who would be sent elsewhere,
+   real bookings the rule would have turned away, bookings gained at last
+   month's rate, and whether the month's open hours had room.
 7. **The client's side** — a programme shown as a thread on the manage page
    and the private link, with the unbooked session on its spot.
 8. **Console as small flows** — each business drawn as its own flow, the

@@ -6127,3 +6127,101 @@ g.is-lit > .fl-edge {
     animation: none;
   }
 }
+
+/* ── Replaying a routing change ─────────────────────────────────────────
+   Beside the toggles while a question is edited: last month's answers
+   under the unsaved rule. A figure that moves shows its before, its after
+   and the difference, so nothing depends on colour alone. */
+.rp-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 22px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .rp-split {
+    grid-template-columns: 1fr;
+  }
+}
+.rp {
+  position: sticky;
+  top: 80px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--app-canvas);
+}
+.rp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rp-state {
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.rp-state.is-changed {
+  color: var(--emphasis-ink);
+  font-weight: 600;
+}
+.rp-note {
+  margin: 6px 0 10px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.rp-small {
+  margin: 10px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--faint);
+}
+.rp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 0.88rem;
+}
+.rp-figures {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rp-figures b {
+  font-size: 1.05rem;
+}
+.rp-figures small {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+/* The same neutral chip either way. More people sent elsewhere is not a
+   loss and more reaching the calendar is not a win — that judgement is the
+   business's, as on Overview's figures before it. */
+.rp-figures small.is-up,
+.rp-figures small.is-down {
+  background: var(--pale-mineral);
+  color: var(--accent-ink);
+}
+.rp-cap {
+  margin-top: 12px;
+}
+.rp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.rp-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.rp-bar i.is-over {
+  background: var(--status-broken);
+}

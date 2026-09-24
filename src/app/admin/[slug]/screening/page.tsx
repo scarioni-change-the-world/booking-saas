@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
+import { replay, routingChanged, type Capacity, type ReplayQuestion, type ReplayResponse } from '@/lib/replay';
 
 type Kind = 'text' | 'yes_no' | 'single_choice';
 type PathType = 'meeting' | 'other';
@@ -619,6 +620,161 @@ function QuestionsPreview({ questions }: { questions: Question[] }) {
  * (migration 0016) so the two don't drift into two slightly different
  * question rows over time.
  */
+interface ReplayData {
+  responses: ReplayResponse[];
+  capacity: Capacity;
+}
+
+function toReplayQuestion(q: Question): ReplayQuestion {
+  return { id: q.id, kind: q.kind, options: q.options };
+}
+
+function draftQuestion(id: string, form: FormState): ReplayQuestion {
+  return {
+    id,
+    kind: form.kind,
+    options: form.kind === 'yes_no' ? form.yesNo : form.kind === 'single_choice' ? form.choices : [],
+  };
+}
+
+function hoursLabel(minutes: number): string {
+  const h = Math.round((minutes / 60) * 10) / 10;
+  return `${h} h`;
+}
+
+/**
+ * Last month's answers, replayed under the rule being edited — beside the
+ * toggles, updating on every flip, before anything is saved. See
+ * src/lib/replay.ts for how, and why it compares against today's rules
+ * rather than against what happened.
+ */
+function ReplayPanel({
+  saved,
+  form,
+  questions,
+  data,
+}: {
+  saved: Question;
+  form: FormState;
+  questions: Question[];
+  data: ReplayData | null | 'unavailable';
+}) {
+  if (form.kind === 'text') {
+    return (
+      <aside className="rp">
+        <p className="wk-side-eyebrow">Last 30 days, with this rule</p>
+        <p className="rp-note">A free-text answer never sends anyone anywhere, so nothing would change.</p>
+      </aside>
+    );
+  }
+  if (data === 'unavailable') {
+    return (
+      <aside className="rp">
+        <p className="wk-side-eyebrow">Last 30 days, with this rule</p>
+        <p className="rp-note">Last month’s answers could not be loaded, so this change cannot be tried out here.</p>
+      </aside>
+    );
+  }
+  if (!data) {
+    return (
+      <aside className="rp">
+        <p className="rp-note">Replaying last month’s answers…</p>
+      </aside>
+    );
+  }
+
+  const draft = draftQuestion(saved.id, form);
+  const changed = routingChanged(toReplayQuestion(saved), draft);
+  const result = replay(data.responses, questions.map(toReplayQuestion), draft, data.capacity);
+
+  if (result.answered === 0) {
+    return (
+      <aside className="rp">
+        <p className="wk-side-eyebrow">Last 30 days, with this rule</p>
+        <p className="rp-note">
+          Nobody new answered this question in the last 30 days, so there is nothing to replay yet.
+        </p>
+      </aside>
+    );
+  }
+
+  const bookingsAfter = result.bookingsBefore - result.bookingsLost + result.bookingsGained;
+  const row = (label: string, before: number, after: number, approx = false) => {
+    const delta = after - before;
+    return (
+      <div className="rp-row">
+        <span>{label}</span>
+        <span className="rp-figures">
+          {before}
+          {changed && (
+            <>
+              <span aria-hidden="true"> → </span>
+              <span className="sr-only"> would become </span>
+              <b>
+                {approx && delta !== 0 ? 'about ' : ''}
+                {after}
+              </b>
+              {delta !== 0 && <small className={delta > 0 ? 'is-up' : 'is-down'}>{delta > 0 ? `+${delta}` : delta}</small>}
+            </>
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  const cap = result.capacity;
+  const usedAfter = cap ? (changed ? cap.usedAfter : cap.usedBefore) : 0;
+
+  return (
+    <aside className="rp" aria-live="polite">
+      <div className="rp-head">
+        <p className="wk-side-eyebrow">Last 30 days, with this rule</p>
+        <span className={`rp-state${changed ? ' is-changed' : ''}`}>{changed ? 'Not saved yet' : 'Same as now'}</span>
+      </div>
+      <p className="rp-note">
+        {result.answered} new {result.answered === 1 ? 'person was' : 'people were'} asked this. Replayed
+        {changed ? ' with your change' : ''}:
+      </p>
+      {row('Reach your calendar', result.before.calendar, result.after.calendar)}
+      {row('Sent elsewhere', result.before.elsewhere, result.after.elsewhere)}
+      {row('Bookings', result.bookingsBefore, bookingsAfter, true)}
+
+      {changed && result.bookingsLost > 0 && (
+        <p className="wk-warning">
+          {result.bookingsLost === 1
+            ? '1 real booking last month came from someone this rule would now send elsewhere.'
+            : `${result.bookingsLost} real bookings last month came from people this rule would now send elsewhere.`}
+        </p>
+      )}
+      {changed && result.nowLetThrough > 0 && (
+        <p className="rp-note">
+          {result.nowLetThrough} more would have reached your calendar. At last month’s rate — about{' '}
+          {Math.round(result.bookingRate * 100)}% of people let through went on to book — that is about{' '}
+          {result.bookingsGained} more {result.bookingsGained === 1 ? 'booking' : 'bookings'}.
+        </p>
+      )}
+
+      {cap && (
+        <div className="rp-cap">
+          <div className="rp-bar" role="img" aria-label={`${hoursLabel(usedAfter)} of ${hoursLabel(cap.openMinutes)} open hours used`}>
+            <i style={{ width: `${Math.min(100, (usedAfter / cap.openMinutes) * 100)}%` }} className={cap.shortBy > 0 && changed ? 'is-over' : undefined} />
+          </div>
+          <p className="rp-note">
+            {changed && cap.shortBy > 0
+              ? `About ${hoursLabel(cap.shortBy)} more than your open hours: the month would not have had room for everyone.`
+              : `${hoursLabel(usedAfter)} of ${hoursLabel(cap.openMinutes)} open hours used. Room for everyone.`}
+          </p>
+        </div>
+      )}
+
+      <p className="rp-small">
+        New enquiries who were asked this question. Worked out with your other questions as they are today,
+        so only this change is measured.
+      </p>
+    </aside>
+  );
+}
+
 function QuestionRow({
   q,
   isFirst,
@@ -633,8 +789,12 @@ function QuestionRow({
   onMove,
   onToggleRequired,
   onRemove,
+  questions,
+  replayData,
 }: {
   q: Question;
+  questions: Question[];
+  replayData: ReplayData | null | 'unavailable';
   isFirst: boolean;
   isLast: boolean;
   editingId: string | null;
@@ -650,16 +810,19 @@ function QuestionRow({
 }) {
   if (editingId === q.id) {
     return (
-      <form className="card" onSubmit={(e) => onSubmitEdit(e, q.id)}>
-        <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`edit-${q.id}`} />
-        <div className="actions">
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-          <button type="button" className="btn-link" onClick={onCancelEdit}>
-            Cancel
-          </button>
+      <form className="card rp-split" onSubmit={(e) => onSubmitEdit(e, q.id)}>
+        <div>
+          <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`edit-${q.id}`} />
+          <div className="actions">
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" className="btn-link" onClick={onCancelEdit}>
+              Cancel
+            </button>
+          </div>
         </div>
+        <ReplayPanel saved={q} form={editForm} questions={questions} data={replayData} />
       </form>
     );
   }
@@ -762,6 +925,14 @@ export default function ScreeningQuestionsPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
+  /* Last month's answers, loaded once: every toggle replays them in the
+     browser, so flipping an answer shows its effect at once. */
+  const [replayData, setReplayData] = useState<ReplayData | null | 'unavailable'>(null);
+  useEffect(() => {
+    adminFetchJson<ReplayData>(`/api/admin/${slug}/replay`)
+      .then(setReplayData)
+      .catch(() => setReplayData('unavailable'));
+  }, [slug]);
 
   async function load() {
     setLoading(true);
@@ -925,6 +1096,8 @@ export default function ScreeningQuestionsPage() {
     onMove: move,
     onToggleRequired: toggleRequired,
     onRemove: remove,
+    questions,
+    replayData,
   };
 
   return (
