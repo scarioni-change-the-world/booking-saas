@@ -174,6 +174,8 @@
      that's what makes this the real, final answer rather than another
      placeholder like Plus Jakarta Sans was. */
   --font-heading: Arial, ui-sans-serif, system-ui, sans-serif;
+  /* IBM Plex Sans ships with the app — see src/app/layout.tsx. */
+  --font-sans: 'IBM Plex Sans';
   --font-body: var(--font-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     sans-serif;
   --font: var(--font-body);
@@ -5890,8 +5892,9 @@ body:has(.bk-embedded) {
    it, and only when asked. Colour only where it means something: the service's
    mark, and Ochre for the few words on a chip that needs something done. */
 /* The services float on the page as rows; the chosen one's flow opens in
-   a card below, like a drop-down. Borders are the same on every side:
-   the service's colour is carried by its mark, not by a thick edge. */
+   a card below, like a drop-down. No outlines: as on a Braun radio, each
+   part is told apart by its tone — a pale wash of the service's own
+   colour — and a soft shadow lifts it off the page. */
 .fc-services {
   display: grid;
   gap: 10px;
@@ -5905,9 +5908,13 @@ body:has(.bk-embedded) {
   display: grid;
   gap: 16px;
   padding: 20px 22px 22px;
-  border: 1px solid var(--strong-border);
   border-radius: var(--radius-surface, 12px);
   background: var(--surface);
+  box-shadow: 0 1px 2px rgba(32, 34, 33, 0.04), 0 8px 24px rgba(32, 34, 33, 0.06);
+}
+/* The flow wears a pale wash of its service's colour, like its row. */
+.fc-flow {
+  background: color-mix(in srgb, var(--svc) 5%, var(--surface));
 }
 .fc-card-head {
   display: flex;
@@ -5943,22 +5950,27 @@ body:has(.bk-embedded) {
   gap: 14px;
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid var(--soft-border);
+  border: 0;
   border-radius: 10px;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(32, 34, 33, 0.04), 0 6px 18px rgba(32, 34, 33, 0.05);
+  background: color-mix(in srgb, var(--svc) 9%, var(--surface));
   color: var(--ink);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 .fc-row:hover {
-  border-color: var(--strong-border);
-  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.05), 0 10px 24px rgba(32, 34, 33, 0.08);
+  background: color-mix(in srgb, var(--svc) 15%, var(--surface));
 }
+/* The open one: a deeper wash of its colour and a lift off the page — no
+   outline, the way a Braun part is told apart by its tone. */
 .fc-row.is-open {
-  border-color: var(--ink);
-  box-shadow: 0 0 0 1px var(--ink), 0 10px 24px rgba(32, 34, 33, 0.08);
+  background: color-mix(in srgb, var(--svc) 18%, var(--surface));
+  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.06), 0 10px 24px rgba(32, 34, 33, 0.1);
+}
+.fc-row:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 .fc-row:disabled {
   opacity: 0.5;
@@ -6024,7 +6036,6 @@ body:has(.bk-embedded) {
   justify-content: space-between;
   gap: 10px 16px;
   padding: 12px 16px;
-  border: 1px solid color-mix(in srgb, var(--emphasis) 40%, var(--surface));
   border-radius: 10px;
   background: var(--emphasis-tint);
   color: var(--emphasis-ink);
@@ -6072,22 +6083,26 @@ body:has(.bk-embedded) {
   gap: 2px;
   width: 100%;
   padding: 14px 16px 16px;
-  border: 1px solid var(--strong-border);
+  border: 1px solid transparent;
   border-radius: 12px;
   background: var(--surface);
+  box-shadow: 0 1px 2px rgba(32, 34, 33, 0.05);
   color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
 }
 .fc-step:hover {
-  border-color: var(--ink);
-  box-shadow: 0 6px 18px rgba(32, 34, 33, 0.08);
+  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.06), 0 8px 20px rgba(32, 34, 33, 0.08);
 }
 .fc-step.is-open {
-  border-color: var(--ink);
-  box-shadow: 0 0 0 1px var(--ink);
+  background: color-mix(in srgb, var(--svc) 14%, var(--surface));
+  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.06), 0 8px 20px rgba(32, 34, 33, 0.08);
+}
+.fc-step:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 .fc-step:disabled {
   cursor: default;
@@ -6137,9 +6152,8 @@ body:has(.bk-embedded) {
   display: grid;
   gap: 14px;
   padding: 18px 20px;
-  border: 1px solid var(--soft-border);
   border-radius: 10px;
-  background: var(--app-canvas);
+  background: var(--surface);
 }
 .fc-panel-head {
   display: flex;
