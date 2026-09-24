@@ -19,10 +19,11 @@ import type { QuestionInsight, ServiceInsight } from './enquiry-analysis';
  * It used to be drawn as a network of boxes and lines, and read like a lab
  * chart: counts of people and of appointments sat on one line (a programme
  * of three counts three times), dashed lines drew connections that did not
- * exist, and a red dot stood in for a sentence. It is now four plain steps
- * — find it, answer, choose a time, booked — each with what it is set to,
- * one count of people, and anything that needs doing said in words on the
- * step where it happens.
+ * exist, and a red dot stood in for a sentence. It is now four clickable
+ * chips in a line — your page, questions, choose a time, booked — each
+ * holding one count of people and, when something needs doing, a few words
+ * saying so. The sentences, the fixes and the settings open under the path
+ * when a chip is chosen.
  *
  * Pure and client-safe; the page and the tests read this one model.
  */
@@ -261,6 +262,13 @@ export interface StepNote {
 
 export interface FlowStep {
   id: StepId;
+  /** The chip's name: two or three words. */
+  label: string;
+  /** Shown on the chip when there is no count to show. */
+  short: string;
+  /** A few words on the chip when something needs doing, or null. */
+  flag: string | null;
+  /** The step in full, for its opened detail. */
   title: string;
   /** What the step is set to, in one plain line. */
   detail: string;
@@ -362,6 +370,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   if (lane.fromPage) {
     find = {
       id: 'find',
+      label: 'Your page',
+      short: `/t/${slug}`,
+      flag: null,
       title: 'They find it on your booking page',
       detail: `/t/${slug}`,
       state: 'set',
@@ -376,6 +387,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   } else if (lane.fromClients) {
     find = {
       id: 'find',
+      label: 'Their own link',
+      short: 'Existing clients only',
+      flag: null,
       title: 'Existing clients find it on their own link',
       detail: 'It isn’t on your booking page, so new people don’t see it.',
       state: 'set',
@@ -386,6 +400,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   } else {
     find = {
       id: 'find',
+      label: 'Your page',
+      short: 'Not on it',
+      flag: 'Not offered yet',
       title: 'They find it',
       detail: 'It isn’t on your booking page, and it isn’t offered to existing clients.',
       state: 'missing',
@@ -401,6 +418,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   if (!lane.fromPage && lane.fromClients) {
     questions = {
       id: 'questions',
+      label: 'Questions',
+      short: 'Skipped',
+      flag: null,
       title: 'No questions',
       detail: 'Their own link skips the questions.',
       state: 'skipped',
@@ -411,6 +431,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   } else if (!asks) {
     questions = {
       id: 'questions',
+      label: 'Questions',
+      short: 'None asked',
+      flag: null,
       title: 'No questions',
       detail: 'New people go straight to choosing a time.',
       state: 'set',
@@ -447,6 +470,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
     }
     questions = {
       id: 'questions',
+      label: 'Questions',
+      short: `${n} asked`,
+      flag: model.elsewhere.said ? null : 'Next step not written',
       title: `They answer ${n} ${n === 1 ? 'question' : 'questions'}`,
       detail:
         lane.ownQuestions === 0
@@ -466,6 +492,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   const times: FlowStep = model.calendar.noHours
     ? {
         id: 'times',
+        label: 'Choose a time',
+        short: 'No hours yet',
+        flag: 'No hours yet',
         title: pickTitle,
         detail: 'You haven’t set any hours, so there is nothing to choose.',
         state: 'missing',
@@ -475,6 +504,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
       }
     : {
         id: 'times',
+        label: 'Choose a time',
+        short: `${hoursWords(model.calendar.weeklyMinutes)} a week`,
+        flag: model.calendar.flag,
         title: pickTitle,
         detail: `From your usual hours, ${hoursWords(model.calendar.weeklyMinutes)} a week`,
         state: 'set',
@@ -489,6 +521,9 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   const extra = appointmentsNote(lane);
   const booked: FlowStep = {
     id: 'booked',
+    label: 'Booked',
+    short: 'Nobody yet',
+    flag: model.booked.flag,
     title: 'They’re booked',
     detail: 'They get a confirmation email, and their own link to change it or book again.',
     state: 'set',
@@ -512,6 +547,8 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         st.state = 'waiting';
         st.figure = null;
         st.notes = [];
+        st.flag = null;
+        st.short = 'Waiting';
       }
     }
   }

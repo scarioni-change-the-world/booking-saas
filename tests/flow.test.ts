@@ -258,6 +258,29 @@ describe('serviceSteps', () => {
   });
 });
 
+describe('the chips', () => {
+  const chips = (over: Partial<FlowInput> = {}, svc: Partial<FlowService> = {}) => {
+    const model = buildFlow(input({ services: [service(svc)], ...over }));
+    return serviceSteps(model, model.lanes[0]!, 'ruiz');
+  };
+
+  it('names each chip in two or three words', () => {
+    expect(chips().map((s) => s.label)).toEqual(['Your page', 'Questions', 'Choose a time', 'Booked']);
+  });
+
+  it('puts a few words on the chip where something needs doing, and nowhere else', () => {
+    expect(chips().map((s) => s.flag)).toEqual([null, null, null, null]);
+    expect(chips({ hasOtherPathMessage: false, hasOtherPathUrl: false })[1]!.flag).toBe('Next step not written');
+    expect(chips({ availabilityRuleCount: 0 })[2]!.flag).toBe('No hours yet');
+    expect(chips({}, { availableToProspects: false })[0]!.flag).toBe('Not offered yet');
+  });
+
+  it('says "Waiting" on the chips after a missing one, with no count and no flag', () => {
+    const list = chips({ availabilityRuleCount: 0 });
+    expect(list[3]).toMatchObject({ state: 'waiting', short: 'Waiting', figure: null, flag: null });
+  });
+});
+
 describe('stepForPart', () => {
   it('opens the right step from an older link or a test run', () => {
     expect(['page', 'service:s1', 'questions', 'elsewhere', 'calendar', 'booked', 'nope'].map(stepForPart)).toEqual([

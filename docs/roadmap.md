@@ -75,16 +75,17 @@ Six rules every screen follows:
    the business's name, time zone (with a preview of what changing it
    does), currency (relabelled, not converted — it says so), signing in,
    the team (read-only) and the plan, with a map of where the rest went.
-   **Flow, redrawn as steps** — done, after a review in the spirit of
-   Dieter Rams. The network of boxes and lines read like a lab chart:
-   people and appointments on one line (a programme of three counts three
-   times), dashed lines for things that do not happen, a red dot for a
-   sentence, and Diagram, List and tiles showing the same numbers. Each
-   service is now four plain steps (find it, answer, choose a time,
-   booked) under one sentence of its last 30 days. The steps count people;
-   appointments are named as appointments. A problem is a sentence with
-   its fix, on the step where it happens; a missing step is drawn dashed
-   and the ones after it wait. Try your booking page lights the steps.
+   **Flow, redrawn as chips** — done. The network of boxes and lines read
+   like a lab chart: people and appointments on one line (a programme of
+   three counts three times), dashed lines for things that do not happen,
+   a red dot for a sentence, and Diagram, List and tiles showing the same
+   numbers. A first rewrite as a list of steps with notes read as clutter.
+   Now: services as clickable chips with their own number; the chosen
+   service's path as four clickable chips (your page, questions, choose a
+   time, booked), each with one count of people — appointments named as
+   appointments — and a few Ochre words when something needs doing. Its
+   text, fixes and Change open in one panel under the path, only when a
+   chip is chosen. Try your booking page lights the chips.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 
