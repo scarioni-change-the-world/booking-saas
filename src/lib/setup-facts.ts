@@ -1,6 +1,7 @@
 import { serializeEventType } from './admin-serializers';
 import type { TenantScope } from './db';
 import type { EventTypeRow, OutcomePathRow } from './db/types';
+import { isDeleted } from './service-deletion-server';
 
 /**
  * Everything the setup model needs, for every service, in one pass.
@@ -32,7 +33,9 @@ export async function loadSetupFacts(scope: TenantScope) {
     if (result.error) throw result.error;
   }
 
-  const rows = (services.data ?? []) as unknown as EventTypeRow[];
+  /* A deleted service is gone from everything the business sets up
+     (migration 0029); its past bookings keep its name elsewhere. */
+  const rows = ((services.data ?? []) as unknown as EventTypeRow[]).filter((r) => !isDeleted(r));
 
   const scoped = (questions.data ?? []) as unknown as Array<{ id: string; event_type_id: string | null }>;
   const own = new Map<string, number>();

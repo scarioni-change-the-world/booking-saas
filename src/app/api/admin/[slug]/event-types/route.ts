@@ -13,6 +13,8 @@ import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
 import { parseBookingModeForCreate, parseLocation, parsePrice } from '@/lib/admin-event-types';
 import type { EventTypeRow } from '@/lib/db/types';
+import { countActiveServices, isDeleted } from '@/lib/service-deletion-server';
+import { LIMIT_REACHED, withinServiceLimit } from '@/lib/service-deletion';
 
 /** Duration and buffers default rather than being required, so the
  * dashboard's inline "just type a name" create row (see SessionsPage) can
@@ -55,7 +57,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       .order('created_at', { ascending: true });
     if (error) throw error;
 
-    const rows = (data ?? []) as unknown as EventTypeRow[];
+    // A deleted service is gone for good from everything the business sets up.
+    const rows = ((data ?? []) as unknown as EventTypeRow[]).filter((r) => !isDeleted(r));
     return ok({ eventTypes: rows.map(serializeEventType) });
   } catch (error) {
     return handleError(error);
@@ -65,11 +68,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
 /**
  * Create a session type.
  *
- * No hard cap in the schema — the "up to 3" the product currently offers is a
- * soft, UI-level guide while pricing tiers are still undecided, not a
- * database constraint. Enforcing it here would mean a real migration the day
- * tiering is settled; a disabled button in the dashboard costs nothing to
- * change in the meantime.
+ * No hard cap in the schema: the allowance (SERVICE_LIMIT active services;
+ * paused ones do not count) is checked here and on resume, so the day
+ * pricing tiers are settled it changes in one constant, not a migration.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -78,6 +79,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const body = await readJson(request);
 
     const name = requireString(body, 'name', { maxLength: 200 });
+    if (!withinServiceLimit(await countActiveServices(scope))) return fail(LIMIT_REACHED, 409);
     const durationMinutes =
       body.durationMinutes === undefined
         ? DEFAULT_DURATION_MINUTES

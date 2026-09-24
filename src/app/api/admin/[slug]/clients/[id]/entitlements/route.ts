@@ -27,6 +27,7 @@ export async function POST(
     if (eventTypeError) throw eventTypeError;
     if (!eventTypeData) return fail('Unknown session type', 404);
     const eventType = eventTypeData as unknown as EventTypeRow;
+    if (eventType.deleted_at) return fail('That service has been deleted', 404);
 
     const entitlement = await grantEntitlement(scope, id, eventTypeId, sessions);
 

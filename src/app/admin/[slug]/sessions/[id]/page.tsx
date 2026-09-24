@@ -96,7 +96,7 @@ export default function ServicePage() {
       <>
         <PageHeader eyebrow="Set up" title="That service is not here" />
         <p className="notice notice-muted">
-          It may have been archived. <a href={`/admin/${slug}/flow`}>Back to the flow</a>.
+          It may have been deleted. <a href={`/admin/${slug}/flow`}>Back to your services</a>.
         </p>
       </>
     );
@@ -194,20 +194,18 @@ export default function ServicePage() {
         ))}
       </ol>
 
-      {/* Archiving lives at the foot of the service it archives, which is
-          where somebody looking for it will be. "Delete" is not offered and
-          never has been: a service with a booking against it cannot be
-          removed without orphaning history, so archiving is what deleting
-          has always meant here — said in the word that is true. */}
+      {/* Pausing lives here as well as on Flow, at the foot of the service
+          it pauses. Deleting for good is on Flow, under Paused, where it
+          can say what is still booked (src/lib/service-deletion.ts). */}
       <div className="service-retire">
         <div>
           <p className="service-retire-label">
-            {service.active ? 'Stop offering this service' : 'This service is archived'}
+            {service.active ? 'Pause this service' : 'This service is paused'}
           </p>
           <p className="service-retire-note">
             {service.active
-              ? 'It comes off your booking page. Everything already booked stays exactly as it is, and you can bring it back at any time.'
-              : 'It is off your booking page. Past bookings are untouched.'}
+              ? 'No new appointments can be made. Appointments already booked stay, and those clients can still move or cancel them. You can resume it at any time.'
+              : 'No new appointments can be made. Appointments already booked stay. To delete it for good, go to Flow, under Paused.'}
           </p>
         </div>
         <button
@@ -223,7 +221,7 @@ export default function ServicePage() {
             }
           }}
         >
-          {retiring ? 'Saving…' : service.active ? 'Archive' : 'Restore'}
+          {retiring ? 'Saving…' : service.active ? 'Pause' : 'Resume'}
         </button>
       </div>
     </>

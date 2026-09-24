@@ -22,6 +22,7 @@ import {
   type StepId,
 } from '@/lib/flow';
 import { partForPhase, type TestMessage } from '@/lib/test-run';
+import { LIMIT_REACHED, nameConfirmed, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
 
 interface NextUp {
   id: string;
@@ -37,8 +38,6 @@ interface Payload extends FlowInput {
   nextUp: NextUp[];
 }
 
-/** Up to this many active services — the same soft guide Services kept. */
-const SOFT_CAP = 5;
 
 interface Walked {
   steps: Set<StepId>;
@@ -320,11 +319,11 @@ export default function FlowPage() {
                 )}
 
                 {!trying && (
-                  <ArchiveService
+                  <PauseService
                     key={lane.id}
                     slug={slug}
                     lane={lane}
-                    onArchived={() => {
+                    onPaused={() => {
                       setLaneId(null);
                       setOpenStep(null);
                       void load();
@@ -337,7 +336,12 @@ export default function FlowPage() {
             {/* Below the open flow, so nothing comes between a service and
                 the flow it opens. */}
             {!trying && model.archived.length > 0 && (
-              <ArchivedServices slug={slug} archived={model.archived} onRestored={() => void load()} />
+              <PausedServices
+                slug={slug}
+                paused={model.archived}
+                activeCount={activeCount}
+                onChanged={() => void load()}
+              />
             )}
           </div>
 
@@ -348,7 +352,7 @@ export default function FlowPage() {
   );
 }
 
-/* ── Taking a service off, and bringing it back ─────────────────────────── */
+/* ── Pausing a service, resuming it, deleting it ────────────────────────── */
 
 async function setActive(slug: string, id: string, active: boolean) {
   await adminFetchJson(`/api/admin/${slug}/event-types/${id}`, {
@@ -359,21 +363,21 @@ async function setActive(slug: string, id: string, active: boolean) {
 }
 
 /**
- * Removing a service is archiving it. A service with bookings against it
- * cannot be deleted without breaking their history (see the event-types
- * route), so the button says what really happens, and asks once, in place.
+ * Pausing: no new appointments can be made. Allowed at any time — whoever
+ * already booked keeps their appointment and can still move or cancel it
+ * (see src/lib/service-deletion.ts). Asked once, in place.
  */
-function ArchiveService({ slug, lane, onArchived }: { slug: string; lane: Lane; onArchived: () => void }) {
+function PauseService({ slug, lane, onPaused }: { slug: string; lane: Lane; onPaused: () => void }) {
   const [asking, setAsking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function archive() {
+  async function pause() {
     setSaving(true);
     setError(null);
     try {
       await setActive(slug, lane.id, false);
-      onArchived();
+      onPaused();
     } catch (cause) {
       setError((cause as Error).message);
       setSaving(false);
@@ -385,15 +389,15 @@ function ArchiveService({ slug, lane, onArchived }: { slug: string; lane: Lane; 
       {asking ? (
         <>
           <p>
-            <b>Archive {lane.name}?</b> It comes off your booking page and out of this list. Bookings already made
-            stay exactly as they are, and you can restore it at any time.
+            <b>Pause {lane.name}?</b> No new appointments can be made. Appointments already booked stay, and those
+            clients can still move or cancel them. You can resume it at any time.
           </p>
           <div className="fl-actions">
-            <button type="button" className="btn-primary" onClick={() => void archive()} disabled={saving}>
-              {saving ? 'Archiving…' : 'Archive it'}
+            <button type="button" className="btn-primary" onClick={() => void pause()} disabled={saving}>
+              {saving ? 'Pausing…' : 'Pause it'}
             </button>
             <button type="button" className="btn-link" onClick={() => setAsking(false)} disabled={saving}>
-              Keep it
+              Keep it open
             </button>
           </div>
           {error && (
@@ -404,31 +408,36 @@ function ArchiveService({ slug, lane, onArchived }: { slug: string; lane: Lane; 
         </>
       ) : (
         <button type="button" className="btn-link" onClick={() => setAsking(true)}>
-          Archive this service
+          Pause this service
         </button>
       )}
     </div>
   );
 }
 
-function ArchivedServices({
+function PausedServices({
   slug,
-  archived,
-  onRestored,
+  paused,
+  activeCount,
+  onChanged,
 }: {
   slug: string;
-  archived: Array<{ id: string; name: string }>;
-  onRestored: () => void;
+  paused: Array<{ id: string; name: string }>;
+  activeCount: number;
+  onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const full = !withinServiceLimit(activeCount);
 
-  async function restore(id: string) {
+  async function resume(id: string) {
     setBusy(id);
     setError(null);
     try {
       await setActive(slug, id, true);
-      onRestored();
+      onChanged();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -438,20 +447,207 @@ function ArchivedServices({
 
   return (
     <div className="fc-archived">
-      <p className="fc-eyebrow">Archived</p>
+      <p className="fc-eyebrow">Paused</p>
+      {done && (
+        <p className="notice notice-muted" role="status">
+          {done}
+        </p>
+      )}
       <ul>
-        {archived.map((x) => (
-          <li key={x.id}>
-            <span>
-              <b>{x.name}</b>
-              <small>Not on your booking page. Its past bookings are kept.</small>
-            </span>
-            <button type="button" className="btn-secondary" onClick={() => void restore(x.id)} disabled={busy !== null}>
-              {busy === x.id ? 'Restoring…' : 'Restore'}
-            </button>
+        {paused.map((x) => (
+          <li key={x.id} className={deleting === x.id ? 'is-deleting' : undefined}>
+            <div className="fc-paused-row">
+              <span>
+                <b>{x.name}</b>
+                <small>No new appointments. Ones already booked stay.</small>
+              </span>
+              <span className="fl-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void resume(x.id)}
+                  disabled={busy !== null || full}
+                  title={full ? LIMIT_REACHED : undefined}
+                >
+                  {busy === x.id ? 'Resuming…' : 'Resume'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-link"
+                  aria-expanded={deleting === x.id}
+                  onClick={() => setDeleting((cur) => (cur === x.id ? null : x.id))}
+                >
+                  Delete…
+                </button>
+              </span>
+            </div>
+            {deleting === x.id && (
+              <DeleteService
+                slug={slug}
+                id={x.id}
+                name={x.name}
+                onCancel={() => setDeleting(null)}
+                onDeleted={(note) => {
+                  setDeleting(null);
+                  setDone(note);
+                  onChanged();
+                }}
+              />
+            )}
           </li>
         ))}
       </ul>
+      {full && <p className="fc-hint">{LIMIT_REACHED}</p>}
+      {error && (
+        <p className="notice notice-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface DeletionCheck {
+  upcoming: number;
+  owedSessions: number;
+  past: number;
+  blockers: string[];
+  keeps: string;
+}
+
+/**
+ * Deleting for good, asked twice: first what it means — or why it cannot
+ * happen yet — then the service's name, typed back. The route checks every
+ * one of these again before it deletes anything.
+ */
+function DeleteService({
+  slug,
+  id,
+  name,
+  onCancel,
+  onDeleted,
+}: {
+  slug: string;
+  id: string;
+  name: string;
+  onCancel: () => void;
+  onDeleted: (note: string) => void;
+}) {
+  const [check, setCheck] = useState<DeletionCheck | null>(null);
+  const [stage, setStage] = useState<'explain' | 'type'>('explain');
+  const [typed, setTyped] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    adminFetchJson<DeletionCheck>(`/api/admin/${slug}/event-types/${id}/deletion`)
+      .then(setCheck)
+      .catch((cause) => setError((cause as Error).message));
+  }, [slug, id]);
+
+  async function remove() {
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await adminFetchJson<{ emailedTo: string | null; email: string }>(
+        `/api/admin/${slug}/event-types/${id}`,
+        {
+          method: 'DELETE',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ confirmName: typed }),
+        },
+      );
+      onDeleted(
+        result.email === 'sent' && result.emailedTo
+          ? `${name} was deleted. A confirmation is on its way to ${result.emailedTo}.`
+          : `${name} was deleted.`,
+      );
+    } catch (cause) {
+      setError((cause as Error).message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fc-delete" role="region" aria-label={`Delete ${name}`}>
+      {!check && !error && <p className="fc-hint">Checking what is still booked…</p>}
+
+      {check && check.blockers.length > 0 && (
+        <>
+          <p>
+            <b>{name} can’t be deleted yet.</b>
+          </p>
+          <ul className="fc-delete-reasons">
+            {check.blockers.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+          <div className="fl-actions">
+            {check.upcoming > 0 && (
+              <a className="btn-secondary" href={`/admin/${slug}/week?view=list`}>
+                See them on the Week
+              </a>
+            )}
+            {check.owedSessions > 0 && (
+              <a className="btn-secondary" href={`/admin/${slug}/people?show=owed`}>
+                See who in People
+              </a>
+            )}
+            <button type="button" className="btn-link" onClick={onCancel}>
+              Close
+            </button>
+          </div>
+        </>
+      )}
+
+      {check && check.blockers.length === 0 && stage === 'explain' && (
+        <>
+          <p>
+            <b>Delete {name} for good?</b> It can’t be undone: it can never be resumed, and its settings and its
+            own questions are removed. {check.keeps} Nobody is cancelled or emailed. You’ll get an email confirming
+            it.
+          </p>
+          <div className="fl-actions">
+            <button type="button" className="btn-secondary" onClick={() => setStage('type')}>
+              Continue
+            </button>
+            <button type="button" className="btn-link" onClick={onCancel}>
+              Keep it
+            </button>
+          </div>
+        </>
+      )}
+
+      {check && check.blockers.length === 0 && stage === 'type' && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (nameConfirmed(typed, name)) void remove();
+          }}
+        >
+          <div className="field">
+            <label htmlFor={`fc-delete-${id}`}>
+              To confirm, type the service’s name: <b>{name}</b>
+            </label>
+            <input
+              id={`fc-delete-${id}`}
+              type="text"
+              autoComplete="off"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+            />
+          </div>
+          <div className="fl-actions">
+            <button type="submit" className="btn-danger" disabled={saving || !nameConfirmed(typed, name)}>
+              {saving ? 'Deleting…' : 'Delete for good'}
+            </button>
+            <button type="button" className="btn-link" onClick={onCancel} disabled={saving}>
+              Keep it
+            </button>
+          </div>
+        </form>
+      )}
+
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
@@ -748,7 +944,7 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const atCap = activeCount >= SOFT_CAP;
+  const atCap = !withinServiceLimit(activeCount);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -771,7 +967,7 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
   return (
     <form className="card" onSubmit={submit} style={{ marginBottom: 14 }}>
       <div className="admin-card-title">
-        A new service · {activeCount} of {SOFT_CAP} used
+        A new service · {activeCount} of {SERVICE_LIMIT} in use
       </div>
       {error && (
         <p className="notice notice-error" role="alert">
@@ -780,7 +976,7 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
       )}
       {atCap ? (
         <p className="notice notice-muted" style={{ margin: 0 }}>
-          You&apos;re using all {SOFT_CAP} services available right now. Archive one to make room for another.
+          {LIMIT_REACHED}
         </p>
       ) : (
         <div className="fl-add">

@@ -124,6 +124,10 @@ export interface EventTypeRow {
   price_minor: number | null;
   location_kind: ServiceLocationKind | null;
   location_detail: string | null;
+  /** Set when the service was deleted for good (migration 0029). Absent on
+   *  a database that has not run it yet, which reads the same as null. */
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export interface AvailabilityRuleRow {

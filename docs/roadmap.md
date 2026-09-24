@@ -89,6 +89,17 @@ Six rules every screen follows:
    A step that stops the service is a sentence above the chips with the
    button that fixes it. A chip's text, fixes and Change open under the
    chips, only when chosen.
+   **Pausing and deleting a service** — done (migration 0029). "Archive"
+   is now Pause: no new appointments, allowed at any time; whoever already
+   booked keeps their appointment and can still move or cancel it, and
+   paid sessions can still be booked (that used to fail on a paused
+   service). Paused services sit under Flow with Resume and Delete. Delete
+   only works on a paused service with nothing still coming up and nothing
+   still owed. It asks twice: first what it means, then the service's name
+   typed back. It cancels and emails nobody, and emails whoever deleted it.
+   The row stays, marked deleted, so past appointments keep their name and
+   clients keep their history. The five-service allowance (active only) is
+   now enforced on the server, on adding and on resuming.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

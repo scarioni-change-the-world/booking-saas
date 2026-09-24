@@ -6060,19 +6060,73 @@ body:has(.bk-embedded) {
   padding: 0;
   list-style: none;
 }
-.fc-archived li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
+.fc-archived > ul > li {
+  display: grid;
+  gap: 12px;
   padding: 10px 16px;
   border-radius: 10px;
   background: color-mix(in srgb, var(--ink) 4%, var(--canvas));
   color: var(--muted);
 }
-.fc-archived li > span {
+.fc-archived > ul > li.is-deleting {
+  padding-bottom: 16px;
+}
+.fc-paused-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.fc-paused-row > span:first-child {
   display: grid;
+}
+/* Deleting for good: asked in place, under the paused service it deletes. */
+.fc-delete {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.fc-delete p {
+  margin: 0;
+  max-width: 72ch;
+}
+.fc-delete form {
+  display: grid;
+  gap: 12px;
+}
+.fc-delete .field {
+  max-width: 420px;
+  margin: 0;
+}
+.fc-delete-reasons {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--emphasis-ink);
+}
+/* The one red button in the product: the act that cannot be undone. */
+.btn-danger {
+  padding: 12px 22px;
+  border: 1px solid var(--status-broken-ink);
+  border-radius: var(--radius-sm, 7px);
+  background: var(--status-broken-ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.btn-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .fc-archived small {
   color: var(--faint);

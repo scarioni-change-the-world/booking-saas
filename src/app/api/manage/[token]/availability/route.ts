@@ -41,6 +41,9 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
       booking.event_type_id,
       today.toFormat('yyyy-MM-dd'),
       today.plus({ days: 30 }).toFormat('yyyy-MM-dd'),
+      /* Moving an appointment you already have still works while its
+         service is paused: pausing only stops new ones. */
+      { paused: 'allow' },
     );
 
     const withoutSelf = {

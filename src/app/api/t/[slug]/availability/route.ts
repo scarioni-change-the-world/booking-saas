@@ -76,7 +76,12 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       throw new BookingError(`Range cannot exceed ${MAX_RANGE_DAYS} days`, 400);
     }
 
-    const days = await getAvailability(tenant, scope, eventTypeId, from, to);
+    /* A client's own link books sessions they already hold, so a paused
+       service still shows its times there. Booking itself is checked
+       against their balance, and a new booking still needs an active one. */
+    const days = await getAvailability(tenant, scope, eventTypeId, from, to, {
+      paused: audience === 'client' ? 'allow' : 'refuse',
+    });
     return ok({ timezone: tenant.timezone, days });
   } catch (error) {
     return handleError(error);

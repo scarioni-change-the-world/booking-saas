@@ -84,16 +84,23 @@ async function loadSettings(scope: TenantScope): Promise<TenantSettingsRow> {
  * scoped to a service the tenant doesn't have (or has archived) should
  * fail the same clear way an attempt to book it does.
  */
-export async function loadEventType(scope: TenantScope, eventTypeId: string): Promise<EventTypeRow> {
-  const { data, error } = await scope
-    .select('event_types')
-    .eq('id', eventTypeId)
-    .eq('active', true)
-    .maybeSingle();
+export async function loadEventType(
+  scope: TenantScope,
+  eventTypeId: string,
+  { paused = 'refuse' }: { paused?: 'refuse' | 'allow' } = {},
+): Promise<EventTypeRow> {
+  let query = scope.select('event_types').eq('id', eventTypeId);
+  if (paused === 'refuse') query = query.eq('active', true);
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new BookingError('Unknown event type', 404);
-  return data as unknown as EventTypeRow;
+  const row = data as unknown as EventTypeRow | null;
+  /* A paused service still serves whoever already booked it — moving an
+     appointment, rebooking a cancelled programme session, booking sessions
+     already paid for — so those callers pass paused: 'allow'. Nothing is
+     ever served for a deleted one. */
+  if (!row || row.deleted_at) throw new BookingError('Unknown event type', 404);
+  return row;
 }
 
 /**
@@ -111,10 +118,11 @@ export async function buildSlotQuery(
   eventTypeId: string,
   fromDate: string,
   toDate: string,
+  { paused = 'refuse' }: { paused?: 'refuse' | 'allow' } = {},
 ): Promise<SlotQuery> {
   const [settings, eventType] = await Promise.all([
     loadSettings(scope),
-    loadEventType(scope, eventTypeId),
+    loadEventType(scope, eventTypeId, { paused }),
   ]);
 
   const rangeStart = DateTime.fromISO(fromDate, { zone: tenant.timezone }).startOf('day');
@@ -209,8 +217,9 @@ export async function getAvailability(
   eventTypeId: string,
   fromDate: string,
   toDate: string,
+  options: { paused?: 'refuse' | 'allow' } = {},
 ): Promise<DaySlots[]> {
-  const query = await buildSlotQuery(tenant, scope, eventTypeId, fromDate, toDate);
+  const query = await buildSlotQuery(tenant, scope, eventTypeId, fromDate, toDate, options);
   return generateSlots(query);
 }
 
@@ -712,13 +721,14 @@ export async function bookPackReplacement(
     throw new BookingError('Every appointment in this programme is already booked', 409);
   }
 
-  const eventType = await loadEventType(scope, sibling.event_type_id);
+  const eventType = await loadEventType(scope, sibling.event_type_id, { paused: 'allow' });
   const query = await buildSlotQuery(
     tenant,
     scope,
     sibling.event_type_id,
     DateTime.fromISO(startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
     DateTime.fromISO(startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
+    { paused: 'allow' },
   );
 
   if (!isSlotBookable(query, startsAt)) {
@@ -934,10 +944,10 @@ export async function rescheduleBooking(
     throw new BookingError('That booking was cancelled', 409);
   }
 
-  const eventType = await loadEventType(scope, booking.event_type_id);
+  const eventType = await loadEventType(scope, booking.event_type_id, { paused: 'allow' });
   const localDate = DateTime.fromISO(newStartIso).setZone(tenant.timezone).toFormat('yyyy-MM-dd');
 
-  const query = await buildSlotQuery(tenant, scope, booking.event_type_id, localDate, localDate);
+  const query = await buildSlotQuery(tenant, scope, booking.event_type_id, localDate, localDate, { paused: 'allow' });
   const withoutSelf: SlotQuery = {
     ...query,
     busy: query.busy.filter(
@@ -1166,7 +1176,7 @@ export async function createEntitlementBookings(
     throw new BookingError('That package does not belong to this client', 403);
   }
 
-  const eventType = await loadEventType(scope, entitlement.event_type_id);
+  const eventType = await loadEventType(scope, entitlement.event_type_id, { paused: 'allow' });
 
   const results: EntitlementBookingResult[] = [];
   let used = entitlement.used_sessions;
@@ -1178,7 +1188,7 @@ export async function createEntitlementBookings(
     }
 
     const localDate = DateTime.fromISO(startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd');
-    const query = await buildSlotQuery(tenant, scope, eventType.id, localDate, localDate);
+    const query = await buildSlotQuery(tenant, scope, eventType.id, localDate, localDate, { paused: 'allow' });
 
     if (!isSlotBookable(query, startsAt)) {
       results.push({ startsAt, status: 'unavailable' });
