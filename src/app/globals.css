@@ -5639,11 +5639,6 @@ body:has(.bk-embedded) {
   align-items: center;
   gap: 10px;
 }
-.fl-archived {
-  margin: 10px 2px 0;
-  font-size: 0.82rem;
-  color: var(--faint);
-}
 .fl-insights {
   display: grid;
   gap: 12px;
@@ -6028,6 +6023,60 @@ body:has(.bk-embedded) {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.fc-archive {
+  display: flex;
+  justify-content: flex-end;
+}
+.fc-archive .btn-link {
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+.fc-archive.is-asking {
+  display: grid;
+  justify-content: stretch;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+.fc-archive.is-asking p {
+  margin: 0;
+  max-width: 70ch;
+}
+.fc-archive.is-asking .btn-link {
+  color: var(--ink);
+  font-size: inherit;
+}
+.fc-archived {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.fc-archived ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fc-archived li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--canvas));
+  color: var(--muted);
+}
+.fc-archived li > span {
+  display: grid;
+}
+.fc-archived small {
+  color: var(--faint);
+  font-size: 0.82rem;
 }
 .fc-callout {
   display: flex;

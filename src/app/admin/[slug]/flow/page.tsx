@@ -160,23 +160,10 @@ export default function FlowPage() {
         title="Your services"
         description="Choose a service to configure it."
         actions={
-          model ? (
-            trying ? (
-              <button type="button" className="btn-secondary" onClick={() => setTrying(false)}>
-                Stop the test
-              </button>
-            ) : (
-              <div className="fl-actions">
-                <button type="button" className="btn-secondary" onClick={() => setAdding(true)}>
-                  + Add a service
-                </button>
-                {model.lanes.length > 0 && (
-                  <button type="button" className="btn-primary" onClick={startTrying}>
-                    Try your booking page
-                  </button>
-                )}
-              </div>
-            )
+          model && !trying ? (
+            <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
+              + Add a service
+            </button>
           ) : undefined
         }
       />
@@ -234,6 +221,7 @@ export default function FlowPage() {
                   })}
                 </ul>
               )}
+
             </section>
 
             {lane && (
@@ -251,11 +239,25 @@ export default function FlowPage() {
                       <h2 id="fc-flow-title">{lane.name}</h2>
                     </div>
                   </div>
-                  {!trying && (
-                    <a className="btn-secondary" href={a(`sessions/${lane.id}`)}>
-                      Service settings
-                    </a>
-                  )}
+                  <div className="fl-actions">
+                    {trying ? (
+                      <button type="button" className="btn-secondary" onClick={() => setTrying(false)}>
+                        Stop the test
+                      </button>
+                    ) : (
+                      <>
+                        {/* The real booking page, in a test run that saves and
+                            sends nothing, with these steps lighting up as it
+                            is walked: a test of this flow, so it sits here. */}
+                        <button type="button" className="btn-secondary" onClick={startTrying}>
+                          Test as a client
+                        </button>
+                        <a className="btn-secondary" href={a(`sessions/${lane.id}`)}>
+                          Service settings
+                        </a>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {(() => {
@@ -316,19 +318,26 @@ export default function FlowPage() {
                     <StepDetail id={opened.id} model={model} lane={lane} data={data} slug={slug} />
                   </StepPanel>
                 )}
+
+                {!trying && (
+                  <ArchiveService
+                    key={lane.id}
+                    slug={slug}
+                    lane={lane}
+                    onArchived={() => {
+                      setLaneId(null);
+                      setOpenStep(null);
+                      void load();
+                    }}
+                  />
+                )}
               </section>
             )}
 
+            {/* Below the open flow, so nothing comes between a service and
+                the flow it opens. */}
             {!trying && model.archived.length > 0 && (
-              <p className="fl-archived">
-                Archived:{' '}
-                {model.archived.map((x, i) => (
-                  <span key={x.id}>
-                    {i > 0 && ', '}
-                    <a href={a(`sessions/${x.id}`)}>{x.name}</a>
-                  </span>
-                ))}
-              </p>
+              <ArchivedServices slug={slug} archived={model.archived} onRestored={() => void load()} />
             )}
           </div>
 
@@ -336,6 +345,119 @@ export default function FlowPage() {
         </div>
       )}
     </>
+  );
+}
+
+/* ── Taking a service off, and bringing it back ─────────────────────────── */
+
+async function setActive(slug: string, id: string, active: boolean) {
+  await adminFetchJson(`/api/admin/${slug}/event-types/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ active }),
+  });
+}
+
+/**
+ * Removing a service is archiving it. A service with bookings against it
+ * cannot be deleted without breaking their history (see the event-types
+ * route), so the button says what really happens, and asks once, in place.
+ */
+function ArchiveService({ slug, lane, onArchived }: { slug: string; lane: Lane; onArchived: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function archive() {
+    setSaving(true);
+    setError(null);
+    try {
+      await setActive(slug, lane.id, false);
+      onArchived();
+    } catch (cause) {
+      setError((cause as Error).message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={`fc-archive${asking ? ' is-asking' : ''}`}>
+      {asking ? (
+        <>
+          <p>
+            <b>Archive {lane.name}?</b> It comes off your booking page and out of this list. Bookings already made
+            stay exactly as they are, and you can restore it at any time.
+          </p>
+          <div className="fl-actions">
+            <button type="button" className="btn-primary" onClick={() => void archive()} disabled={saving}>
+              {saving ? 'Archiving…' : 'Archive it'}
+            </button>
+            <button type="button" className="btn-link" onClick={() => setAsking(false)} disabled={saving}>
+              Keep it
+            </button>
+          </div>
+          {error && (
+            <p className="notice notice-error" role="alert">
+              {error}
+            </p>
+          )}
+        </>
+      ) : (
+        <button type="button" className="btn-link" onClick={() => setAsking(true)}>
+          Archive this service
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ArchivedServices({
+  slug,
+  archived,
+  onRestored,
+}: {
+  slug: string;
+  archived: Array<{ id: string; name: string }>;
+  onRestored: () => void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function restore(id: string) {
+    setBusy(id);
+    setError(null);
+    try {
+      await setActive(slug, id, true);
+      onRestored();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="fc-archived">
+      <p className="fc-eyebrow">Archived</p>
+      <ul>
+        {archived.map((x) => (
+          <li key={x.id}>
+            <span>
+              <b>{x.name}</b>
+              <small>Not on your booking page. Its past bookings are kept.</small>
+            </span>
+            <button type="button" className="btn-secondary" onClick={() => void restore(x.id)} disabled={busy !== null}>
+              {busy === x.id ? 'Restoring…' : 'Restore'}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p className="notice notice-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
