@@ -271,13 +271,13 @@ describe('the chips', () => {
   it('puts a few words on the chip where something needs doing, and nowhere else', () => {
     expect(chips().map((s) => s.flag)).toEqual([null, null, null, null]);
     expect(chips({ hasOtherPathMessage: false, hasOtherPathUrl: false })[1]!.flag).toBe('Next step not written');
-    expect(chips({ availabilityRuleCount: 0 })[2]!.flag).toBe('No hours yet');
-    expect(chips({}, { availableToProspects: false })[0]!.flag).toBe('Not offered yet');
+    expect(chips({ availabilityRuleCount: 0 })[2]!.short).toBe('No hours set');
+    expect(chips({}, { availableToProspects: false })[0]!.short).toBe('Not offered to anyone');
   });
 
-  it('says "Waiting" on the chips after a missing one, with no count and no flag', () => {
+  it('says which step the chips after a missing one are waiting for', () => {
     const list = chips({ availabilityRuleCount: 0 });
-    expect(list[3]).toMatchObject({ state: 'waiting', short: 'Waiting', figure: null, flag: null });
+    expect(list[3]).toMatchObject({ state: 'waiting', short: 'Waiting for step 3', figure: null, flag: null });
   });
 });
 

@@ -75,17 +75,20 @@ Six rules every screen follows:
    the business's name, time zone (with a preview of what changing it
    does), currency (relabelled, not converted — it says so), signing in,
    the team (read-only) and the plan, with a map of where the rest went.
-   **Flow, redrawn as chips** — done. The network of boxes and lines read
-   like a lab chart: people and appointments on one line (a programme of
-   three counts three times), dashed lines for things that do not happen,
-   a red dot for a sentence, and Diagram, List and tiles showing the same
-   numbers. A first rewrite as a list of steps with notes read as clutter.
-   Now: services as clickable chips with their own number; the chosen
-   service's path as four clickable chips (your page, questions, choose a
-   time, booked), each with one count of people — appointments named as
-   appointments — and a few Ochre words when something needs doing. Its
-   text, fixes and Change open in one panel under the path, only when a
-   chip is chosen. Try your booking page lights the chips.
+   **Flow, redrawn** — done. The network of boxes and lines read like a
+   lab chart: people and appointments on one line (a programme of three
+   counts three times), dashed lines for things that do not happen, a red
+   dot for a sentence, and Diagram, List and tiles repeating one another.
+   Two rewrites later (a list of steps read as clutter; chips with the
+   services mixed in read as a guessing game), Flow is two containers.
+   "Your services" lists every service as a row with its numbers, its
+   state and Show flow, and the button to add one. Choosing a row opens
+   that service's flow in its own card below, like a drop-down: four
+   numbered chips (your page, questions, choose a time, booked), each with
+   one count of people and a few Ochre words when something needs doing.
+   A step that stops the service is a sentence above the chips with the
+   button that fixes it. A chip's text, fixes and Change open under the
+   chips, only when chosen.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

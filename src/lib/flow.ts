@@ -401,8 +401,8 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
     find = {
       id: 'find',
       label: 'Your page',
-      short: 'Not on it',
-      flag: 'Not offered yet',
+      short: 'Not offered to anyone',
+      flag: null,
       title: 'They find it',
       detail: 'It isn’t on your booking page, and it isn’t offered to existing clients.',
       state: 'missing',
@@ -493,8 +493,8 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
     ? {
         id: 'times',
         label: 'Choose a time',
-        short: 'No hours yet',
-        flag: 'No hours yet',
+        short: 'No hours set',
+        flag: null,
         title: pickTitle,
         detail: 'You haven’t set any hours, so there is nothing to choose.',
         state: 'missing',
@@ -548,7 +548,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         st.figure = null;
         st.notes = [];
         st.flag = null;
-        st.short = 'Waiting';
+        st.short = `Waiting for step ${firstMissing + 1}`;
       }
     }
   }

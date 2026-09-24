@@ -52,12 +52,14 @@ const START: Walked = { steps: new Set(['find']), current: 'find', elsewhere: fa
 /**
  * Flow: each service as the path people take to book it.
  *
- * A row of services, each a chip with its own number; under it, the chosen
- * service's path as four chips — your page, questions, choosing a time,
- * booked — each with one count of people and, when something needs doing,
- * a few words saying so. Nothing else is on the page until a chip is
- * chosen: then its detail, its problems in full and the way to change it
- * open in one panel under the path.
+ * Two containers, one above the other. "Your services" lists every service
+ * as a row with its numbers, and the button to add one. Choosing a service
+ * opens its flow in its own container underneath, like a drop-down: four
+ * numbered chips — your page, questions, choose a time, booked — each with
+ * one count of people and, when something needs doing, a few words saying
+ * so. A step that stops the service is said in a sentence above the chips,
+ * with the button that fixes it. Choosing a chip opens its detail, its
+ * problems in full and the way to change it, in one panel under them.
  */
 export default function FlowPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -97,7 +99,14 @@ export default function FlowPage() {
   }, [load]);
 
   const model = useMemo(() => (data ? buildFlow(data) : null), [data]);
-  const lane = model?.lanes.find((l) => l.id === laneId) ?? model?.lanes[0] ?? null;
+  /* A service's flow opens when it is chosen, and closes when it is chosen
+     again. With only one service there is nothing to choose between, so
+     it starts open. */
+  const lane = model?.lanes.find((l) => l.id === laneId) ?? null;
+  useEffect(() => {
+    if (model && model.lanes.length === 1 && laneId === null) setLaneId(model.lanes[0]!.id);
+    // Only when the services arrive: closing it afterwards must stay closed.
+  }, [model]);
   const steps = useMemo(() => (model && lane ? serviceSteps(model, lane, slug) : []), [model, lane, slug]);
   const opened = steps.find((st) => st.id === openStep) ?? null;
 
@@ -131,7 +140,7 @@ export default function FlowPage() {
   }, [trying, model]);
 
   function chooseLane(id: string) {
-    setLaneId(id);
+    setLaneId((cur) => (cur === id ? null : id));
     setOpenStep(null);
   }
 
@@ -149,7 +158,7 @@ export default function FlowPage() {
       <PageHeader
         eyebrow="Flow"
         title="How people reach you"
-        description="The last 30 days. Choose a service, then any step."
+        description="Choose a service to see how people book it. Numbers are the last 30 days."
         actions={
           model && model.lanes.length > 0 ? (
             trying ? (
@@ -174,54 +183,100 @@ export default function FlowPage() {
       {loading && <p className="status">Loading…</p>}
 
       {data && model && (
-        <>
-          <div className="fc-services" role="tablist" aria-label="Services">
-            {model.lanes.map((l) => {
-              const state = laneState(model, l);
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={lane?.id === l.id}
-                  className={`fc-service${state.live ? '' : ' is-off'}`}
-                  style={{ ['--svc' as string]: l.color }}
-                  onClick={() => chooseLane(l.id)}
-                  disabled={trying && lane?.id !== l.id}
-                >
-                  <ServiceBadge name={l.name} color={l.color} />
-                  <span>
-                    <b>{l.name}</b>
-                    <small>
-                      {state.live
-                        ? `${l.bookedPeople} booked${l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}`
-                        : state.label}
-                    </small>
-                  </span>
-                </button>
-              );
-            })}
-            {!trying && (
-              <button type="button" className="fc-service is-add" onClick={() => setAdding(true)}>
-                <span className="fc-add-mark" aria-hidden="true">
-                  +
-                </span>
-                <span>
-                  <b>Add a service</b>
-                </span>
-              </button>
-            )}
-          </div>
+        <div className={trying ? 'fl-try-layout' : undefined}>
+          <div className="fc-stack">
+            <section className="fc-card" aria-labelledby="fc-services-title">
+              <div className="fc-card-head">
+                <h2 id="fc-services-title">Your services</h2>
+                {!trying && (
+                  <button type="button" className="btn-secondary" onClick={() => setAdding(true)}>
+                    + Add a service
+                  </button>
+                )}
+              </div>
 
-          {adding && <AddService slug={slug} activeCount={activeCount} onCancel={() => setAdding(false)} />}
+              {adding && <AddService slug={slug} activeCount={activeCount} onCancel={() => setAdding(false)} />}
 
-          {!lane ? (
-            <p className="notice notice-muted">No services yet. Add your first one and its path appears here.</p>
-          ) : (
-            <div className={trying ? 'fl-try-layout' : undefined}>
-              <div>
-                <ol className="fc-path" aria-label={`How people book ${lane.name}`} style={{ ['--svc' as string]: lane.color }}>
-                  {steps.map((st) => (
+              {model.lanes.length === 0 ? (
+                <p className="fc-empty">No services yet. Add your first one to see how people book it.</p>
+              ) : (
+                <ul className="fc-rows">
+                  {model.lanes.map((l) => {
+                    const state = laneState(model, l);
+                    const isOpen = lane?.id === l.id;
+                    return (
+                      <li key={l.id}>
+                        <button
+                          type="button"
+                          className={`fc-row${isOpen ? ' is-open' : ''}`}
+                          aria-expanded={isOpen}
+                          aria-controls="fc-flow"
+                          style={{ ['--svc' as string]: l.color }}
+                          onClick={() => chooseLane(l.id)}
+                          disabled={trying && !isOpen}
+                        >
+                          <ServiceBadge name={l.name} color={l.color} />
+                          <span className="fc-row-name">
+                            <b>{l.name}</b>
+                            <small>{l.words}</small>
+                          </span>
+                          {state.live && (
+                            <span className="fc-row-figs">
+                              {l.bookedPeople} booked
+                              {l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}
+                            </span>
+                          )}
+                          <span className={`fc-state${state.live ? '' : ' is-off'}`}>{state.label}</span>
+                          <span className="fc-row-toggle" aria-hidden="true">
+                            {isOpen ? 'Hide flow ▴' : 'Show flow ▾'}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
+            {lane && (
+              <section
+                id="fc-flow"
+                className="fc-card fc-flow"
+                style={{ ['--svc' as string]: lane.color }}
+                aria-labelledby="fc-flow-title"
+              >
+                <div className="fc-card-head">
+                  <div className="fc-flow-title">
+                    <ServiceBadge name={lane.name} color={lane.color} size="lg" />
+                    <div>
+                      <p className="fc-eyebrow">How people book it</p>
+                      <h2 id="fc-flow-title">{lane.name}</h2>
+                    </div>
+                  </div>
+                  {!trying && (
+                    <a className="btn-secondary" href={a(`sessions/${lane.id}`)}>
+                      Service settings
+                    </a>
+                  )}
+                </div>
+
+                {(() => {
+                  const missing = steps.find((st) => st.state === 'missing');
+                  if (!missing || trying) return null;
+                  return (
+                    <div className="fc-callout" role="status">
+                      <span>{readout(model, lane).text}</span>
+                      {missing.change && (
+                        <a className="btn-primary" href={a(missing.change.href)}>
+                          {missing.change.label}
+                        </a>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <ol className="fc-path" aria-label={`How people book ${lane.name}`}>
+                  {steps.map((st, i) => (
                     <li key={st.id}>
                       <button
                         type="button"
@@ -231,7 +286,9 @@ export default function FlowPage() {
                         onClick={() => setOpenStep((cur) => (cur === st.id ? null : st.id))}
                         disabled={trying}
                       >
-                        <span className="fc-label">{st.label}</span>
+                        <span className="fc-label">
+                          {i + 1} · {st.label}
+                        </span>
                         {st.figure ? (
                           <>
                             <b className="fc-value">{st.figure.value}</b>
@@ -252,11 +309,7 @@ export default function FlowPage() {
                   ))}
                 </ol>
 
-                {!trying && (
-                  <p className="fc-settings">
-                    <a href={a(`sessions/${lane.id}`)}>Settings for {lane.name}</a>
-                  </p>
-                )}
+                {!trying && !opened && <p className="fc-hint">Choose a step to see more, or to change it.</p>}
 
                 {trying && <TryLegend walked={walked} lane={lane} />}
 
@@ -265,24 +318,24 @@ export default function FlowPage() {
                     <StepDetail id={opened.id} model={model} lane={lane} data={data} slug={slug} />
                   </StepPanel>
                 )}
+              </section>
+            )}
 
-                {!trying && model.archived.length > 0 && (
-                  <p className="fl-archived">
-                    Archived:{' '}
-                    {model.archived.map((x, i) => (
-                      <span key={x.id}>
-                        {i > 0 && ', '}
-                        <a href={a(`sessions/${x.id}`)}>{x.name}</a>
-                      </span>
-                    ))}
-                  </p>
-                )}
-              </div>
+            {!trying && model.archived.length > 0 && (
+              <p className="fl-archived">
+                Archived:{' '}
+                {model.archived.map((x, i) => (
+                  <span key={x.id}>
+                    {i > 0 && ', '}
+                    <a href={a(`sessions/${x.id}`)}>{x.name}</a>
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
 
-              {trying && <TryPanel slug={slug} onRestart={() => setWalked(START)} />}
-            </div>
-          )}
-        </>
+          {trying && <TryPanel slug={slug} onRestart={() => setWalked(START)} />}
+        </div>
       )}
     </>
   );

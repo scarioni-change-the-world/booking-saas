@@ -5884,76 +5884,164 @@ body:has(.bk-embedded) {
 }
 
 /* ── Flow: services and the path, as chips ──────────────────────────────
-   Every chip is a button that holds its own number. The path is four of
-   them in a line; the text a step needs opens in one panel under it, and
-   only when asked. Colour only where it means something: the service's own
+   "Your services" is a card of rows; choosing one opens its flow in a
+   card below. The path is four numbered chips in a line, each a button
+   holding its own number; the text a step needs opens in one panel under
+   it, and only when asked. Colour only where it means something: the service's own
    colour along each chip's top edge, Ochre for the few words on a chip that
    needs something done. */
-.fc-services {
+/* Two containers: "Your services", and under it the chosen service's
+   flow, opened from its row like a drop-down. */
+.fc-stack {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.fc-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--strong-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+}
+.fc-card-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-.fc-service {
-  display: flex;
-  justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  min-width: 210px;
-  padding: 10px 14px;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.fc-card-head h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.fc-empty {
+  margin: 0;
+  color: var(--muted);
+}
+.fc-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fc-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: stretch;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 16px;
   border: 1px solid var(--soft-border);
-  border-top: 3px solid var(--svc);
+  border-left: 5px solid var(--svc);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--app-canvas);
   color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.fc-service > span:last-child {
-  display: grid;
-  min-width: 0;
-}
-.fc-service b {
-  font-size: 0.95rem;
-  overflow-wrap: anywhere;
-}
-.fc-service small {
-  color: var(--faint);
-  font-size: 0.82rem;
-}
-.fc-service.is-off small {
-  color: var(--emphasis-ink);
-}
-.fc-service:hover {
-  border-color: var(--strong-border);
-  border-top-color: var(--svc);
-}
-.fc-service[aria-selected='true'] {
+.fc-row:hover {
   border-color: var(--ink);
-  border-top-color: var(--svc);
+  border-left-color: var(--svc);
+}
+.fc-row.is-open {
+  border-color: var(--ink);
+  border-left-color: var(--svc);
+  background: var(--surface);
   box-shadow: 0 0 0 1px var(--ink);
 }
-.fc-service:disabled {
+.fc-row:disabled {
   opacity: 0.5;
   cursor: default;
 }
-.fc-service.is-add {
-  border: 1px dashed var(--strong-border);
-  color: var(--faint);
+.fc-row-name {
+  display: grid;
+  min-width: 0;
 }
-.fc-service.is-add b {
+.fc-row-name b {
+  font-size: 1.02rem;
+  overflow-wrap: anywhere;
+}
+.fc-row-name small {
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+.fc-row-figs {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fc-state {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fc-state.is-off {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+.fc-row-toggle {
+  min-width: 98px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+/* The flow card hangs from its service: its colour along the top. */
+.fc-flow {
+  border-top: 5px solid var(--svc);
+}
+.fc-flow-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.fc-eyebrow {
+  margin: 0;
+  color: var(--faint);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fc-callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--emphasis) 40%, var(--surface));
+  border-radius: 10px;
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
   font-weight: 500;
 }
-.fc-add-mark {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: none;
-  border: 1.5px dashed var(--ghost);
-  border-radius: 50%;
+.fc-callout .btn-primary {
+  padding: 9px 16px;
+  color: var(--accent-contrast);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.fc-hint {
+  margin: -4px 2px 0;
+  color: var(--faint);
+  font-size: 0.85rem;
 }
 .fc-path {
   display: grid;
@@ -6050,23 +6138,13 @@ body:has(.bk-embedded) {
 .fc-step.is-skipped {
   opacity: 0.5;
 }
-.fc-settings {
-  margin: 10px 2px 0;
-  font-size: 0.85rem;
-  text-align: right;
-}
-.fc-settings a {
-  color: var(--ink);
-  font-weight: 600;
-}
 .fc-panel {
   display: grid;
   gap: 14px;
-  margin-top: 14px;
   padding: 18px 20px;
-  border: 1px solid var(--strong-border);
-  border-radius: var(--radius-surface, 12px);
-  background: var(--surface);
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: var(--app-canvas);
 }
 .fc-panel-head {
   display: flex;
@@ -6138,9 +6216,19 @@ body:has(.bk-embedded) {
 }
 /* On a phone the path runs down the screen. */
 @media (max-width: 760px) {
-  .fc-service {
-    flex: 1 1 100%;
-    min-width: 0;
+  .fc-card {
+    padding: 16px 14px 18px;
+  }
+  .fc-row {
+    grid-auto-flow: row;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .fc-row-figs,
+  .fc-state,
+  .fc-row-toggle {
+    grid-column: 2;
+    justify-self: start;
+    text-align: left;
   }
   .fc-path {
     grid-template-columns: 1fr;
