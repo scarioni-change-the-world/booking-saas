@@ -1,5 +1,6 @@
 import { baseUrl } from './base-url';
 import { emailProvider } from './email';
+import { logEmailSend } from './email-log';
 import { renderTemplate } from './email/templates';
 import type { TenantScope } from './db';
 import type { ClientRow, EmailStatus, TenantRow } from './db/types';
@@ -42,6 +43,21 @@ export async function sendClientInviteEmail(
   scope: TenantScope,
   client: ClientRow,
 ): Promise<Exclude<EmailStatus, 'pending'>> {
+  const outcome = await attemptInvite(tenant, scope, client);
+  await logEmailSend(scope, {
+    kind: 'client_invite',
+    status: outcome.status,
+    clientId: client.id,
+    error: outcome.error,
+  });
+  return outcome.status;
+}
+
+async function attemptInvite(
+  tenant: TenantRow,
+  scope: TenantScope,
+  client: ClientRow,
+): Promise<{ status: Exclude<EmailStatus, 'pending'>; error?: string }> {
   try {
     const { data, error } = await scope
       .select('email_templates')
@@ -50,7 +66,7 @@ export async function sendClientInviteEmail(
     if (error) throw error;
 
     const template = data as unknown as { subject: string; body: string } | null;
-    if (!template) return 'not_configured';
+    if (!template) return { status: 'not_configured' };
 
     const rendered = renderTemplate(
       template,
@@ -67,9 +83,9 @@ export async function sendClientInviteEmail(
       text: rendered.text,
     });
 
-    return provider.id === 'console' ? 'not_configured' : 'sent';
+    return { status: provider.id === 'console' ? 'not_configured' : 'sent' };
   } catch (cause) {
     console.error('[client-email] invite send failed:', cause);
-    return 'failed';
+    return { status: 'failed', error: (cause as Error).message };
   }
 }

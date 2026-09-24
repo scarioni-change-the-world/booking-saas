@@ -34,9 +34,11 @@ Six rules every screen follows:
    booking makes a client record and a link, so "Add as client" is now
    "Give them their own link", shown only where a booking predates that or
    the record could not be made. Enquiries keeps its figures until Flow.
-3. **Messages on the client's journey** — the six email templates and the
-   next-steps message, pinned to the moment each is sent, with delivery
-   counts.
+3. ~~**Messages on the client's journey**~~ — done. Every email and the
+   next-steps message, pinned to the moment each is sent, edited in place
+   with a live preview, with 30-day delivery counts from a new send log
+   (migration 0027). Replaced Settings' email templates and the Next steps
+   tab under Questions.
 4. **Flow as the home screen** — the new shell that replaces the sidebar:
    lanes per service, two ways in, parts open beside the flow, a
    top-to-bottom version for phones, and a plain list for screen readers.

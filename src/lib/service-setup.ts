@@ -216,7 +216,7 @@ function messagesStage(facts: ServiceFacts): Stage {
       ? ''
       : 'Nothing written for people sent elsewhere. They are told a meeting is not the next step, and nothing else.',
     blocking: false,
-    href: 'screening/next-steps',
+    href: 'messages?m=next_steps',
     scope: 'business',
   };
 }

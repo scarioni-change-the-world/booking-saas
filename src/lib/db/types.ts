@@ -235,6 +235,19 @@ export interface BookingRow {
  * 0017's reasoning: same as outcome_paths.message, and for the same
  * reason). Exactly one row per (tenant_id, kind), auto-seeded.
  */
+/** One email that went out, or tried to — migration 0027. Shape only: no
+ * address, subject or body. */
+export interface EmailSendRow {
+  id: string;
+  tenant_id: string;
+  kind: EmailTemplateKind;
+  status: Exclude<EmailStatus, 'pending'>;
+  booking_id: string | null;
+  client_id: string | null;
+  error: string | null;
+  created_at: string;
+}
+
 export interface EmailTemplateRow {
   id: string;
   tenant_id: string;
@@ -334,6 +347,7 @@ export interface TenantScopedTables {
   client_entitlements: ClientEntitlementRow;
   ai_usage_events: AiUsageEventRow;
   email_templates: EmailTemplateRow;
+  email_sends: EmailSendRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

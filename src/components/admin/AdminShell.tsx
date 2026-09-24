@@ -51,10 +51,12 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  * as the last step of a setup wizard.
  *   Sessions -> Services   what a business sells, not what the table is called
  *
- * Two of the brief's suggested destinations are deliberately absent.
- * "Messages" has no page behind it — email templates live inside Settings,
- * and inventing a nav item for a place that does not exist is the one thing
- * the brief tells us not to do.
+ * "Messages" has a page now, and so an entry: every email and the
+ * next-steps message, pinned to the moment in a client's journey that sends
+ * each one, with how many arrived. It took the email templates out of
+ * Settings and the Next steps tab out of Questions. Below the divider,
+ * beside Questions: wording is set up and returned to now and then, not
+ * checked daily.
  *
  * "Week" replaced two entries, Bookings and Availability. They were two
  * screens about the same seven days — when you are open, and what is in it
@@ -75,6 +77,7 @@ const NAV = [
   { href: 'enquiries', label: 'Enquiries' },
   { href: 'sessions', label: 'Services', divider: true },
   { href: 'screening', label: 'Questions' },
+  { href: 'messages', label: 'Messages' },
   { href: 'settings', label: 'Settings' },
 ];
 
@@ -89,9 +92,8 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // startsWith, not ===: Intake is now a section with its own sub-routes
-  // (screening/next-steps) via a step-tab layout, and
-  // the sidebar entry should stay highlighted across all of them. The
+  // startsWith, not ===: a section can have sub-routes, and the sidebar
+  // entry should stay highlighted across all of them. The
   // trailing slash on the prefix keeps "screening" from matching a
   // future "screening-x" segment.
   const isActive = (href: string) => {

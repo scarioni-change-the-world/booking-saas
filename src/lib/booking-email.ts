@@ -5,6 +5,7 @@ import { mapUrlForInvite } from './maps';
 import { describeLocation } from './service-location';
 import { clientBookingUrl } from './client-email';
 import { emailProvider } from './email';
+import { logEmailSend } from './email-log';
 import { renderTemplate, type TemplateTokens, type TemplateLink } from './email/templates';
 import type { TenantScope } from './db';
 import type {
@@ -85,15 +86,22 @@ function manageUrl(manageToken: string): string {
   return `${baseUrl()}/manage/${manageToken}`;
 }
 
+/**
+ * Where a send's outcome goes: onto the booking, as the latest word on it,
+ * and into the log that Messages counts from (migration 0027), which keeps
+ * every attempt rather than only the last.
+ */
 async function recordEmailStatus(
   scope: TenantScope,
   bookingId: string,
-  status: EmailStatus,
+  kind: EmailTemplateKind,
+  status: Exclude<EmailStatus, 'pending'>,
   error?: string,
 ): Promise<void> {
   await scope
     .update('bookings', { email_status: status, email_error: error ?? null })
     .eq('id', bookingId);
+  await logEmailSend(scope, { kind, status, bookingId, error });
 }
 
 interface ClientEmailOptions {
@@ -125,7 +133,7 @@ async function sendClientEmail(
   const serviceName = service.name;
 
   if (!template) {
-    await recordEmailStatus(scope, booking.id, 'not_configured');
+    await recordEmailStatus(scope, booking.id, kind, 'not_configured');
     return 'not_configured';
   }
 
@@ -203,11 +211,11 @@ async function sendClientEmail(
     // something that never actually left the building. Its id is what
     // distinguishes a real send from the console fallback.
     const status: EmailStatus = provider.id === 'console' ? 'not_configured' : 'sent';
-    await recordEmailStatus(scope, booking.id, status);
+    await recordEmailStatus(scope, booking.id, kind, status);
     return status;
   } catch (cause) {
     console.error(`[booking-email] ${kind} send failed:`, cause);
-    await recordEmailStatus(scope, booking.id, 'failed', (cause as Error).message);
+    await recordEmailStatus(scope, booking.id, kind, 'failed', (cause as Error).message);
     return 'failed';
   }
 }
@@ -238,7 +246,8 @@ async function sendOwnerNotification(
       tenantName: tenant.name,
     });
 
-    await emailProvider().send({
+    const provider = emailProvider();
+    await provider.send({
       to: { email: notificationEmail },
       fromName: PRODUCT_NAME,
       // The client's own address, not the tenant's reply-to setting — so
@@ -248,8 +257,19 @@ async function sendOwnerNotification(
       html: rendered.html,
       text: rendered.text,
     });
+    await logEmailSend(scope, {
+      kind: 'owner_notification',
+      status: provider.id === 'console' ? 'not_configured' : 'sent',
+      bookingId: booking.id,
+    });
   } catch (cause) {
     console.error('[booking-email] owner notification failed:', cause);
+    await logEmailSend(scope, {
+      kind: 'owner_notification',
+      status: 'failed',
+      bookingId: booking.id,
+      error: (cause as Error).message,
+    });
   }
 }
 
@@ -457,7 +477,10 @@ export async function sendBookingPackConfirmedEmail(
   if (!first) return 'not_configured';
 
   const packId = first.pack_id;
-  const record = async (status: EmailStatus, error?: string) => {
+  /* One email, so one line in the log, filed against the first
+     appointment; the status goes on every appointment, as before. */
+  const record = async (status: Exclude<EmailStatus, 'pending'>, error?: string) => {
+    await logEmailSend(scope, { kind: 'booking_pack_confirmed', status, bookingId: first.id, error });
     if (!packId) return;
     await scope
       .update('bookings', { email_status: status, email_error: error ?? null })

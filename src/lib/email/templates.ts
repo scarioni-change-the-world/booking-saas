@@ -52,7 +52,7 @@ export type TemplateTokens = Record<string, string>;
  * self-diagnosing mistake, which is friendlier than a save that fails for
  * a reason the tenant has to guess at.
  */
-function substitute(template: string, tokens: TemplateTokens): string {
+export function substitute(template: string, tokens: TemplateTokens): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
     key in tokens ? tokens[key]! : match,
   );

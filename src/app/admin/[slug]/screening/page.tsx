@@ -570,7 +570,7 @@ function AiSetupCard({
                   {otherPathSaving ? 'Saving…' : otherPathSaved ? 'Saved' : 'Use this message'}
                 </button>
                 <span style={{ fontSize: '0.82rem', color: 'var(--faint)' }}>
-                  You can fine-tune this further on the Next steps tab.
+                  You can fine-tune it, and see it as they will, on Messages.
                 </span>
               </div>
             </div>

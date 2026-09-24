@@ -224,7 +224,7 @@ describe('where the work happens', () => {
     const stages = setupStages(complete);
     expect(stages.find((s) => s.id === 'questions')!.href).toBe('screening?service=svc-1');
     expect(stages.find((s) => s.id === 'availability')!.href).toBe('week');
-    expect(stages.find((s) => s.id === 'messages')!.href).toBe('screening/next-steps');
+    expect(stages.find((s) => s.id === 'messages')!.href).toBe('messages?m=next_steps');
   });
 });
 

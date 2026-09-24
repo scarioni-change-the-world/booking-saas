@@ -5347,3 +5347,258 @@ body:has(.bk-embedded) {
   margin-top: 8px;
   padding: 9px 11px;
 }
+
+/* ── Messages ───────────────────────────────────────────────────────────
+   The journey across the top, each message pinned under the moment that
+   sends it; the chosen one opens below with its wording and a live
+   preview side by side. On a phone the journey turns to run downwards. */
+.ms-journey-wrap {
+  margin-bottom: 18px;
+  padding: 18px 16px 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+}
+.ms-journey {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ms-journey::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--accent);
+}
+.ms-moment {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+.ms-pin {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+}
+.ms-moment.tone-booked .ms-pin {
+  background: var(--status-live);
+  border-color: var(--status-live);
+}
+.ms-moment.tone-elsewhere .ms-pin {
+  border-color: var(--emphasis);
+  background: var(--emphasis-tint);
+}
+.ms-moment h3 {
+  margin: 2px 0 4px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+}
+.ms-card {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ms-card:hover {
+  border-color: var(--accent);
+}
+.ms-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.ms-card:focus-visible {
+  outline: 2px solid var(--emphasis);
+  outline-offset: 2px;
+}
+.ms-card b {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.ms-card small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.ms-card.is-warn small {
+  color: var(--status-broken-ink);
+}
+.ms-card.is-yours {
+  border-style: dashed;
+}
+.ms-dirty {
+  color: var(--emphasis);
+}
+@media (max-width: 760px) {
+  .ms-journey {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding-left: 28px;
+  }
+  .ms-journey::before {
+    top: 8px;
+    bottom: 8px;
+    left: 8px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+  .ms-pin {
+    position: absolute;
+    left: -28px;
+    top: 0;
+  }
+  .ms-moment h3 {
+    text-align: left;
+    margin-top: 0;
+  }
+}
+
+.ms-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .ms-editor {
+    grid-template-columns: 1fr;
+  }
+}
+.ms-edit,
+.ms-side {
+  padding: 18px 18px 20px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+  min-width: 0;
+}
+.ms-title {
+  margin: 0 0 6px;
+  font-size: 1.3rem;
+}
+.ms-when {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.ms-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -6px 0 14px;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+.ms-token {
+  min-height: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--soft-border);
+  border-radius: 999px;
+  background: var(--app-canvas);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.ms-token:hover {
+  border-color: var(--accent);
+}
+.ms-saved {
+  font-size: 0.85rem;
+  color: var(--status-live-ink);
+}
+.ms-mail {
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--app-canvas);
+}
+.ms-mail-from {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  color: var(--faint);
+}
+.ms-mail-subject {
+  margin: 0 0 10px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ms-mail-body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+.ms-mail-link {
+  margin: 14px 0 0;
+  font-size: 0.86rem;
+  color: var(--status-info);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.ms-problems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.ms-problems b {
+  display: block;
+  font-size: 0.86rem;
+}
+.ms-problems small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--status-broken-ink);
+}
+.ms-who {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.ms-route {
+  margin-bottom: 10px;
+}
+.ms-route small {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+.ms-chip {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
