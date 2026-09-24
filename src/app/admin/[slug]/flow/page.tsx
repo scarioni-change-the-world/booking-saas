@@ -52,9 +52,9 @@ const START: Walked = { steps: new Set(['find']), current: 'find', elsewhere: fa
 /**
  * Flow: each service as the path people take to book it.
  *
- * Two containers, one above the other. "Your services" lists every service
- * as a row with its numbers, and the button to add one. Choosing a service
- * opens its flow in its own container underneath, like a drop-down: four
+ * Every service is a row floating on the page, with its numbers; adding one
+ * is a button beside the title. Choosing a service opens its flow in its
+ * own card underneath, like a drop-down: four
  * numbered chips — your page, questions, choose a time, booked — each with
  * one count of people and, when something needs doing, a few words saying
  * so. A step that stops the service is said in a sentence above the chips,
@@ -157,18 +157,25 @@ export default function FlowPage() {
     <>
       <PageHeader
         eyebrow="Flow"
-        title="How people reach you"
-        description="Choose a service to see how people book it. Numbers are the last 30 days."
+        title="Your services"
+        description="Choose a service to configure it."
         actions={
-          model && model.lanes.length > 0 ? (
+          model ? (
             trying ? (
               <button type="button" className="btn-secondary" onClick={() => setTrying(false)}>
                 Stop the test
               </button>
             ) : (
-              <button type="button" className="btn-primary" onClick={startTrying}>
-                Try your booking page
-              </button>
+              <div className="fl-actions">
+                <button type="button" className="btn-secondary" onClick={() => setAdding(true)}>
+                  + Add a service
+                </button>
+                {model.lanes.length > 0 && (
+                  <button type="button" className="btn-primary" onClick={startTrying}>
+                    Try your booking page
+                  </button>
+                )}
+              </div>
             )
           ) : undefined
         }
@@ -185,16 +192,7 @@ export default function FlowPage() {
       {data && model && (
         <div className={trying ? 'fl-try-layout' : undefined}>
           <div className="fc-stack">
-            <section className="fc-card" aria-labelledby="fc-services-title">
-              <div className="fc-card-head">
-                <h2 id="fc-services-title">Your services</h2>
-                {!trying && (
-                  <button type="button" className="btn-secondary" onClick={() => setAdding(true)}>
-                    + Add a service
-                  </button>
-                )}
-              </div>
-
+            <section className="fc-services" aria-label="Your services">
               {adding && <AddService slug={slug} activeCount={activeCount} onCancel={() => setAdding(false)} />}
 
               {model.lanes.length === 0 ? (
@@ -249,7 +247,7 @@ export default function FlowPage() {
                   <div className="fc-flow-title">
                     <ServiceBadge name={lane.name} color={lane.color} size="lg" />
                     <div>
-                      <p className="fc-eyebrow">How people book it</p>
+                      <p className="fc-eyebrow">How people book it · last 30 days</p>
                       <h2 id="fc-flow-title">{lane.name}</h2>
                     </div>
                   </div>
