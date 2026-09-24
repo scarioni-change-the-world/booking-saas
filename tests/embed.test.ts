@@ -96,15 +96,15 @@ describe('normaliseEmbedDomains', () => {
 });
 
 describe('frameAncestors', () => {
-  // The safe default and the honest one: a tenant who has not said who may
-  // embed their page has said nobody may.
-  it("is 'none' when nothing is allowed", () => {
-    expect(frameAncestors([])).toBe("'none'");
+  // A tenant who has not said who may embed their page has said nobody
+  // else may. Only the app itself, for Flow's test run.
+  it("is only 'self' when nothing else is allowed", () => {
+    expect(frameAncestors([])).toBe("'self'");
   });
 
   it('pins https, so a stored host can never be framed over http', () => {
     expect(frameAncestors(['example.com', '*.acme.io'])).toBe(
-      'https://example.com https://*.acme.io',
+      "'self' https://example.com https://*.acme.io",
     );
   });
 });

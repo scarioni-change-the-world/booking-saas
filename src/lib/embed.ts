@@ -88,17 +88,17 @@ export function normaliseEmbedDomains(inputs: readonly string[]): {
 /**
  * The frame-ancestors value for a tenant.
  *
- * 'none' when the list is empty, which is both the safe default and the
- * honest one: a tenant who has not said who may embed their page has said
- * nobody may.
+ * 'self' always, and the tenant's own domains beside it. 'self' is this
+ * app framing its own booking page — Flow's test run, which walks the real
+ * page beside the flow. It lets no other site in: a tenant who has not said
+ * who may embed their page has said nobody else may.
  *
  * https only. A booking form asking for someone's name and email inside an
  * unencrypted page is a problem regardless of who framed it, and pinning
  * the scheme here means a stored host can never be reached over http.
  */
 export function frameAncestors(domains: readonly string[]): string {
-  if (domains.length === 0) return "'none'";
-  return domains.map((d) => `https://${d}`).join(' ');
+  return ["'self'", ...domains.map((d) => `https://${d}`)].join(' ');
 }
 
 /**

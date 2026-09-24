@@ -4,6 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Phase, StepId } from './journey';
 import { applicableSteps, previousStep, stepIdFor } from './journey';
 import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from '../types';
+import { supabaseBrowser } from '@/lib/supabase-browser';
+import { TEST_HEADER, type TestMessage } from '@/lib/test-run';
+
+/**
+ * What a test run adds to every request: that it is one, and who is
+ * running it. The server honours the first only with the second — see
+ * test-run-server.ts — so the calendar's gate cannot be skipped by adding
+ * a flag to the address.
+ */
+async function testHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabaseBrowser().auth.getSession();
+  const token = data.session?.access_token;
+  return { [TEST_HEADER]: '1', ...(token ? { authorization: `Bearer ${token}` } : {}) };
+}
 
 /**
  * The booking journey — all of it, and none of its appearance.
@@ -22,17 +36,17 @@ import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from '..
  * and the back navigation that makes moving around the journey safe.
  */
 
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+async function getJson<T>(url: string, headers: Record<string, string> = {}): Promise<T> {
+  const response = await fetch(url, { headers });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Request failed');
   return body as T;
 }
 
-async function postJson<T>(url: string, payload: unknown): Promise<T> {
+async function postJson<T>(url: string, payload: unknown, headers: Record<string, string> = {}): Promise<T> {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(payload),
   });
   const body = await response.json().catch(() => ({}));
@@ -53,7 +67,15 @@ export interface OtherPath {
   label: string | null;
 }
 
-export function useBookingJourney(slug: string) {
+export function useBookingJourney(slug: string, options: { test?: boolean } = {}) {
+  const test = options.test === true;
+  const api = useMemo(
+    () => ({
+      get: async <T,>(url: string) => getJson<T>(url, test ? await testHeaders() : {}),
+      post: async <T,>(url: string, payload: unknown) => postJson<T>(url, payload, test ? await testHeaders() : {}),
+    }),
+    [test],
+  );
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,6 +107,16 @@ export function useBookingJourney(slug: string) {
 
   const base = `/api/t/${encodeURIComponent(slug)}`;
 
+  /* A test run tells the Flow beside it where it has got to, so the route
+     lights up as it is walked. Only to this app's own origin: the page is
+     framed by nothing else in a test run, and a message for "any origin"
+     would say where somebody is in a booking to whoever asked. */
+  useEffect(() => {
+    if (!test || typeof window === 'undefined' || window.parent === window) return;
+    const message: TestMessage = { type: 'intro:test', phase, eventTypeId: eventType?.id ?? null };
+    window.parent.postMessage(message, window.location.origin);
+  }, [test, phase, eventType]);
+
   /** The client's own timezone, used only for display. */
   const viewerZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
@@ -94,8 +126,8 @@ export function useBookingJourney(slug: string) {
     (async () => {
       try {
         const [cfg, types] = await Promise.all([
-          getJson<PublicConfig>(`${base}/config`),
-          getJson<{ eventTypes: PublicEventType[] }>(`${base}/event-types?audience=prospect`),
+          api.get<PublicConfig>(`${base}/config`),
+          api.get<{ eventTypes: PublicEventType[] }>(`${base}/event-types?audience=prospect`),
         ]);
         if (cancelled) return;
 
@@ -112,7 +144,7 @@ export function useBookingJourney(slug: string) {
     return () => {
       cancelled = true;
     };
-  }, [base]);
+  }, [base, api]);
 
   /**
    * A service has been picked — explicitly, via the one-choice auto-skip
@@ -129,7 +161,7 @@ export function useBookingJourney(slug: string) {
       setBusy(true);
       setError(null);
       try {
-        const q = await getJson<{ questions: PublicQuestion[] }>(
+        const q = await api.get<{ questions: PublicQuestion[] }>(
           `${base}/questions?eventTypeId=${encodeURIComponent(type.id)}`,
         );
         setQuestions(q.questions);
@@ -142,7 +174,7 @@ export function useBookingJourney(slug: string) {
         setBusy(false);
       }
     },
-    [base, responseId],
+    [base, responseId, api],
   );
 
   // Auto-skip the service picker when there is only one choice (brief 2.3).
@@ -159,7 +191,7 @@ export function useBookingJourney(slug: string) {
       try {
         const params = new URLSearchParams({ eventTypeId: chosen.id, audience: 'prospect' });
         if (responseId) params.set('responseId', responseId);
-        const result = await getJson<{ days: DaySlots[] }>(
+        const result = await api.get<{ days: DaySlots[] }>(
           `${base}/availability?${params.toString()}`,
         );
         setDays(result.days);
@@ -172,7 +204,7 @@ export function useBookingJourney(slug: string) {
         setBusy(false);
       }
     },
-    [base, responseId],
+    [base, responseId, api],
   );
 
   useEffect(() => {
@@ -192,7 +224,7 @@ export function useBookingJourney(slug: string) {
     setBusy(true);
     setError(null);
     try {
-      const result = await postJson<{ responseId: string }>(`${base}/qualify/start`, {
+      const result = await api.post<{ responseId: string }>(`${base}/qualify/start`, {
         email,
         eventTypeId: eventType.id,
       });
@@ -210,7 +242,7 @@ export function useBookingJourney(slug: string) {
     setBusy(true);
     setError(null);
     try {
-      const result = await postJson<{
+      const result = await api.post<{
         outcomePathType: 'meeting' | 'other';
         responseId: string;
         message?: string;
@@ -253,7 +285,7 @@ export function useBookingJourney(slug: string) {
     setBusy(true);
     setError(null);
     try {
-      const result = await postJson<{
+      const result = await api.post<{
         booking: Confirmed;
         bookings: Confirmed[];
         programmeLink: string | null;
@@ -387,6 +419,7 @@ export function useBookingJourney(slug: string) {
   const canGoBack = currentStep !== null && previousStep(steps, currentStep) !== null;
 
   return {
+    test,
     phase,
     steps,
     currentStep,

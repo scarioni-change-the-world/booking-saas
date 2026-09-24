@@ -727,6 +727,15 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
 }
 
 /**
+ * Where a booking is managed — nowhere, in a test run, whose stand-in
+ * booking has no page. The link stays as text so the screen still reads
+ * exactly as a client's would.
+ */
+function manageHref(token: string): string | undefined {
+  return token === 'test' ? undefined : `/manage/${token}`;
+}
+
+/**
  * The last screen, and the one most likely to be the only record a client
  * keeps. Calm, short, and every fact they need to turn up.
  */
@@ -865,7 +874,7 @@ function Confirmation({
                 {formatInstantDay(booking.startsAt)},{' '}
                 {formatTimeRange(booking.startsAt, durationMinutes)}
               </span>
-              <a className="bk-textlink" href={`/manage/${booking.manageToken}`}>
+              <a className="bk-textlink" href={manageHref(booking.manageToken)}>
                 Change
               </a>
             </li>
@@ -955,7 +964,7 @@ function Confirmation({
             <>The email carries a link for each one, so nothing is lost if you close this page.</>
           ) : (
             <>
-              You can <a href={`/manage/${confirmed.manageToken}`}>reschedule or cancel</a>{' '}
+              You can <a href={manageHref(confirmed.manageToken)}>reschedule or cancel</a>{' '}
               here — worth keeping this link.
             </>
           )}
@@ -979,7 +988,7 @@ function Confirmation({
             <>
               Your booking is confirmed. <strong>Save this link</strong> — it&apos;s
               how you&apos;ll find, change or cancel it:{' '}
-              <a href={`/manage/${confirmed.manageToken}`}>manage your booking</a>.
+              <a href={manageHref(confirmed.manageToken)}>manage your booking</a>.
             </>
           )}
         </p>

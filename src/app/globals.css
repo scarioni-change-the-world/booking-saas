@@ -5962,3 +5962,168 @@ body:has(.bk-embedded) {
   color: #fff;
   font-size: 0.6rem;
 }
+
+/* A test run's banner on the booking page itself. Ochre, the product's
+   "look at this" colour, never the business's own accent: it is intro
+   speaking, not the business. */
+.bk-test {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--emphasis);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+  font-size: 0.85rem;
+}
+
+/* ── Flow: the service cards, and trying the page ───────────────────────── */
+.fl-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.fl-service {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+  min-height: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--soft-border);
+  border-top: 4px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  justify-content: flex-start;
+}
+.fl-service:hover {
+  border-color: var(--accent);
+}
+.fl-service[aria-selected='true'] {
+  background: var(--selected-mineral);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.fl-service:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.fl-service.is-broken {
+  border-style: dashed;
+  border-top-style: solid;
+}
+.fl-service b {
+  display: block;
+  font-size: 0.9rem;
+}
+.fl-service small {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--faint);
+}
+.fl-service.is-add {
+  border-style: dashed;
+  border-top: 1px dashed var(--ghost);
+  color: var(--muted);
+}
+.fl-add-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1.5px dashed var(--ghost);
+  border-radius: 50%;
+  font-size: 1rem;
+}
+@media (max-width: 760px) {
+  .fl-service {
+    flex: 1 1 100%;
+  }
+}
+
+.fl-try-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .fl-try-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.fl-try {
+  position: sticky;
+  top: 76px;
+  border: 1px solid var(--strong-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+  overflow: hidden;
+}
+.fl-try-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+  font-size: 0.82rem;
+}
+.fl-try-head p {
+  margin: 0;
+}
+.fl-try-frame {
+  display: block;
+  width: 100%;
+  height: min(760px, calc(100vh - 170px));
+  border: 0;
+  background: var(--canvas);
+}
+.fl-try-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 2px 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+.fl-try-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--emphasis);
+  animation: fl-pulse 1.4s ease-in-out infinite;
+}
+/* The walked route: parts reached are lit, the current one rings. */
+.fl-node.is-lit rect {
+  stroke: var(--emphasis);
+  stroke-width: 2.5;
+}
+.fl-node.is-here rect {
+  stroke: var(--emphasis);
+  stroke-width: 4;
+}
+.fl-here {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--emphasis-ink);
+}
+g.is-lit > .fl-edge {
+  stroke-width: 5;
+}
+@keyframes fl-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fl-try-dot {
+    animation: none;
+  }
+}

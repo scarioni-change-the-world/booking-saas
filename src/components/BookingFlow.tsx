@@ -38,10 +38,12 @@ interface Props {
    * Detection is the default, not the rule.
    */
   mode?: BookingMode;
+  /** A test run from Flow: nothing is saved, held or sent. */
+  test?: boolean;
 }
 
-export default function BookingFlow({ slug, mode }: Props) {
-  const journey = useBookingJourney(slug);
+export default function BookingFlow({ slug, mode, test }: Props) {
+  const journey = useBookingJourney(slug, { test });
   useHostHeight();
 
   /**
@@ -91,6 +93,15 @@ export default function BookingFlow({ slug, mode }: Props) {
     />
   );
 
+  /* Said on the page itself, not only beside it: whoever is walking a test
+     run must never mistake it for a booking, and a screenshot of it must
+     never pass for one. */
+  const testBanner = journey.test ? (
+    <p className="bk-test" role="status">
+      <b>Test run.</b> Nothing you do here is saved, booked or emailed.
+    </p>
+  ) : null;
+
   if (resolved === 'embedded') {
     return (
       /* No page background, no outer margins, no credit, no two columns.
@@ -103,6 +114,7 @@ export default function BookingFlow({ slug, mode }: Props) {
          is the one thing that gives an embed away. */
       <div className="bk bk-embedded" style={accent}>
         <div className="bk-panel">
+          {testBanner}
           {summary}
           <BookingExperience journey={journey} />
         </div>
@@ -116,6 +128,7 @@ export default function BookingFlow({ slug, mode }: Props) {
         <div className="bk-columns">
           <aside className="bk-aside-col">{summary}</aside>
           <div className="bk-panel">
+            {testBanner}
             <BookingExperience journey={journey} />
           </div>
         </div>

@@ -46,8 +46,11 @@ Six rules every screen follows:
    Services list and the Enquiries analysis folded into it; a list version
    serves phones and screen readers. Services, Questions and Messages stay
    as pages reached from their part of the flow.
-5. **Try your booking page** — the real booking page in a test mode, with
-   the route lighting up.
+5. ~~**Try your booking page**~~ — done. Flow now draws one flow per
+   service, in the page's real order (service, its questions, calendar),
+   chosen from a row of service cards. "Try your booking page" opens the
+   real page beside it in a test run — admin-only, nothing stored, held or
+   emailed — and the route lights up step by step.
 6. **See a change before saving it** — replay last month's answers against
    a new routing rule, including whether the week had room.
 7. **The client's side** — a programme shown as a thread on the manage page

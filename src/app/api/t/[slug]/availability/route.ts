@@ -4,6 +4,7 @@ import { BookingError, getAvailability } from '@/lib/booking-service';
 import type { QualificationResponseRow } from '@/lib/db/types';
 import type { TenantScope } from '@/lib/db';
 import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
+import { isTestRun } from '@/lib/test-run-server';
 
 /** Cap the range so one request cannot ask the engine to walk years of days. */
 const MAX_RANGE_DAYS = 62;
@@ -49,7 +50,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     if (!eventTypeId) throw new BookingError('Missing "eventTypeId"', 400);
 
     const audience = params.get('audience') === 'client' ? 'client' : 'prospect';
-    if (audience === 'prospect') {
+    // A test run is the business itself, signed in, whose answers were
+    // scored but not stored — so there is no response to present.
+    if (audience === 'prospect' && !(await isTestRun(request, slug))) {
       const onMeetingPath = await prospectIsOnMeetingPath(scope, params.get('responseId'));
       if (!onMeetingPath) {
         // Only gate on a questionnaire that exists. A service with nothing

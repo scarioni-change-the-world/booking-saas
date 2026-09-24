@@ -13,6 +13,7 @@ import { createBooking, createBookingPack } from '@/lib/booking-service';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
 import { BookingError } from '@/lib/booking-service';
+import { isTestRun } from '@/lib/test-run-server';
 import type { QualificationResponseRow } from '@/lib/db/types';
 
 /**
@@ -37,6 +38,24 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     if (isResponse(resolved)) return resolved;
 
     const { tenant, scope } = resolved;
+
+    /* A test run books nothing: no row, no calendar event, no email, no
+       count. It answers the way a real booking would, so the page shows
+       its confirmation screen and the flow beside it reaches Booked. */
+    if (await isTestRun(request, slug)) {
+      const body = await readJson(request);
+      requireString(body, 'eventTypeId', { maxLength: 64 });
+      const times = requireSlotsIfPresent(body) ?? [requireString(body, 'startsAt', { maxLength: 40 })];
+      const shaped = times.map((startsAt, i) => ({
+        id: `test-${i}`,
+        startsAt,
+        endsAt: startsAt,
+        manageToken: 'test',
+        meetingUrl: null,
+        confirmationEmailSent: false,
+      }));
+      return ok({ booking: shaped[0]!, bookings: shaped, programmeLink: null, test: true }, 201);
+    }
 
     // Before the qualification check below, not after: a caller throwing
     // invalid attempts at this endpoint is exactly who this is for, and

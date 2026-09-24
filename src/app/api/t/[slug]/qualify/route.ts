@@ -2,6 +2,8 @@ import { handleError, isResponse, ok, readJson, requireString, requireTenant } f
 import { BookingError } from '@/lib/booking-service';
 import { evaluateQualification, type Question } from '@/lib/qualification';
 import { completeResponse } from '@/lib/qualification-response-service';
+import { isTestRun } from '@/lib/test-run-server';
+import { eventTypeOfTestResponse } from '@/lib/test-run';
 import type { OutcomePathRow, QualificationQuestionRow, QualificationResponseRow } from '@/lib/db/types';
 
 function toQuestions(rows: QualificationQuestionRow[]): Question[] {
@@ -49,9 +51,19 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       throw new BookingError('Missing "answers"', 400);
     }
 
-    const responseResult = await scope.select('qualification_responses').eq('id', responseId).maybeSingle();
-    if (responseResult.error) throw responseResult.error;
-    const response = responseResult.data as unknown as QualificationResponseRow | null;
+    /* A test run has no stored response: its id names the service, and
+       the answers are scored and returned without being written down. */
+    const test = await isTestRun(request, slug);
+    let response: Pick<QualificationResponseRow, 'event_type_id'> | null;
+    if (test) {
+      const eventTypeId = eventTypeOfTestResponse(responseId);
+      if (!eventTypeId) throw new BookingError('That test run has lost its place — start it again.', 400);
+      response = { event_type_id: eventTypeId };
+    } else {
+      const responseResult = await scope.select('qualification_responses').eq('id', responseId).maybeSingle();
+      if (responseResult.error) throw responseResult.error;
+      response = responseResult.data as unknown as QualificationResponseRow | null;
+    }
     if (!response) {
       throw new BookingError('That questionnaire session was not found — please start again.', 404);
     }
@@ -77,12 +89,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const questions = toQuestions(rows);
 
     const result = evaluateQualification(questions, answers as Record<string, string>);
-    const outcomePathType = await completeResponse(
-      scope,
-      responseId,
-      result.answers,
-      result.outcomePathType,
-    );
+    const outcomePathType = test
+      ? result.outcomePathType
+      : await completeResponse(scope, responseId, result.answers, result.outcomePathType);
 
     if (outcomePathType === 'other') {
       const paths = (pathsResult.data ?? []) as unknown as OutcomePathRow[];

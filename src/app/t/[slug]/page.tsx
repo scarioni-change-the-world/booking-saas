@@ -13,12 +13,14 @@ export default async function ProspectBookingPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; test?: string }>;
 }) {
   const { slug } = await params;
   // ?mode=embedded forces the embedded shell for a customer who frames this
   // somewhere the frame check cannot see — a modal on their own site, say.
   // Anything else falls through to the component's own detection.
-  const { mode } = await searchParams;
-  return <BookingFlow slug={slug} mode={mode === 'embedded' ? 'embedded' : undefined} />;
+  // ?test=1 is Flow's test run. It changes nothing by itself: the server
+  // honours it only for a signed-in admin of this business.
+  const { mode, test } = await searchParams;
+  return <BookingFlow slug={slug} mode={mode === 'embedded' ? 'embedded' : undefined} test={test === '1'} />;
 }

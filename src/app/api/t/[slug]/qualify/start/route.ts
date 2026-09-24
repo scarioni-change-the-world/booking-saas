@@ -2,6 +2,8 @@ import { handleError, isResponse, ok, readJson, requireEmail, requireString, req
 import { loadEventType } from '@/lib/booking-service';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { startResponse } from '@/lib/qualification-response-service';
+import { isTestRun } from '@/lib/test-run-server';
+import { testResponseId } from '@/lib/test-run';
 
 /**
  * Begin a questionnaire session.
@@ -31,12 +33,18 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     // Every call here writes a row that lands in the tenant's own
     // completion-rate numbers (migration 0012), so unbounded junk doesn't
     // just fill a table — it distorts the one measure the gate is judged on.
-    await enforceRateLimit(request, resolved.tenant.id, 'qualification');
+    const test = await isTestRun(request, slug);
+    if (!test) await enforceRateLimit(request, resolved.tenant.id, 'qualification');
 
     const body = await readJson(request);
     const email = requireEmail(body, 'email');
     const eventTypeId = requireString(body, 'eventTypeId', { maxLength: 100 });
     await loadEventType(resolved.scope, eventTypeId);
+
+    // A test run stores nothing: the id it gets back only says which
+    // service it is answering for, so its answers are scored against the
+    // right questions and counted nowhere.
+    if (test) return ok({ responseId: testResponseId(eventTypeId) }, 201);
 
     const responseId = await startResponse(resolved.scope, email, eventTypeId);
     return ok({ responseId }, 201);

@@ -12,6 +12,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const RESPONSE_LIMIT = 1000;
 const BOOKING_LIMIT = 2000;
+/** Per service; read six times over so each service's panel has its own. */
 const NEXT_UP_LIMIT = 5;
 /** A client record made this close to a booking is that booking's own. */
 const SAME_MOMENT_MS = 5 * 60 * 1000;
@@ -28,6 +29,7 @@ interface NextUpJoin {
   name: string;
   email: string;
   starts_at: string;
+  event_type_id: string;
   event_types: { name: string } | null;
 }
 
@@ -60,11 +62,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
           .gte('created_at', sinceIso)
           .limit(BOOKING_LIMIT),
         scope
-          .select('bookings', 'id, name, email, starts_at, event_types(name)')
+          .select('bookings', 'id, name, email, starts_at, event_type_id, event_types(name)')
           .eq('status', 'confirmed')
           .gte('starts_at', nowIso)
           .order('starts_at', { ascending: true })
-          .limit(NEXT_UP_LIMIT),
+          .limit(NEXT_UP_LIMIT * 6),
         scope.select('bookings', 'id').eq('status', 'confirmed').gte('starts_at', nowIso).lt('starts_at', weekAheadIso),
         scope.select('bookings', 'id').eq('sync_status', 'failed'),
         scope.select('email_sends', 'id').eq('status', 'failed').gte('created_at', sinceIso),
@@ -100,7 +102,14 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       hasOtherPathUrl: facts.hasOtherPathUrl,
       otherPathLabel: facts.otherPathLabel,
       services: facts.services,
-      questionInsights: analyseQuestions(analysed),
+      /* Per service, because each service's flow has its own questions:
+         the shared ones and any it asks of its own. */
+      questionInsightsByService: Object.fromEntries(
+        facts.services.map((svc) => [
+          svc.id,
+          analyseQuestions(analysed.filter((r) => r.eventTypeId === svc.id)),
+        ]),
+      ),
       serviceInsights: analyseServices(analysed),
       bookings: ((bookings.data ?? []) as unknown as BookingJoin[]).map((b) => ({
         eventTypeId: b.event_type_id,
@@ -127,6 +136,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         name: b.name,
         email: b.email,
         startsAt: b.starts_at,
+        eventTypeId: b.event_type_id,
         eventTypeName: b.event_types?.name ?? 'A service you have since removed',
       })),
     });
