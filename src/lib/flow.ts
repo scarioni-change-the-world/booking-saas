@@ -5,7 +5,7 @@ import type { QuestionInsight, ServiceInsight } from './enquiry-analysis';
 
 /**
  * The arithmetic behind Flow, the home screen: how somebody reaches a
- * business, drawn as the pipeline it is — one service at a time.
+ * business, one service at a time, as the steps they take.
  *
  * Each service has its own flow because that is how the booking page runs:
  * a person picks the service first, then answers that service's questions
@@ -14,13 +14,17 @@ import type { QuestionInsight, ServiceInsight } from './enquiry-analysis';
  * in the wrong order and made each service's numbers a guess.
  *
  * Two ways in — the booking page, where strangers meet the questions, and a
- * client's own link, which skips them. The numbers on the lines are the
- * last 30 days moving through. A service that is not finished has its
- * missing connections drawn as gaps rather than listed on a page of its own.
+ * client's own link, which skips them. The numbers are the last 30 days.
  *
- * Pure and client-safe. The diagram, the plain list that stands in for it
- * on a phone and for a screen reader, and the tests all read this one
- * model, so the three can never disagree about what the flow is.
+ * It used to be drawn as a network of boxes and lines, and read like a lab
+ * chart: counts of people and of appointments sat on one line (a programme
+ * of three counts three times), dashed lines drew connections that did not
+ * exist, and a red dot stood in for a sentence. It is now four plain steps
+ * — find it, answer, choose a time, booked — each with what it is set to,
+ * one count of people, and anything that needs doing said in words on the
+ * step where it happens.
+ *
+ * Pure and client-safe; the page and the tests read this one model.
  */
 
 export interface FlowService {
@@ -54,8 +58,9 @@ export interface FlowInput {
   /** Which questions turn people away, counted per service. */
   questionInsightsByService: Record<string, QuestionInsight[]>;
   serviceInsights: ServiceInsight[];
-  /** Bookings made in the last 30 days. */
-  bookings: Array<{ eventTypeId: string; status: 'confirmed' | 'cancelled'; byExistingClient: boolean }>;
+  /** Bookings made in the last 30 days. `person` is who made it — their
+   *  email, lower-cased — so people can be counted apart from appointments. */
+  bookings: Array<{ eventTypeId: string; status: 'confirmed' | 'cancelled'; byExistingClient: boolean; person: string }>;
   weeklyMinutes: number;
   calendarStatus: 'not_connected' | 'active' | 'needs_reconnect' | 'revoked';
   syncFailures: number;
@@ -74,6 +79,10 @@ export interface Lane {
   monogram: string;
   /** Price and length, or the first thing missing. */
   sub: string;
+  /** The same, as a person would say it: "A programme of 3 sessions, 30 minutes each · €65.00". */
+  words: string;
+  /** Sessions in a programme, or null for a single appointment. */
+  packSize: number | null;
   fromPage: boolean;
   fromClients: boolean;
   /** Offered to somebody, and nothing is stopping it. */
@@ -84,10 +93,14 @@ export interface Lane {
   /** New enquiries the questions let through to this service. */
   qualified: number;
   sentElsewhere: number;
-  /** Everyone who booked it, in 30 days. */
+  /** Appointments booked, in 30 days. A programme counts once per session. */
   booked: number;
-  /** Of those, people who were already clients. */
+  /** Of those appointments, ones made by people who were already clients. */
   bookedByClients: number;
+  /** People who booked it, in 30 days, however many appointments each. */
+  bookedPeople: number;
+  /** Of those, people who came in new — through the booking page. */
+  bookedPeopleNew: number;
   /** Questions a new enquiry is asked for this service: shared, and its own. */
   sharedQuestions: number;
   ownQuestions: number;
@@ -114,6 +127,22 @@ function laneSub(s: FlowService, currency: string, stages: Stage[]): string {
   const price = s.priceMinor !== null ? formatMoney(s.priceMinor, currency) : 'price —';
   const length = s.bookingMode === 'pack' && s.packSize ? `${s.packSize} × ${s.durationMinutes} min` : `${s.durationMinutes} min`;
   return `${price} · ${length}`;
+}
+
+function laneWords(s: FlowService, currency: string): string {
+  const price = s.priceMinor !== null ? formatMoney(s.priceMinor, currency) : 'no price yet';
+  const shape =
+    s.bookingMode === 'pack' && s.packSize
+      ? `A programme of ${s.packSize} sessions, ${s.durationMinutes} minutes each`
+      : `One session, ${s.durationMinutes} minutes`;
+  return `${shape} · ${price}`;
+}
+
+/** Distinct people among some bookings, and how many of them came in new. */
+function countPeople(bookings: FlowInput['bookings']): { all: number; fresh: number } {
+  const fresh = new Set(bookings.filter((b) => !b.byExistingClient).map((b) => b.person));
+  const all = new Set(bookings.map((b) => b.person));
+  return { all: all.size, fresh: fresh.size };
 }
 
 export function buildFlow(input: FlowInput): FlowModel {
@@ -144,6 +173,7 @@ export function buildFlow(input: FlowInput): FlowModel {
        Elsewhere — rather than as a gap on every lane. */
     const stages = setupStages(facts).filter((st) => st.scope === 'service');
     const mine = input.bookings.filter((b) => b.eventTypeId === s.id && b.status === 'confirmed');
+    const people = countPeople(mine);
     return {
       id: s.id,
       part: `service:${s.id}` as PartId,
@@ -151,6 +181,8 @@ export function buildFlow(input: FlowInput): FlowModel {
       color: serviceColour(s.color),
       monogram: monogram(s.name),
       sub: laneSub(s, input.tenant.currency, stages),
+      words: laneWords(s, input.tenant.currency),
+      packSize: s.bookingMode === 'pack' && s.packSize ? s.packSize : null,
       fromPage: s.availableToProspects,
       fromClients: s.availableToExistingClients,
       live: blockers(stages).length === 0,
@@ -160,6 +192,8 @@ export function buildFlow(input: FlowInput): FlowModel {
       sentElsewhere: insight.get(s.id)?.other ?? 0,
       booked: mine.length,
       bookedByClients: mine.filter((b) => b.byExistingClient).length,
+      bookedPeople: people.all,
+      bookedPeopleNew: people.fresh,
       sharedQuestions: input.globalQuestionCount,
       ownQuestions: s.ownQuestionCount,
       questionInsights: input.questionInsightsByService[s.id] ?? [],
@@ -208,261 +242,288 @@ export function buildFlow(input: FlowInput): FlowModel {
   };
 }
 
-/* ── Drawing one service ───────────────────────────────────────────────── */
-
-export interface DrawnNode {
-  part: PartId;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  title: string;
-  sub: string;
-  tone: 'door' | 'part' | 'exit' | 'end' | 'broken';
-  flag: string | null;
-  /** A service's own colour and mark; absent on every other part. */
-  color?: string;
-  monogram?: string;
-}
-
-export interface DrawnEdge {
-  id: string;
-  d: string;
-  label: string | null;
-  lx: number;
-  ly: number;
-  anchor: 'start' | 'middle' | 'end';
-  tone: 'on' | 'out' | 'gap';
-  /** The service's lines are drawn in its colour. */
-  color?: string;
-}
-
-export interface FlowDrawing {
-  width: number;
-  height: number;
-  nodes: DrawnNode[];
-  edges: DrawnEdge[];
-}
-
-const NODE_H = 62;
-const ROW_A = 110;
-const ROW_B = 250;
-const X = { door: 10, service: 200, questions: 460, calendar: 680, booked: 870 };
-const W = { door: 150, service: 220, questions: 180, calendar: 150, booked: 130 };
-
-function hours(minutes: number): string {
-  const h = minutes / 60;
-  return Number.isInteger(h) ? `${h} h` : `${h.toFixed(1)} h`;
-}
-
 /** Whether a new enquiry is asked anything before the calendar for this service. */
 export function asksQuestions(lane: Lane): boolean {
   return lane.sharedQuestions + lane.ownQuestions > 0;
 }
 
-/** New enquiries who booked this service, as opposed to existing clients. */
-export function bookedByNew(lane: Lane): number {
-  return lane.booked - lane.bookedByClients;
+/* ── One service, as four steps ────────────────────────────────────────── */
+
+export type StepId = 'find' | 'questions' | 'times' | 'booked';
+
+export interface StepNote {
+  /** 'need' is something to do; 'info' is only worth knowing. */
+  tone: 'info' | 'need';
+  text: string;
+  /** Relative to the business's admin, e.g. `messages?m=next_steps`. */
+  action?: { label: string; href: string };
+}
+
+export interface FlowStep {
+  id: StepId;
+  title: string;
+  /** What the step is set to, in one plain line. */
+  detail: string;
+  /**
+   * 'set' is working; 'missing' stops the service and says so; 'waiting'
+   * comes after a missing step, so nobody reaches it yet; 'skipped' is a
+   * step this service's people never meet.
+   */
+  state: 'set' | 'missing' | 'waiting' | 'skipped';
+  /** One count of people — never appointments — with an optional line under it. */
+  figure: { value: string; label: string; sub?: string } | null;
+  change: { label: string; href: string } | null;
+  notes: StepNote[];
+}
+
+const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
+
+function hoursWords(minutes: number): string {
+  const h = Math.round((minutes / 60) * 10) / 10;
+  return `${h} ${h === 1 ? 'hour' : 'hours'}`;
+}
+
+/** Appointments beyond the people who made them, explained — or nothing. */
+function appointmentsNote(lane: Lane): string | null {
+  if (lane.booked <= lane.bookedPeople) return null;
+  return lane.packSize
+    ? `That is ${lane.booked} appointments, because it is a programme of ${lane.packSize} sessions.`
+    : `That is ${lane.booked} appointments: some people booked more than once.`;
+}
+
+export interface LaneState {
+  label: string;
+  live: boolean;
+}
+
+/** Whether people can book this service now, in two or three words. */
+export function laneState(model: FlowModel, lane: Lane): LaneState {
+  if (!lane.fromPage && !lane.fromClients) return { label: 'Not offered yet', live: false };
+  if (lane.blocking.length > 0 || model.calendar.noHours) return { label: 'Not bookable yet', live: false };
+  return { label: 'Taking bookings', live: true };
 }
 
 /**
- * One service's flow, in the order the booking page runs it: your page, the
- * service, its questions, the calendar, booked. Existing clients come in
- * below, choose the service on their own link, and pass under the questions
- * straight to the calendar — drawn as exactly that.
+ * The service's last 30 days in one sentence, and at most two short
+ * lines under it: who else booked, and why there are more appointments
+ * than people. Read aloud, it should make sense to somebody who has never
+ * seen the screen.
  */
-export function drawServiceFlow(model: FlowModel, lane: Lane, slug: string): FlowDrawing {
-  const mid = ROW_A + NODE_H / 2;
-  const midB = ROW_B + NODE_H / 2;
-  const asks = asksQuestions(lane);
-  const noHours = model.calendar.noHours;
-  const c = lane.color;
-
-  const nodes: DrawnNode[] = [
-    {
-      part: 'page',
-      x: X.door,
-      y: ROW_A,
-      w: W.door,
-      h: NODE_H,
-      title: 'Your page',
-      sub: `/t/${slug}`,
-      tone: 'door',
-      flag: null,
-    },
-    {
-      part: lane.part,
-      x: X.service,
-      y: ROW_A,
-      w: W.service,
-      h: NODE_H,
-      title: lane.name,
-      sub: lane.sub,
-      tone: lane.live ? 'part' : 'broken',
-      flag: null,
-      color: c,
-      monogram: lane.monogram,
-    },
-    {
-      part: 'questions',
-      x: X.questions,
-      y: ROW_A,
-      w: W.questions,
-      h: NODE_H,
-      title: 'Questions',
-      sub: asks
-        ? `${lane.sharedQuestions + lane.ownQuestions} asked · ${lane.finished}/${lane.started} done`
-        : 'nothing asked',
-      tone: 'part',
-      flag: null,
-    },
-    {
-      part: 'elsewhere',
-      x: X.questions,
-      y: 12,
-      w: W.questions,
-      h: 54,
-      title: 'Elsewhere',
-      sub: model.elsewhere.said ? (model.elsewhere.label ?? 'your message') : 'nothing written',
-      tone: 'exit',
-      flag: model.elsewhere.said || !asks ? null : 'Nothing written',
-    },
-    {
-      part: 'calendar',
-      x: X.calendar,
-      y: ROW_A,
-      w: W.calendar,
-      h: NODE_H,
-      title: 'Calendar',
-      sub: noHours ? 'no hours' : `${hours(model.calendar.weeklyMinutes)} a week`,
-      tone: noHours ? 'broken' : 'part',
-      flag: model.calendar.flag,
-    },
-    {
-      part: 'booked',
-      x: X.booked,
-      y: ROW_A,
-      w: W.booked,
-      h: NODE_H,
-      title: 'Booked',
-      sub: `${lane.booked} in 30 days`,
-      tone: 'end',
-      flag: model.booked.flag,
-    },
-    {
-      part: 'clients',
-      x: X.door,
-      y: ROW_B,
-      w: W.door,
-      h: NODE_H,
-      title: 'Existing clients',
-      sub: 'own link, no questions',
-      tone: 'door',
-      flag: null,
-    },
-  ];
-
-  const newWay = lane.fromPage;
-  const clientWay = lane.fromClients;
-  const inAt = X.service + 40;
-  const outAt = X.service + W.service - 40;
-
-  const edges: DrawnEdge[] = [
-    {
-      id: 'page-service',
-      d: `M${X.door + W.door} ${mid} H${X.service}`,
-      label: newWay ? String(asks ? lane.started : bookedByNew(lane)) : null,
-      lx: (X.door + W.door + X.service) / 2,
-      ly: mid - 8,
-      anchor: 'middle',
-      tone: newWay ? 'on' : 'gap',
-      color: newWay ? c : undefined,
-    },
-    {
-      id: 'service-questions',
-      d: `M${X.service + W.service} ${mid} H${X.questions}`,
-      label: null,
-      lx: 0,
-      ly: 0,
-      anchor: 'middle',
-      tone: newWay ? 'on' : 'gap',
-      color: newWay ? c : undefined,
-    },
-    {
-      id: 'questions-elsewhere',
-      d: `M${X.questions + W.questions / 2} ${ROW_A} V${12 + 54}`,
-      label: asks && newWay ? String(lane.sentElsewhere) : null,
-      lx: X.questions + W.questions / 2 + 10,
-      ly: (ROW_A + 66) / 2 + 4,
-      anchor: 'start',
-      tone: asks && newWay ? 'out' : 'gap',
-    },
-    {
-      id: 'questions-calendar',
-      d: `M${X.questions + W.questions} ${mid} H${X.calendar}`,
-      label: newWay && !noHours ? String(asks ? lane.qualified : bookedByNew(lane)) : null,
-      lx: (X.questions + W.questions + X.calendar) / 2,
-      ly: mid - 8,
-      anchor: 'middle',
-      tone: newWay && !noHours ? 'on' : 'gap',
-      color: newWay && !noHours ? c : undefined,
-    },
-    {
-      id: 'calendar-booked',
-      d: `M${X.calendar + W.calendar} ${mid} H${X.booked}`,
-      label: noHours ? null : String(lane.booked),
-      lx: (X.calendar + W.calendar + X.booked) / 2,
-      ly: mid - 8,
-      anchor: 'middle',
-      tone: noHours ? 'gap' : 'on',
-      color: noHours ? undefined : c,
-    },
-    {
-      id: 'clients-service',
-      d: `M${X.door + W.door} ${midB} H${inAt - 12} Q${inAt} ${midB} ${inAt} ${midB - 12} V${ROW_A + NODE_H}`,
-      label: clientWay ? String(lane.bookedByClients) : null,
-      lx: inAt - 18,
-      ly: midB - 8,
-      anchor: 'end',
-      tone: clientWay ? 'on' : 'gap',
-      color: clientWay ? c : undefined,
-    },
-    {
-      /* Under the questions, not through them: that is the whole point of
-         a client's own link. */
-      id: 'service-calendar-direct',
-      d: `M${outAt} ${ROW_A + NODE_H} V${midB - 12} Q${outAt} ${midB} ${outAt + 12} ${midB} H${X.calendar + 28} Q${X.calendar + 40} ${midB} ${X.calendar + 40} ${midB - 12} V${ROW_A + NODE_H}`,
-      label: clientWay ? 'skips the questions' : 'not offered to existing clients',
-      lx: (outAt + X.calendar + 40) / 2,
-      ly: midB + 18,
-      anchor: 'middle',
-      tone: clientWay && !noHours ? 'on' : 'gap',
-      color: clientWay && !noHours ? c : undefined,
-    },
-  ];
-
-  return { width: X.booked + W.booked + 10, height: ROW_B + NODE_H + 30, nodes, edges };
-}
-
-/**
- * One service's flow in words, for a screen reader and for anyone who
- * would rather read it: the same parts and counts, in the order people
- * move through them.
- */
-export function describeLane(model: FlowModel, lane: Lane): string {
-  const parts: string[] = [`${lane.name}, the last 30 days`];
+export function readout(model: FlowModel, lane: Lane): { text: string; asides: string[] } {
   if (!lane.fromPage && !lane.fromClients) {
-    parts.push('It is offered to nobody, so nobody can reach it yet');
+    return { text: 'Nobody can book this yet: it isn’t offered to anyone.', asides: [] };
   }
+  const stop = lane.blocking.find((st) => st.id !== 'review');
+  if (stop) return { text: `Nobody can book this yet. ${stop.note}`, asides: [] };
+  if (model.calendar.noHours) {
+    return { text: 'Nobody can book this yet: you haven’t set any hours.', asides: [] };
+  }
+
+  const clientsOnly = lane.bookedPeople - lane.bookedPeopleNew;
+  let text: string;
+  if (lane.fromPage && asksQuestions(lane)) {
+    text =
+      lane.started === 0
+        ? 'Nobody new has started booking this in the last 30 days.'
+        : `In the last 30 days, ${people(lane.started)} started booking this, ${lane.qualified} could choose a time, and ${lane.bookedPeopleNew === 0 ? 'nobody' : lane.bookedPeopleNew} booked.`;
+  } else if (lane.fromPage) {
+    text =
+      lane.bookedPeopleNew === 0
+        ? 'Nobody new has booked this in the last 30 days.'
+        : `In the last 30 days, ${people(lane.bookedPeopleNew)} booked this.`;
+  } else {
+    text =
+      clientsOnly === 0
+        ? 'No existing client has booked this in the last 30 days.'
+        : `In the last 30 days, ${people(clientsOnly)} booked this on their own link.`;
+  }
+
+  const asides: string[] = [];
+  if (lane.fromPage && clientsOnly > 0) {
+    asides.push(`${people(clientsOnly)} who ${clientsOnly === 1 ? 'was already a client' : 'were already clients'} also booked it, on their own link.`);
+  }
+  const extra = appointmentsNote(lane);
+  if (extra) asides.push(extra);
+  return { text, asides };
+}
+
+/**
+ * The four steps a person takes to book this service, in order. Every
+ * count is of people. A step that stops the service is 'missing' and says
+ * how to fix it; the steps after it are 'waiting'.
+ */
+export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowStep[] {
+  const asks = asksQuestions(lane);
+  const settings = `sessions/${lane.id}`;
+  const counted = lane.fromPage && asks;
+
+  /* 1 · Finding it */
+  let find: FlowStep;
   if (lane.fromPage) {
-    parts.push(
-      asksQuestions(lane)
-        ? `${lane.started} new ${lane.started === 1 ? 'person' : 'people'} chose it and started its questions, ${lane.finished} finished, ${lane.qualified} were let through to the calendar and ${lane.sentElsewhere} were sent elsewhere`
-        : `New people go straight to the calendar; ${bookedByNew(lane)} booked`,
-    );
+    find = {
+      id: 'find',
+      title: 'They find it on your booking page',
+      detail: `/t/${slug}`,
+      state: 'set',
+      figure: counted ? { value: String(lane.started), label: 'chose it' } : null,
+      change: { label: 'Change', href: settings },
+      notes: [
+        lane.fromClients
+          ? { tone: 'info', text: `Existing clients can also book it on their own link${asks ? ', without the questions' : ''}.` }
+          : { tone: 'info', text: 'Existing clients don’t see it on their own link.', action: { label: 'Offer it to them', href: settings } },
+      ],
+    };
+  } else if (lane.fromClients) {
+    find = {
+      id: 'find',
+      title: 'Existing clients find it on their own link',
+      detail: 'It isn’t on your booking page, so new people don’t see it.',
+      state: 'set',
+      figure: null,
+      change: { label: 'Change', href: settings },
+      notes: [{ tone: 'info', text: 'Only people who have booked with you before can book this.', action: { label: 'Put it on your page', href: settings } }],
+    };
+  } else {
+    find = {
+      id: 'find',
+      title: 'They find it',
+      detail: 'It isn’t on your booking page, and it isn’t offered to existing clients.',
+      state: 'missing',
+      figure: null,
+      change: { label: 'Choose who sees it', href: settings },
+      notes: [],
+    };
   }
-  if (lane.fromClients) parts.push(`${lane.bookedByClients} existing clients booked it through their own link, without the questions`);
-  if (model.calendar.noHours) parts.push('There are no opening hours, so nothing can be booked');
-  parts.push(`${lane.booked} bookings in total`);
-  return `${parts.join('. ')}.`;
+
+  /* 2 · The questions */
+  let questions: FlowStep;
+  const questionsHref = `screening?service=${encodeURIComponent(lane.id)}`;
+  if (!lane.fromPage && lane.fromClients) {
+    questions = {
+      id: 'questions',
+      title: 'No questions',
+      detail: 'Their own link skips the questions.',
+      state: 'skipped',
+      figure: null,
+      change: null,
+      notes: [],
+    };
+  } else if (!asks) {
+    questions = {
+      id: 'questions',
+      title: 'No questions',
+      detail: 'New people go straight to choosing a time.',
+      state: 'set',
+      figure: null,
+      change: { label: 'Add questions', href: questionsHref },
+      notes: [],
+    };
+  } else {
+    const n = lane.sharedQuestions + lane.ownQuestions;
+    const notes: StepNote[] = [];
+    const unfinished = Math.max(0, lane.started - lane.finished);
+    if (unfinished > 0) {
+      notes.push({ tone: 'info', text: `${people(unfinished)} didn’t finish.`, action: { label: 'See who', href: 'people?show=unfinished' } });
+    }
+    const sent = lane.sentElsewhere;
+    const was = sent === 1 ? 'was' : 'were';
+    if (model.elsewhere.said) {
+      if (sent > 0) {
+        notes.push({
+          tone: 'info',
+          text: `${people(sent)} ${was} sent to your other next step${model.elsewhere.label ? `, “${model.elsewhere.label}”` : ''}.`,
+          action: { label: 'See who', href: 'people?figure=other' },
+        });
+      }
+    } else {
+      notes.push({
+        tone: 'need',
+        text:
+          sent > 0
+            ? `${people(sent)} ${was} sent to your other next step, but it isn’t written yet, so they saw nothing.`
+            : 'If an answer sends someone to your other next step, they will see nothing: it isn’t written yet.',
+        action: { label: 'Write it', href: 'messages?m=next_steps' },
+      });
+    }
+    questions = {
+      id: 'questions',
+      title: `They answer ${n} ${n === 1 ? 'question' : 'questions'}`,
+      detail:
+        lane.ownQuestions === 0
+          ? 'The ones you ask for every service'
+          : lane.sharedQuestions === 0
+            ? 'Asked only for this service'
+            : `${lane.sharedQuestions} asked for every service, ${lane.ownQuestions} just for this one`,
+      state: 'set',
+      figure: counted && lane.started > 0 ? { value: `${lane.finished} of ${lane.started}`, label: 'finished' } : null,
+      change: { label: 'Change', href: questionsHref },
+      notes,
+    };
+  }
+
+  /* 3 · Choosing a time */
+  const pickTitle = lane.packSize ? `They choose ${lane.packSize} times` : 'They choose a time';
+  const times: FlowStep = model.calendar.noHours
+    ? {
+        id: 'times',
+        title: pickTitle,
+        detail: 'You haven’t set any hours, so there is nothing to choose.',
+        state: 'missing',
+        figure: null,
+        change: { label: 'Set your hours', href: 'week' },
+        notes: [],
+      }
+    : {
+        id: 'times',
+        title: pickTitle,
+        detail: `From your usual hours, ${hoursWords(model.calendar.weeklyMinutes)} a week`,
+        state: 'set',
+        figure: counted ? { value: String(lane.qualified), label: 'could choose' } : null,
+        change: { label: 'Change', href: 'week' },
+        notes: model.calendar.flag
+          ? [{ tone: 'need', text: `${model.calendar.flag}.`, action: { label: 'Open the Week', href: 'week#calendar' } }]
+          : [],
+      };
+
+  /* 4 · Booked */
+  const extra = appointmentsNote(lane);
+  const booked: FlowStep = {
+    id: 'booked',
+    title: 'They’re booked',
+    detail: 'They get a confirmation email, and their own link to change it or book again.',
+    state: 'set',
+    figure: {
+      value: String(lane.bookedPeople),
+      label: lane.bookedPeople === 1 ? 'person' : 'people',
+      sub: extra ? `${lane.booked} appointments` : undefined,
+    },
+    change: { label: 'Change', href: 'messages' },
+    notes: model.booked.flag
+      ? [{ tone: 'need', text: `${model.booked.flag} in the last 30 days.`, action: { label: 'See which', href: 'messages' } }]
+      : [],
+  };
+
+  const steps = [find, questions, times, booked];
+  /* Nobody gets past a missing step, so the ones after it wait. */
+  const firstMissing = steps.findIndex((st) => st.state === 'missing');
+  if (firstMissing >= 0) {
+    for (const st of steps.slice(firstMissing + 1)) {
+      if (st.state === 'set') {
+        st.state = 'waiting';
+        st.figure = null;
+        st.notes = [];
+      }
+    }
+  }
+  return steps;
+}
+
+/** Which step an older link or a test run's phase names. */
+export function stepForPart(part: string | null): StepId | null {
+  if (!part) return null;
+  if (part === 'page' || part === 'clients' || part === 'service' || part.startsWith('service:')) return 'find';
+  if (part === 'questions' || part === 'elsewhere') return 'questions';
+  if (part === 'calendar') return 'times';
+  if (part === 'booked') return 'booked';
+  return null;
 }

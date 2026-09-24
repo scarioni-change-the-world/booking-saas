@@ -122,7 +122,7 @@ export default function AccountPage() {
                 <span>Your hours, minimum notice, how far ahead people can book, and Google Calendar.</span>
               </li>
               <li>
-                <a href={a('flow?part=page')}>Flow → Your page</a>
+                <a href={a('flow?part=page')}>Flow → step 1</a>
                 <span>Your booking link, and the code to put it on your own website.</span>
               </li>
               <li>
@@ -130,7 +130,7 @@ export default function AccountPage() {
                 <span>What every email says, where booking alerts go, and where replies land.</span>
               </li>
               <li>
-                <a href={a('flow')}>Flow → a service</a>
+                <a href={a('flow')}>Flow → a service’s settings</a>
                 <span>Each service’s price, length, place and who it is offered to.</span>
               </li>
             </ul>

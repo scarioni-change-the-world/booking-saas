@@ -70,11 +70,21 @@ Six rules every screen follows:
    The same small flow heads each business's own Console page.
 9. ~~**Account**~~ — done. Settings is gone; each setting moved to where
    it takes effect. Notice, booking window and Google Calendar sit on the
-   Week (Google now returns there); the embed code sits under Flow → Your
-   page; notification and reply-to addresses head Messages. Account keeps
+   Week (Google now returns there); the embed code sits under Flow, in a
+   service's first step; notification and reply-to addresses head Messages. Account keeps
    the business's name, time zone (with a preview of what changing it
    does), currency (relabelled, not converted — it says so), signing in,
    the team (read-only) and the plan, with a map of where the rest went.
+   **Flow, redrawn as steps** — done, after a review in the spirit of
+   Dieter Rams. The network of boxes and lines read like a lab chart:
+   people and appointments on one line (a programme of three counts three
+   times), dashed lines for things that do not happen, a red dot for a
+   sentence, and Diagram, List and tiles showing the same numbers. Each
+   service is now four plain steps (find it, answer, choose a time,
+   booked) under one sentence of its last 30 days. The steps count people;
+   appointments are named as appointments. A problem is a sentence with
+   its fix, on the step where it happens; a missing step is drawn dashed
+   and the ones after it wait. Try your booking page lights the steps.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

@@ -5629,197 +5629,14 @@ body:has(.bk-embedded) {
 }
 
 /* ── Flow ───────────────────────────────────────────────────────────────
-   The home screen: the pipeline drawn as it is. Lines are Mineral where
-   people move, Ochre where they are sent elsewhere, and dashed where a
-   connection is missing — the same three the rest of the app uses. The
-   diagram gives way to its list on a phone; the list is also what a
-   screen reader walks. */
+   The home screen: each service as the four steps people take to book it.
+   The layout, the steps and their notes are further down (.fs-*). */
 .fl-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
-.fl-main {
-  min-width: 0;
-}
-.fl-diagram {
-  overflow-x: auto;
-  padding: 10px 8px;
-  border: 1px solid var(--soft-border);
-  border-radius: var(--radius-surface, 12px);
-  background: var(--surface);
-}
-.fl-diagram.is-hidden {
-  display: none;
-}
-.fl-svg {
-  display: block;
-  width: 100%;
-  min-width: 760px;
-  height: auto;
-}
-.fl-edge {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2;
-}
-.fl-edge.tone-out {
-  stroke: var(--emphasis);
-}
-.fl-edge.tone-gap {
-  stroke: var(--ghost);
-  stroke-dasharray: 5 6;
-}
-.fl-count {
-  /* A halo in the surface colour, so a count stays legible where a line
-     runs under it. */
-  paint-order: stroke;
-  stroke: var(--surface);
-  stroke-width: 4px;
-  stroke-linejoin: round;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  fill: var(--accent-ink);
-  font-variant-numeric: tabular-nums;
-}
-.fl-count.tone-out {
-  fill: var(--emphasis-ink);
-}
-.fl-count.tone-gap {
-  fill: var(--faint);
-  font-weight: 500;
-  font-style: italic;
-}
-.fl-node {
-  cursor: pointer;
-  outline: none;
-}
-.fl-node rect {
-  fill: var(--surface);
-  stroke: var(--strong-border);
-  stroke-width: 1.5;
-}
-.fl-node:hover rect {
-  stroke: var(--accent);
-}
-.fl-node:focus-visible rect {
-  stroke: var(--emphasis);
-  stroke-width: 3;
-}
-.fl-node.is-selected rect {
-  fill: var(--selected-mineral);
-  stroke: var(--accent);
-  stroke-width: 2.5;
-}
-.fl-node.tone-door rect {
-  fill: var(--pale-mineral);
-}
-.fl-node.tone-end rect {
-  fill: var(--status-live-tint);
-  stroke: var(--status-live);
-}
-.fl-node.tone-exit rect {
-  fill: var(--emphasis-tint);
-  stroke: var(--emphasis);
-}
-.fl-node.tone-broken rect {
-  fill: var(--app-canvas);
-  stroke: var(--ghost);
-  stroke-dasharray: 5 5;
-}
-.fl-title {
-  font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 600;
-  fill: var(--ink);
-}
-.fl-sub {
-  font-family: var(--font-body);
-  font-size: 12px;
-  fill: var(--faint);
-}
-.fl-node.tone-broken .fl-sub {
-  font-style: italic;
-}
-.fl-flag {
-  fill: var(--status-broken);
-  stroke: var(--surface);
-  stroke-width: 2;
-}
-
-.fl-list {
-  display: none;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.fl-list.is-shown {
-  display: grid;
-  gap: 8px;
-}
-.fl-list ol {
-  list-style: none;
-  margin: 6px 0 0 22px;
-  padding: 0;
-}
-.fl-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: start;
-  gap: 2px;
-  width: 100%;
-  min-height: 0;
-  padding: 11px 14px;
-  border: 1px solid var(--soft-border);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.fl-item[aria-pressed='true'] {
-  background: var(--selected-mineral);
-  border-color: var(--accent);
-}
-.fl-item b {
-  font-size: 0.92rem;
-}
-.fl-item span {
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-.fl-item.is-door {
-  border-left-color: var(--pale-mineral);
-}
-.fl-item.is-exit {
-  border-left-color: var(--emphasis);
-}
-.fl-item.is-end {
-  border-left-color: var(--status-live);
-}
-.fl-item.is-broken {
-  border-left-style: dashed;
-  border-left-color: var(--ghost);
-}
-.fl-item-flag {
-  color: var(--status-broken-ink) !important;
-  font-weight: 600;
-}
-/* A phone reads the flow top to bottom. */
-@media (max-width: 760px) {
-  .fl-diagram {
-    display: none;
-  }
-  .fl-list {
-    display: grid;
-    gap: 8px;
-  }
-}
-
 .fl-archived {
   margin: 10px 2px 0;
   font-size: 0.82rem;
@@ -5928,22 +5745,6 @@ body:has(.bk-embedded) {
   align-items: center;
   gap: 10px;
 }
-.fl-item.is-service b {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.fl-title.is-service {
-  font-size: 15px;
-}
-.fl-mark {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  fill: #fff;
-  letter-spacing: 0.02em;
-  pointer-events: none;
-}
 .svc-identity {
   display: flex;
   align-items: center;
@@ -6015,13 +5816,6 @@ body:has(.bk-embedded) {
   font-weight: 700;
   letter-spacing: 0.03em;
 }
-/* The list's own span rule is more specific than the badge's; the badge
-   keeps its white letters and its size. */
-.fl-item span.svc-badge {
-  color: #fff;
-  font-size: 0.6rem;
-}
-
 /* A test run's banner on the booking page itself. Ochre, the product's
    "look at this" colour, never the business's own accent: it is intro
    speaking, not the business. */
@@ -6035,87 +5829,7 @@ body:has(.bk-embedded) {
   font-size: 0.85rem;
 }
 
-/* ── Flow: the service cards, and trying the page ───────────────────────── */
-.fl-services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.fl-service {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 200px;
-  min-height: 0;
-  padding: 11px 14px;
-  border: 1px solid var(--soft-border);
-  border-top: 4px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  justify-content: flex-start;
-}
-.fl-service:hover {
-  border-color: var(--accent);
-}
-.fl-service[aria-selected='true'] {
-  background: var(--selected-mineral);
-  box-shadow: 0 0 0 2px var(--ink);
-}
-.fl-service:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.fl-service.is-broken {
-  border-style: dashed;
-  border-top-style: solid;
-}
-.fl-service b {
-  display: block;
-  font-size: 0.9rem;
-}
-.fl-service small {
-  display: block;
-  font-size: 0.76rem;
-  font-weight: 400;
-  color: var(--faint);
-}
-.fl-service.is-add {
-  border-style: dashed;
-  border-top: 1px dashed var(--ghost);
-  color: var(--muted);
-}
-.fl-add-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1.5px dashed var(--ghost);
-  border-radius: 50%;
-  font-size: 1rem;
-}
-@media (max-width: 760px) {
-  .fl-service {
-    flex: 1 1 100%;
-  }
-}
-
-.fl-try-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
-  gap: 18px;
-  align-items: start;
-}
-@media (max-width: 1080px) {
-  .fl-try-layout {
-    grid-template-columns: 1fr;
-  }
-}
+/* ── Flow: trying the page ─────────────────────────────────────────────── */
 .fl-try {
   position: sticky;
   top: 76px;
@@ -6159,24 +5873,6 @@ body:has(.bk-embedded) {
   background: var(--emphasis);
   animation: fl-pulse 1.4s ease-in-out infinite;
 }
-/* The walked route: parts reached are lit, the current one rings. */
-.fl-node.is-lit rect {
-  stroke: var(--emphasis);
-  stroke-width: 2.5;
-}
-.fl-node.is-here rect {
-  stroke: var(--emphasis);
-  stroke-width: 4;
-}
-.fl-here {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  fill: var(--emphasis-ink);
-}
-g.is-lit > .fl-edge {
-  stroke-width: 5;
-}
 @keyframes fl-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
@@ -6184,6 +5880,392 @@ g.is-lit > .fl-edge {
 @media (prefers-reduced-motion: reduce) {
   .fl-try-dot {
     animation: none;
+  }
+}
+
+/* ── Flow: the services, and one service as its steps ────────────────────
+   A list down the side, and the chosen service read top to bottom: a
+   sentence of what happened, then the four steps. Colour only where it
+   means something: the service's own colour on the step numbers, Ochre
+   where something needs doing. */
+.fs {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  border: 1px solid var(--strong-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--app-canvas);
+  overflow: hidden;
+}
+.fs-index {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 18px 0;
+  border-right: 1px solid var(--soft-border);
+}
+.fs-index .wk-side-eyebrow {
+  margin: 0;
+  padding: 0 18px 8px;
+}
+.fs-svc {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fs-svc > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.fs-svc b {
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.fs-svc small {
+  font-size: 0.78rem;
+  color: var(--status-live-ink);
+}
+.fs-svc small.is-off {
+  color: var(--emphasis-ink);
+}
+.fs-svc:hover,
+.fs-svc.is-on {
+  background: var(--surface);
+}
+.fs-svc.is-on {
+  box-shadow: inset 3px 0 0 var(--svc);
+}
+.fs-svc.is-add b {
+  font-weight: 500;
+  color: var(--faint);
+}
+.fs-add-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1.5px dashed var(--ghost);
+  border-radius: 50%;
+  color: var(--faint);
+}
+.fs-main {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  min-width: 0;
+  padding: 24px 28px 28px;
+  background: var(--surface);
+}
+.fs-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.fs-head-name {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.fs-head-name h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.fs-head-name p {
+  margin: 2px 0 0;
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+.fs-state {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fs-state.is-off {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+.fs-head-link {
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fs-readout {
+  display: grid;
+  gap: 4px;
+  max-width: 64ch;
+}
+.fs-readout p {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.5;
+}
+.fs-readout small {
+  color: var(--faint);
+  font-size: 0.86rem;
+}
+.fs-loose a {
+  color: var(--ink);
+  font-weight: 600;
+}
+.fs-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--soft-border);
+}
+.fs-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--soft-border);
+}
+/* The thread from one step's number to the next. */
+.fs-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 44px;
+  bottom: -16px;
+  width: 2px;
+  background: var(--svc);
+  opacity: 0.3;
+}
+.fs-n {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--svc);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.fs-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.fs-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px minmax(90px, auto);
+  gap: 16px;
+  align-items: start;
+}
+.fs-what {
+  display: grid;
+  justify-content: start;
+  justify-items: start;
+  gap: 2px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fs-what b {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.fs-what b::after {
+  content: '▾';
+  margin-left: 6px;
+  color: var(--ghost);
+  font-size: 0.8em;
+}
+.fs-step.is-open .fs-what b::after {
+  content: '▴';
+}
+.fs-what:disabled {
+  cursor: default;
+}
+.fs-what:disabled b::after {
+  content: none;
+}
+.fs-what:not(:disabled):hover b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fs-what span {
+  color: var(--faint);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+.fs-fig {
+  display: grid;
+  justify-items: end;
+  line-height: 1.3;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.fs-fig b {
+  font-size: 1.2rem;
+}
+.fs-fig span {
+  color: var(--faint);
+  font-size: 0.8rem;
+}
+.fs-change {
+  text-align: right;
+}
+.fs-change a {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.fs-change a.btn-primary {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 8px 14px;
+  color: var(--accent-contrast);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.fs-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm, 7px);
+  background: var(--app-canvas);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.fs-note a {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fs-note.is-need {
+  border-color: color-mix(in srgb, var(--emphasis) 35%, var(--surface));
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+.fs-note.is-need a {
+  color: var(--emphasis-ink);
+}
+.fs-detail {
+  padding: 14px 16px;
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: var(--app-canvas);
+}
+/* A step that stops the service looks missing; the ones after it wait. */
+.fs-step.is-missing .fs-n {
+  border: 2px dashed var(--emphasis);
+  background: transparent;
+  color: var(--emphasis-ink);
+}
+.fs-step.is-missing .fs-what span {
+  color: var(--emphasis-ink);
+}
+.fs-step.is-waiting,
+.fs-step.is-skipped {
+  opacity: 0.5;
+}
+/* A test run lights each step it reaches; the current one in Ochre. */
+.fs.is-trying {
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 18px;
+  align-items: start;
+  border: 0;
+  background: none;
+  overflow: visible;
+}
+.fs.is-trying .fs-main {
+  border: 1px solid var(--strong-border);
+  border-radius: var(--radius-surface, 12px);
+}
+.fs.is-trying .fs-step:not(.is-lit) {
+  opacity: 0.45;
+}
+.fs-step.is-lit .fs-n {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--svc) 22%, transparent);
+}
+.fs-step.is-here .fs-n {
+  background: var(--emphasis);
+}
+.fs-here {
+  color: var(--emphasis-ink);
+  font-weight: 600;
+}
+.fs-try-svc {
+  color: var(--faint);
+}
+@media (max-width: 1080px) {
+  .fs.is-trying {
+    grid-template-columns: 1fr;
+  }
+}
+/* On a phone the services become a row of chips above the steps. */
+@media (max-width: 860px) {
+  .fs {
+    grid-template-columns: 1fr;
+  }
+  .fs-index {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--soft-border);
+  }
+  .fs-index .wk-side-eyebrow {
+    width: 100%;
+    padding: 0 4px 4px;
+  }
+  .fs-svc {
+    width: auto;
+    padding: 5px 12px 5px 5px;
+    border: 1px solid var(--soft-border);
+    border-radius: 999px;
+    background: var(--surface);
+  }
+  .fs-svc.is-on {
+    box-shadow: inset 0 0 0 2px var(--svc);
+  }
+  .fs-svc small {
+    display: none;
+  }
+  .fs-main {
+    padding: 18px 16px 22px;
+  }
+  .fs-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .fs-change {
+    grid-column: 1 / -1;
+    text-align: left;
   }
 }
 
