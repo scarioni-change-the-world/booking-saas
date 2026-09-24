@@ -9,7 +9,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const LIST_LIMIT = 100;
 
 /**
- * Everything the Enquiries section reads, in one request.
+ * The figures the Enquiries section reads, in one request.
  *
  * The same 30-day window as Overview's tiles and loadFunnelStats, on
  * purpose: a page that says "8 sent elsewhere" beside a list of 8 rows and
@@ -57,9 +57,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         answers: Array.isArray(r.answers) ? (r.answers as AnswerSnapshot[]) : [],
       }));
 
+    /* The responses themselves are not sent: the list of who answered
+       lives on People now, and this page only reads the figures. */
     return ok({
       stats,
-      responses,
       questions: analyseQuestions(analysed),
       services: analyseServices(analysed).map((service) => ({
         ...service,

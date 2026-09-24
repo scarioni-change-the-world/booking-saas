@@ -373,6 +373,7 @@ input[type='number'],
 input[type='time'],
 input[type='date'],
 input[type='url'],
+input[type='search'],
 select,
 textarea {
   width: 100%;
@@ -5021,4 +5022,328 @@ body:has(.bk-embedded) {
   .wk-booking:hover {
     filter: none;
   }
+}
+
+/* ── People ─────────────────────────────────────────────────────────────
+   One row per person, drawn as the route they took. Dots follow the Week's
+   language: a filled dot happened, a hollow one did not finish, a dashed
+   one is paid for and missing. Colour is never the only signal — every dot
+   carries its words beside it. */
+.pp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 16px;
+  margin-bottom: 4px;
+}
+.pp-chips {
+  flex: 1 1 520px;
+  margin-bottom: 10px;
+}
+.pp-chips .filter-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pp-chip-count {
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+.pp-search {
+  flex: 0 1 260px;
+  margin-bottom: 10px;
+}
+.pp-search input {
+  width: 100%;
+}
+.pp-list-wrap {
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+  min-width: 0;
+}
+.pp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pp-list > li + li {
+  border-top: 1px solid var(--rule);
+}
+.pp-empty {
+  margin: 0;
+  padding: 22px 18px;
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+.pp-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pp-list > li:first-child .pp-row {
+  border-radius: var(--radius-surface, 12px) var(--radius-surface, 12px) 0 0;
+}
+.pp-list > li:last-child .pp-row {
+  border-radius: 0 0 var(--radius-surface, 12px) var(--radius-surface, 12px);
+}
+.pp-row:hover {
+  background: var(--app-canvas);
+}
+.pp-row.is-selected {
+  background: var(--selected-mineral);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.pp-row:focus-visible {
+  outline: 2px solid var(--emphasis);
+  outline-offset: -2px;
+}
+@media (max-width: 680px) {
+  .pp-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+.pp-who {
+  min-width: 0;
+}
+.pp-who b {
+  display: block;
+  font-size: 0.93rem;
+  overflow-wrap: anywhere;
+}
+.pp-who small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.pp-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.pp-mark {
+  font-size: 0.7rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pp-mark.back {
+  background: var(--pale-mineral);
+  color: var(--accent-ink);
+}
+.pp-mark.owes {
+  background: var(--status-live-tint);
+  color: var(--status-live-ink);
+}
+.pp-mark.again {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+
+.pp-trace {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0 0 2px;
+  list-style: none;
+  overflow-x: auto;
+}
+.pp-trace .pp-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1 0 86px;
+  max-width: 150px;
+  text-align: center;
+}
+/* The line between two steps, drawn from the previous dot to this one. */
+.pp-trace .pp-step + .pp-step::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: calc(50% + 10px);
+  width: calc(100% - 20px);
+  height: 2px;
+  background: var(--accent);
+}
+.pp-trace .pp-step.tone-owed::before,
+.pp-trace .pp-step.tone-stopped::before {
+  background: var(--border);
+}
+.pp-step i {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+}
+.pp-step span {
+  font-size: 0.74rem;
+  line-height: 1.3;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.pp-step small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--faint);
+}
+.pp-step.tone-answered i {
+  background: var(--accent);
+}
+.pp-step.tone-booked i {
+  background: var(--status-live);
+  border-color: var(--status-live);
+}
+.pp-step.tone-elsewhere i {
+  border-color: var(--emphasis);
+  background: var(--emphasis-tint);
+}
+.pp-step.tone-owed i {
+  border-style: dashed;
+  border-color: var(--emphasis);
+}
+.pp-step.tone-stopped i,
+.pp-step.tone-cancelled i {
+  border-color: var(--border);
+}
+.pp-step.tone-cancelled span {
+  color: var(--faint);
+}
+.pp-step.tone-more i {
+  border-color: var(--border);
+  background: var(--rule);
+}
+.pp-step.tone-added i {
+  border-color: var(--accent);
+}
+
+.pp-trace-panel {
+  margin: 0 0 14px;
+}
+.pp-trace-panel .pp-step {
+  flex-basis: 72px;
+}
+.pp-legend {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.pp-legend .pp-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pp-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.pp-link {
+  display: block;
+  font-size: 0.78rem;
+  background: var(--side);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+.pp-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.pp-sessions {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.pp-sessions li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+.pp-sessions small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.pp-grant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.pp-grant .field {
+  flex: 1 1 150px;
+  margin-bottom: 0;
+}
+.pp-grant .pp-grant-count {
+  flex: 0 0 84px;
+}
+.pp-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.pp-hist {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+.pp-hist > .pp-step {
+  padding-top: 2px;
+}
+.pp-hist b {
+  display: block;
+  font-size: 0.88rem;
+}
+.pp-hist small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.pp-hist-link {
+  font-size: 0.78rem;
+}
+.pp-answers {
+  margin-top: 6px;
+}
+.pp-answers summary {
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--accent-ink);
+}
+.pp-answers .answer-pair {
+  margin-top: 8px;
+  padding: 9px 11px;
 }

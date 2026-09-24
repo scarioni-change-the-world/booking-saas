@@ -60,11 +60,18 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  * screens about the same seven days — when you are open, and what is in it
  * — and neither could show the one thing a business looks for, which is
  * where the week is full and where it is empty. See docs/roadmap.md: this is
- * the first of the three places the app is becoming. */
+ * the first of the three places the app is becoming.
+ *
+ * "People" replaced Clients, and took the list half of Enquiries with it.
+ * A client list, an enquiry list and a booking list were three partial
+ * views of the same people; one row per person, drawn as the route they
+ * took, is the second of the three places. Enquiries keeps the figures —
+ * which question turns people away, which service converts — until Flow
+ * takes those over. */
 const NAV = [
   { href: 'overview', label: 'Overview' },
   { href: 'week', label: 'Week' },
-  { href: 'clients', label: 'Clients' },
+  { href: 'people', label: 'People' },
   { href: 'enquiries', label: 'Enquiries' },
   { href: 'sessions', label: 'Services', divider: true },
   { href: 'screening', label: 'Questions' },

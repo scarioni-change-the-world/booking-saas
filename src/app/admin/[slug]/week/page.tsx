@@ -73,6 +73,7 @@ interface WeekPayload {
 
 interface Owed {
   clientName: string;
+  email: string;
   serviceName: string;
   remaining: number;
 }
@@ -89,7 +90,12 @@ export default function WeekPage() {
   /* Seeded once from the address, like the other screens: an old link to
      Bookings arrives here with ?view=list and lands on the list. */
   const [view, setView] = useState<'week' | 'list'>(search.get('view') === 'list' ? 'list' : 'week');
-  const [monday, setMonday] = useState(() => mondayOf(DateTime.now().toFormat('yyyy-MM-dd')));
+  /* ?from= opens a given week — People links each appointment to its own. */
+  const [monday, setMonday] = useState(() => {
+    const from = search.get('from');
+    const asked = from && /^\d{4}-\d{2}-\d{2}$/.test(from) && DateTime.fromISO(from).isValid ? from : null;
+    return mondayOf(asked ?? DateTime.now().toFormat('yyyy-MM-dd'));
+  });
 
   const [week, setWeek] = useState<WeekPayload | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -119,6 +125,7 @@ export default function WeekPage() {
         adminFetchJson<{
           clients: Array<{
             name: string;
+            email: string;
             entitlements: Array<{ eventTypeName: string; remaining: number }>;
           }>;
         }>(`/api/admin/${slug}/clients`).catch(() => ({ clients: [] })),
@@ -132,7 +139,12 @@ export default function WeekPage() {
         c.clients.flatMap((client) =>
           client.entitlements
             .filter((e) => e.remaining > 0)
-            .map((e) => ({ clientName: client.name, serviceName: e.eventTypeName, remaining: e.remaining })),
+            .map((e) => ({
+              clientName: client.name,
+              email: client.email,
+              serviceName: e.eventTypeName,
+              remaining: e.remaining,
+            })),
         ),
       );
     } catch (cause) {
@@ -285,7 +297,8 @@ export default function WeekPage() {
               <span className="wk-owed-label">Still to book</span>
               {owed.map((o, i) => (
                 <span key={i} className="wk-owed-item">
-                  {o.clientName} · {o.serviceName} · {o.remaining}
+                  <a href={`/admin/${slug}/people?person=${encodeURIComponent(o.email)}`}>{o.clientName}</a> ·{' '}
+                  {o.serviceName} · {o.remaining}
                 </span>
               ))}
             </div>
@@ -912,6 +925,9 @@ function BookingPanel({
               {busy ? 'Sending…' : 'Send the email again'}
             </button>
           )}
+          {/* Everyone who books gets their own link, so this only shows
+              where that did not happen: a booking from before, or a record
+              that could not be made at the time. A repair, not a step. */}
           {!b.isClient && (
             <button
               type="button"
@@ -919,9 +935,12 @@ function BookingPanel({
               disabled={busy}
               onClick={() => void actions.addAsClient(b)}
             >
-              Add as client
+              Give them their own link
             </button>
           )}
+          <a className="btn-link" href={`/admin/${slug}/people?person=${encodeURIComponent(b.email)}`}>
+            See {b.name} in People
+          </a>
           <button type="button" className="btn-link" onClick={() => setCancelling(true)}>
             Cancel booking
           </button>

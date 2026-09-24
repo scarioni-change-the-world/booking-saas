@@ -2,16 +2,9 @@ import { fail, handleError, ok, optionalBoolean, readJson, requireEmail, require
 import { requireTenantAdmin } from '@/lib/auth';
 import { sendClientInviteEmail } from '@/lib/client-email';
 import { serializeClient } from '@/lib/admin-serializers';
+import { loadClients } from '@/lib/client-list';
 import { generateManageToken } from '@/lib/tokens';
 import type { ClientRow } from '@/lib/db/types';
-
-interface EntitlementJoin {
-  id: string;
-  event_type_id: string;
-  total_sessions: number;
-  used_sessions: number;
-  event_types: { name: string } | null;
-}
 
 /**
  * Every client, with their package balances alongside them — the whole
@@ -21,31 +14,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
   try {
     const { slug } = await ctx.params;
     const { scope } = await requireTenantAdmin(request, slug);
-
-    const { data, error } = await scope
-      .select(
-        'clients',
-        '*, client_entitlements(id, event_type_id, total_sessions, used_sessions, event_types(name))',
-      )
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    const rows = (data ?? []) as unknown as Array<ClientRow & { client_entitlements: EntitlementJoin[] }>;
-
-    return ok({
-      clients: rows.map((row) => ({
-        ...serializeClient(row),
-        entitlements: row.client_entitlements.map((e) => ({
-          id: e.id,
-          eventTypeId: e.event_type_id,
-          eventTypeName: e.event_types?.name ?? 'Unknown session type',
-          totalSessions: e.total_sessions,
-          usedSessions: e.used_sessions,
-          remaining: e.total_sessions - e.used_sessions,
-        })),
-      })),
-    });
+    return ok({ clients: await loadClients(scope) });
   } catch (error) {
     return handleError(error);
   }
@@ -56,11 +25,12 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
  * here, the same shape as a booking's manage token. No package yet; that's
  * granted separately once you know what they bought.
  *
- * This is the single path a client record is created through, whether it
- * was typed on the Clients page or promoted from a booking on the Bookings
- * page — the same reasoning the AI intake-draft route gives for sending
- * accepted drafts back through the ordinary questions route. Promotion from
- * a booking is that page prefilling this call, not a second way in.
+ * Every booking already makes a client record for the person who booked
+ * (see createBooking), so this is for the two cases that leaves: somebody
+ * the business knows who has never booked, added from People, and somebody
+ * whose booking predates that or whose record could not be made at the
+ * time — given their link from the booking or from People. Both are this
+ * one call, prefilled differently, not a second way in.
  *
  * `sendInvite` decides whether they're emailed their link now. Its outcome
  * comes back on the response rather than being swallowed: "saved, but we

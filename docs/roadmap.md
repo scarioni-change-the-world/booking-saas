@@ -26,13 +26,14 @@ Six rules every screen follows:
 
 ## The redesign, in order
 
-1. **Week** — Availability and Bookings in one picture; paint your usual
-   hours; exceptions and blocks on the same grid; bookings open beside it.
-   Ships inside the current sidebar.
-2. **People** — Clients and the Enquiries list as one list, each person
-   with the route they took. Also settles an inconsistency: bookings now
-   create client records, but the old Bookings screen still offers
-   "Add as client" as a deliberate step.
+1. ~~**Week**~~ — done. Availability and Bookings in one picture; paint
+   your usual hours; exceptions and blocks on the same grid; bookings open
+   beside it. Ships inside the current sidebar.
+2. ~~**People**~~ — done. Clients and the Enquiries list as one list, each
+   person with the route they took. Settled the inconsistency: every
+   booking makes a client record and a link, so "Add as client" is now
+   "Give them their own link", shown only where a booking predates that or
+   the record could not be made. Enquiries keeps its figures until Flow.
 3. **Messages on the client's journey** — the six email templates and the
    next-steps message, pinned to the moment each is sent, with delivery
    counts.

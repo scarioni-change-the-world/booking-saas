@@ -265,13 +265,13 @@ export default function OverviewPage() {
               label="Went on to book"
               value={data.last30Days.meeting}
               note="New enquiries · 30 days"
-              href={`/admin/${slug}/enquiries?show=meeting`}
+              href={`/admin/${slug}/people?figure=meeting`}
             />
             <Stat
               label="Sent somewhere else"
               value={data.last30Days.other}
               note="New enquiries · 30 days"
-              href={`/admin/${slug}/enquiries?show=other`}
+              href={`/admin/${slug}/people?figure=other`}
             />
             {/* Only when there is some. A business with no repeat custom
                 yet does not need a zero explaining an absence. */}
@@ -280,7 +280,7 @@ export default function OverviewPage() {
                 label="Worked with you before"
                 value={data.last30Days.returning}
                 note="Booked again · 30 days"
-                href={`/admin/${slug}/enquiries?show=returning`}
+                href={`/admin/${slug}/people?figure=returning`}
               />
             )}
           </div>

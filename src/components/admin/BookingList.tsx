@@ -71,8 +71,9 @@ export function BookingList({ slug }: { slug: string }) {
   function addAsClient(booking: Booking) {
     if (
       !window.confirm(
-        `Add ${booking.name} as a client and email them their own booking link?\n\n` +
-          `From then on they book without answering your questions.`,
+        `Give ${booking.name} their own link and email it to them?\n\n` +
+          `Everyone who books gets one; this booking was made before that, or the link could not be made at the time. ` +
+          `With it they book without answering your questions.`,
       )
     ) {
       return;
@@ -267,7 +268,7 @@ export function BookingList({ slug }: { slug: string }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                 {b.isClient ? (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>Client</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>Has their own link</span>
                 ) : (
                   <button
                     type="button"
@@ -275,7 +276,7 @@ export function BookingList({ slug }: { slug: string }) {
                     disabled={actions.busyId === b.id}
                     onClick={() => addAsClient(b)}
                   >
-                    {actions.busyId === b.id ? 'Working…' : 'Add as client'}
+                    {actions.busyId === b.id ? 'Working…' : 'Give them their own link'}
                   </button>
                 )}
                 {b.status === 'confirmed' && (

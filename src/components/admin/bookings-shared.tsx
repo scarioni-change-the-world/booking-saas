@@ -157,10 +157,10 @@ export function useBookingActions(slug: string, onDone: () => Promise<void> | vo
       );
       setNotice(
         result.inviteStatus === 'sent'
-          ? `${booking.name} is now a client — their booking link is on its way to them.`
-          : `${booking.name} is now a client, but the email didn't go out${
+          ? `${booking.name} has their own link — it's on its way to them.`
+          : `${booking.name} has their own link, but the email didn't go out${
               result.inviteStatus === 'not_configured' ? ' (email isn’t set up yet)' : ''
-            }. Send them their link from the Clients page.`,
+            }. Copy it from their row in People and send it yourself.`,
       );
     });
   }
