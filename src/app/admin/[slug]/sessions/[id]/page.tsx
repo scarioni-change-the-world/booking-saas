@@ -11,6 +11,8 @@ import {
   toMoneyInput,
 } from '@/lib/money';
 import { LOCATION_OPTIONS } from '@/lib/service-location';
+import { SERVICE_PALETTE, serviceColour } from '@/lib/service-identity';
+import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
@@ -153,6 +155,8 @@ export default function ServicePage() {
           </a>
         }
       />
+
+      <ServiceIdentity service={service} others={payload.services} onSave={patch} />
 
       {/* The sentence this whole page exists for. A service created from the
           Services list is offered to nobody, does not appear on the booking
@@ -592,5 +596,76 @@ function ReviewStageForm({
         {busy ? 'Saving…' : 'Save'}
       </button>
     </form>
+  );
+}
+
+/**
+ * How this service is recognised on Flow, the Week and in People: its mark
+ * and a choice of six colours. Saved on the click, because the change is
+ * the preview — the mark beside the swatches is already the new one.
+ *
+ * A colour another active service is using is still offered, only marked
+ * as taken: two services may share one on purpose, and the business decides.
+ */
+function ServiceIdentity({
+  service,
+  others,
+  onSave,
+}: {
+  service: SerializedEventType;
+  others: SerializedEventType[];
+  onSave: (body: Record<string, unknown>) => Promise<void>;
+}) {
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const current = serviceColour(service.color);
+  const takenBy = new Map(
+    others.filter((o) => o.id !== service.id && o.active).map((o) => [serviceColour(o.color), o.name]),
+  );
+
+  async function choose(hex: string) {
+    if (hex === current) return;
+    setSaving(hex);
+    setError(null);
+    try {
+      await onSave({ color: hex });
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className="svc-identity">
+      <ServiceBadge name={service.name} color={saving ?? current} size="lg" />
+      <div>
+        <p className="svc-identity-label">How you&rsquo;ll spot it on your Flow, Week and People</p>
+        <div className="svc-swatches" role="radiogroup" aria-label="Colour">
+          {SERVICE_PALETTE.map((c) => {
+            const taken = takenBy.get(c.hex);
+            return (
+              <button
+                key={c.hex}
+                type="button"
+                role="radio"
+                aria-checked={(saving ?? current) === c.hex}
+                aria-label={taken ? `${c.label}, also used by ${taken}` : c.label}
+                title={taken ? `${c.label} · also ${taken}` : c.label}
+                className={`svc-swatch${taken ? ' is-taken' : ''}`}
+                style={{ background: c.hex }}
+                disabled={saving !== null}
+                onClick={() => void choose(c.hex)}
+              />
+            );
+          })}
+        </div>
+        {error && (
+          <p className="notice notice-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { InitialsMark } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
+import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import {
   emailBadge,
   formatRange,
@@ -135,7 +136,10 @@ export function BookingList({ slug }: { slug: string }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
                   <span className="data-row-title">{b.name}</span>
-                  <span className="data-row-meta">{b.eventTypeName}</span>
+                  <span className="data-row-meta svc-line">
+                    <ServiceBadge name={b.eventTypeName} color={b.eventTypeColor} size="sm" />
+                    {b.eventTypeName}
+                  </span>
                   {/* This appointment is part of a programme. Said on the row
                       rather than by grouping the rows: a business scans this
                       list by date, and pulling a programme's appointments

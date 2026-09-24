@@ -1339,14 +1339,25 @@ a.btn-secondary {
 }
 .shell-back {
   display: inline-flex;
-  gap: 6px;
-  margin-bottom: 14px;
-  font-size: 0.85rem;
-  color: var(--faint);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 9px 16px 9px 12px;
+  border: 1px solid var(--strong-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
   text-decoration: none;
 }
+.shell-back span {
+  font-size: 1.05rem;
+  color: var(--accent);
+}
 .shell-back:hover {
-  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--selected-mineral);
 }
 @media (max-width: 860px) {
   .shell-bar {
@@ -4788,7 +4799,9 @@ body:has(.bk-embedded) {
   filter: brightness(1.06);
 }
 .wk-booking.is-programme {
-  box-shadow: inset 3px 0 0 var(--emphasis);
+  /* White rather than Ochre now that a booking wears its service's colour
+     — one of which is Ochre. */
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.75);
 }
 .wk-booking.has-trouble {
   outline: 2px solid var(--status-broken);
@@ -5818,4 +5831,134 @@ body:has(.bk-embedded) {
 .fl-add .field {
   flex: 1 1 260px;
   margin-bottom: 0;
+}
+
+/* ── A service's mark ───────────────────────────────────────────────────
+   Two letters on the service's own colour (service-identity.ts), used
+   wherever a service appears so it is found by colour and confirmed by
+   name. Every colour in the palette carries white text at 4.8:1 or more. */
+.svc-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.svc-badge-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 0.62rem;
+}
+.svc-badge-md {
+  width: 28px;
+  height: 28px;
+  font-size: 0.72rem;
+}
+.svc-badge-lg {
+  width: 40px;
+  height: 40px;
+  font-size: 0.95rem;
+}
+.svc-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fl-item.is-service b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fl-title.is-service {
+  font-size: 15px;
+}
+.fl-mark {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  fill: #fff;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.svc-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: -6px 0 18px;
+}
+.svc-identity-label {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.svc-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.svc-swatch {
+  width: 30px;
+  height: 30px;
+  min-height: 0;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border);
+  cursor: pointer;
+}
+.svc-swatch[aria-checked='true'] {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+/* Another service already wears it: a small inner ring, and said in the
+   label, so sharing is a choice made knowingly rather than by accident. */
+.svc-swatch.is-taken {
+  background-image: radial-gradient(circle, transparent 5px, rgba(255, 255, 255, 0.85) 5.5px, rgba(255, 255, 255, 0.85) 7px, transparent 7.5px);
+}
+
+.svc-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wk-side-lead .svc-line {
+  margin-bottom: 2px;
+  color: var(--ink);
+}
+.wk-side-lead .wk-muted {
+  display: block;
+}
+.wk-lg-service {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+.wk-lg-service .svc-badge-sm {
+  width: 18px;
+  height: 18px;
+  font-size: 0.55rem;
+}
+/* The service's two letters inside a booking, for anyone who cannot tell
+   two of the colours apart — and for a half-hour block too short to name
+   the service in full. */
+.wk-b-mark {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+/* The list's own span rule is more specific than the badge's; the badge
+   keeps its white letters and its size. */
+.fl-item span.svc-badge {
+  color: #fff;
+  font-size: 0.6rem;
 }

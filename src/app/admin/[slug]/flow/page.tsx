@@ -6,6 +6,7 @@ import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
+import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import {
   buildFlow,
   describeFlow,
@@ -136,7 +137,7 @@ export default function FlowPage() {
               >
                 {drawing.edges.map((e) => (
                   <g key={e.id}>
-                    <path className={`fl-edge tone-${e.tone}`} d={e.d} />
+                    <path className={`fl-edge tone-${e.tone}`} d={e.d} style={e.color ? { stroke: e.color } : undefined} />
                     {e.label && (
                       <text className={`fl-count tone-${e.tone}`} x={e.lx} y={e.ly} textAnchor={e.anchor}>
                         {e.label}
@@ -209,12 +210,42 @@ function Node({ node, selected, onOpen }: { node: DrawnNode; selected: boolean; 
       }}
     >
       <rect x={node.x} y={node.y} width={node.w} height={node.h} rx={9} />
-      <text className="fl-title" x={node.x + node.w / 2} y={node.y + node.h / 2 - 3} textAnchor="middle">
-        {clip(node.title, node.w)}
-      </text>
-      <text className="fl-sub" x={node.x + node.w / 2} y={node.y + node.h / 2 + 14} textAnchor="middle">
-        {clip(node.sub, node.w)}
-      </text>
+      {node.color && node.monogram ? (
+        /* A service: its colour down the left edge and its mark, so a lane
+           is found by colour first and read second. */
+        <>
+          <clipPath id={`clip-${node.part.replace(/[^a-z0-9-]/gi, '')}`}>
+            <rect x={node.x} y={node.y} width={node.w} height={node.h} rx={9} />
+          </clipPath>
+          <rect
+            x={node.x}
+            y={node.y}
+            width={8}
+            height={node.h}
+            clipPath={`url(#clip-${node.part.replace(/[^a-z0-9-]/gi, '')})`}
+            style={{ fill: node.color }}
+          />
+          <circle cx={node.x + 30} cy={node.y + node.h / 2} r={15} style={{ fill: node.color }} />
+          <text className="fl-mark" x={node.x + 30} y={node.y + node.h / 2 + 4.5} textAnchor="middle">
+            {node.monogram}
+          </text>
+          <text className="fl-title is-service" x={node.x + 54} y={node.y + node.h / 2 - 3}>
+            {clip(node.title, node.w - 50, 7.6)}
+          </text>
+          <text className="fl-sub" x={node.x + 54} y={node.y + node.h / 2 + 14}>
+            {clip(node.sub, node.w - 50)}
+          </text>
+        </>
+      ) : (
+        <>
+          <text className="fl-title" x={node.x + node.w / 2} y={node.y + node.h / 2 - 3} textAnchor="middle">
+            {clip(node.title, node.w)}
+          </text>
+          <text className="fl-sub" x={node.x + node.w / 2} y={node.y + node.h / 2 + 14} textAnchor="middle">
+            {clip(node.sub, node.w)}
+          </text>
+        </>
+      )}
       {node.flag && (
         <circle className="fl-flag" cx={node.x + node.w - 4} cy={node.y + 4} r={6}>
           <title>{node.flag}</title>
@@ -225,8 +256,8 @@ function Node({ node, selected, onOpen }: { node: DrawnNode; selected: boolean; 
 }
 
 /** SVG text does not wrap; a long service name is shortened, never overflowed. */
-function clip(text: string, width: number): string {
-  const max = Math.floor((width - 16) / 7);
+function clip(text: string, width: number, charWidth = 7): string {
+  const max = Math.floor((width - 16) / charWidth);
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
@@ -243,9 +274,25 @@ function FlowList({
   onOpen: (part: PartId) => void;
   className: string;
 }) {
-  const item = (part: PartId, title: string, detail: string, tone = '', flag: string | null = null) => (
-    <button type="button" className={`fl-item ${tone}`} aria-pressed={selected === part} onClick={() => onOpen(part)}>
-      <b>{title}</b>
+  const item = (
+    part: PartId,
+    title: string,
+    detail: string,
+    tone = '',
+    flag: string | null = null,
+    service?: { color: string },
+  ) => (
+    <button
+      type="button"
+      className={`fl-item ${tone}${service ? ' is-service' : ''}`}
+      aria-pressed={selected === part}
+      onClick={() => onOpen(part)}
+      style={service ? { borderLeftColor: service.color } : undefined}
+    >
+      <b>
+        {service && <ServiceBadge name={title} color={service.color} size="sm" />}
+        {title}
+      </b>
       <span>{detail}</span>
       {flag && <span className="fl-item-flag">{flag}</span>}
     </button>
@@ -292,6 +339,8 @@ function FlowList({
               ? `${lane.qualified} let through · ${lane.booked} booked · ${lane.sub}`
               : 'Not connected: offered to nobody',
             lane.live ? '' : 'is-broken',
+            null,
+            { color: lane.color },
           )}
         </li>
       ))}
@@ -603,7 +652,27 @@ function Panel({
       </div>
     );
   }
-  return <LanePanel lane={lane} data={data} slug={slug} head={head(lane.name, 'Service')} />;
+  return (
+    <LanePanel
+      lane={lane}
+      data={data}
+      slug={slug}
+      head={
+        <>
+          <p className="wk-side-eyebrow">Service</p>
+          <div className="wk-side-head">
+            <h3 className="svc-heading">
+              <ServiceBadge name={lane.name} color={lane.color} />
+              {lane.name}
+            </h3>
+            <button type="button" className="btn-link" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </>
+      }
+    />
+  );
 }
 
 function PagePanel({ slug, model, head }: { slug: string; model: FlowModel; head: React.ReactNode }) {

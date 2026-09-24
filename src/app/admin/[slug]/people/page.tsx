@@ -323,7 +323,7 @@ function PersonRow({
 function Step({ step }: { step: TraceStep }) {
   return (
     <li className={`pp-step tone-${step.tone}`}>
-      <i aria-hidden="true" />
+      <i aria-hidden="true" style={step.color ? { background: step.color, borderColor: step.color } : undefined} />
       <span>
         {step.label}
         {step.detail && <small>{step.detail}</small>}
@@ -715,7 +715,10 @@ function HistoryItem({ event, slug, timezone }: { event: PersonEvent; slug: stri
     return (
       <div className="pp-hist">
         <span className={`pp-step tone-${b.status === 'cancelled' ? 'cancelled' : 'booked'}`}>
-          <i aria-hidden="true" />
+          <i
+            aria-hidden="true"
+            style={b.status === 'cancelled' || !b.eventTypeColor ? undefined : { background: b.eventTypeColor, borderColor: b.eventTypeColor }}
+          />
         </span>
         <div>
           <b>

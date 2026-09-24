@@ -8,6 +8,7 @@ import {
   requireInt,
   requireString,
 } from '@/lib/api';
+import { nextColour } from '@/lib/service-identity';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
 import { parseBookingModeForCreate, parseLocation, parsePrice } from '@/lib/admin-event-types';
@@ -99,6 +100,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
 
     const base = slugify(name);
 
+    /* Its own colour from the start, so a second service never arrives
+       looking like the first. The first one no active service is using. */
+    const inUse = await scope.select('event_types', 'color').eq('active', true);
+    if (inUse.error) throw inUse.error;
+    const color = nextColour(((inUse.data ?? []) as unknown as Array<{ color: string }>).map((r) => r.color));
+
     // A tenant's slugs only need to be unique against each other, so a
     // handful of attempts with a numeric suffix resolves any collision
     // without asking the tenant to think about slugs at all.
@@ -119,6 +126,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
         price_minor: priceMinor,
         location_kind: location?.locationKind ?? null,
         location_detail: location?.locationDetail ?? null,
+        color,
       });
 
       if (!error) {

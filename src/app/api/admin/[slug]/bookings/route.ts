@@ -7,7 +7,7 @@ import { findReconsideration, type Reconsideration } from '@/lib/reconsideration
 import type { QualificationResponseRow } from '@/lib/db/types';
 
 const EMBED =
-  '*, event_types(name), qualification_responses(id, email, event_type_id, completed_at, answers, outcome_path_type)';
+  '*, event_types(name, color), qualification_responses(id, email, event_type_id, completed_at, answers, outcome_path_type)';
 
 /**
  * The three lists a tenant actually wants to look at, kept mutually

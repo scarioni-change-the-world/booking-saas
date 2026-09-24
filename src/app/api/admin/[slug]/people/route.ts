@@ -1,6 +1,7 @@
 import { handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { loadClients } from '@/lib/client-list';
+import { serviceColour } from '@/lib/service-identity';
 import { listRecentResponses } from '@/lib/qualification-response-service';
 import type { BookingStatus, EventTypeRow } from '@/lib/db/types';
 import type { PeopleAnswer, PeopleBooking, PeopleResponse } from '@/lib/people';
@@ -20,7 +21,7 @@ interface BookingJoin {
   status: BookingStatus;
   pack_id: string | null;
   pack_size: number | null;
-  event_types: { name: string } | null;
+  event_types: { name: string; color: string | null } | null;
 }
 
 /**
@@ -46,7 +47,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       scope
         .select(
           'bookings',
-          'id, name, email, starts_at, ends_at, created_at, status, pack_id, pack_size, event_types(name)',
+          'id, name, email, starts_at, ends_at, created_at, status, pack_id, pack_size, event_types(name, color)',
         )
         .gte('starts_at', windowStart)
         .order('created_at', { ascending: false })
@@ -68,6 +69,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       name: b.name,
       email: b.email,
       eventTypeName: b.event_types?.name ?? 'A service you have since removed',
+      eventTypeColor: serviceColour(b.event_types?.color),
       startsAt: b.starts_at,
       endsAt: b.ends_at,
       createdAt: b.created_at,

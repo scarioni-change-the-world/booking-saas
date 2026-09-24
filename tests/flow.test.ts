@@ -16,6 +16,7 @@ function service(over: Partial<FlowService>): FlowService {
     availableToExistingClients: false,
     active: true,
     ownQuestionCount: 0,
+    color: '#2c6a63',
     ...over,
   };
 }
@@ -126,6 +127,27 @@ describe('drawFlow', () => {
   it('shows usual weekly hours on the calendar', () => {
     const d = drawFlow(buildFlow(input({ weeklyMinutes: 90 + 32 * 60 })), 'ruiz');
     expect(d.nodes.find((n) => n.part === 'calendar')!.sub).toBe('33.5 h a week');
+  });
+});
+
+describe('telling services apart', () => {
+  it('gives each lane its colour and mark, and draws its lines in that colour', () => {
+    const d = drawFlow(
+      buildFlow(
+        input({
+          services: [
+            service({}),
+            service({ id: 's2', name: 'Wedding coverage', color: '#7a4e7e' }),
+          ],
+        }),
+      ),
+      'ruiz',
+    );
+    const wedding = d.nodes.find((n) => n.part === 'service:s2')!;
+    expect(wedding).toMatchObject({ color: '#7a4e7e', monogram: 'WC' });
+    expect(d.edges.find((e) => e.id === 'questions-s2')!.color).toBe('#7a4e7e');
+    expect(d.edges.find((e) => e.id === 's2-calendar')!.color).toBe('#7a4e7e');
+    expect(d.nodes.find((n) => n.part === 'questions')!.color).toBeUndefined();
   });
 });
 

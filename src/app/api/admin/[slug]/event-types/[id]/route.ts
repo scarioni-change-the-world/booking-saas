@@ -7,6 +7,7 @@ import {
   readJson,
   requireInt,
 } from '@/lib/api';
+import { isPaletteColour } from '@/lib/service-identity';
 import { requireTenantAdmin } from '@/lib/auth';
 import { serializeEventType } from '@/lib/admin-serializers';
 import { parseBookingModeForUpdate, parseLocation, parsePrice } from '@/lib/admin-event-types';
@@ -65,6 +66,14 @@ export async function PATCH(
 
     const active = optionalBoolean(body, 'active');
     if (active !== undefined) patch.active = active;
+
+    // One of the six, so every colour a service can have is one that has
+    // been checked to carry white text — see service-identity.ts.
+    const color = optionalString(body, 'color', { maxLength: 7 });
+    if (color !== undefined) {
+      if (!isPaletteColour(color)) return fail('Choose one of the colours offered', 400);
+      patch.color = color.toLowerCase();
+    }
 
     const priceMinor = parsePrice(body);
     if (priceMinor !== undefined) patch.price_minor = priceMinor;

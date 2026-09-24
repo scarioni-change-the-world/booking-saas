@@ -28,6 +28,7 @@ export interface AnsweredQuestion {
 export interface Booking {
   id: string;
   eventTypeName: string;
+  eventTypeColor: string;
   startsAt: string;
   endsAt: string;
   name: string;

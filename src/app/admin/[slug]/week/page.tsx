@@ -8,6 +8,8 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import DaySchedule from '@/components/admin/DaySchedule';
 import { BookingList } from '@/components/admin/BookingList';
 import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
+import { ServiceBadge } from '@/components/admin/ServiceBadge';
+import { monogram } from '@/lib/service-identity';
 import {
   emailBadge,
   formatRange,
@@ -365,8 +367,16 @@ export default function WeekPage() {
 
             <div className="wk-legend" aria-hidden="true">
               <span><i className="wk-lg-open" />Open</span>
-              <span><i className="wk-lg-booked" />Booked</span>
               <span><i className="wk-lg-blocked" />Blocked</span>
+              {/* Each service in its own colour, so a week of bookings says
+                  what each one is before any of them is opened. Only the
+                  services with something booked this week. */}
+              {[...new Map(bookings.map((b) => [b.eventTypeName, b.eventTypeColor])).entries()].map(([name, color]) => (
+                <span key={name} className="wk-lg-service">
+                  <ServiceBadge name={name} color={color} size="sm" />
+                  {name}
+                </span>
+              ))}
               <span className="wk-tz">Times in {tz.replace(/_/g, ' ')}</span>
             </div>
           </div>
@@ -636,12 +646,17 @@ function WeekGrid({
                     className={`wk-booking${b.pack ? ' is-programme' : ''}${selected ? ' is-selected' : ''}${
                       trouble ? ' has-trouble' : ''
                     }${painting ? ' is-ghost' : ''}`}
-                    style={{ top, height: h }}
+                    style={{ top, height: h, background: b.eventTypeColor }}
                     disabled={painting}
                     onClick={() => onSelect({ kind: 'booking', id: b.id })}
                     aria-label={`${b.name}, ${b.eventTypeName}, ${minutesToTimeLabel(p.startMinutes)}`}
                   >
-                    <span className="wk-b-name">{b.name}</span>
+                    <span className="wk-b-name">
+                      <span className="wk-b-mark" aria-hidden="true">
+                        {monogram(b.eventTypeName)}
+                      </span>
+                      {b.name}
+                    </span>
                     {h >= 40 && (
                       <span className="wk-b-meta">
                         {minutesToTimeLabel(p.startMinutes)} · {b.eventTypeName}
@@ -810,8 +825,12 @@ function BookingPanel({
         </button>
       </div>
       <p className="wk-side-lead">
-        {b.eventTypeName} · {formatRange(b.startsAt, b.endsAt)}
-        <br />
+        <span className="svc-line">
+          <ServiceBadge name={b.eventTypeName} color={b.eventTypeColor} size="sm" />
+          <span>
+            {b.eventTypeName} · {formatRange(b.startsAt, b.endsAt)}
+          </span>
+        </span>
         <span className="wk-muted">{b.email}</span>
       </p>
 

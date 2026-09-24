@@ -113,9 +113,12 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
       )}
 
       <main className="admin-main">
+        {/* A button, not a quiet link: these pages are opened from the
+            flow, and the way back has to be the first thing seen here —
+            the first version, in small grey type, was missed. */}
         {inFlowPart && (
           <a className="shell-back" href={`/admin/${slug}/flow`}>
-            <span aria-hidden="true">←</span> Flow
+            <span aria-hidden="true">←</span> Back to Flow
           </a>
         )}
         {children}

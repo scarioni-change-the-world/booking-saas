@@ -1,4 +1,5 @@
 import type { AnsweredQuestion } from './qualification';
+import { serviceColour } from './service-identity';
 import type {
   AvailabilityRuleRow,
   BookingRow,
@@ -136,7 +137,7 @@ export type SerializedOutcomePath = ReturnType<typeof serializeOutcomePath>;
  * since been edited or removed.
  */
 export interface BookingWithJoins extends BookingRow {
-  event_types: { name: string } | null;
+  event_types: { name: string; color?: string | null } | null;
   qualification_responses: {
     id: string;
     email: string | null;
@@ -151,6 +152,7 @@ export function serializeBooking(row: BookingWithJoins) {
   return {
     id: row.id,
     eventTypeName: row.event_types?.name ?? 'Unknown session type',
+    eventTypeColor: serviceColour(row.event_types?.color),
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     name: row.name,

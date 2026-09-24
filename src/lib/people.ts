@@ -38,6 +38,8 @@ export interface PeopleBooking {
   name: string;
   email: string;
   eventTypeName: string;
+  /** The service's own colour, so its steps match its lane and its bookings. */
+  eventTypeColor?: string;
   startsAt: string;
   endsAt: string;
   createdAt: string;
@@ -89,6 +91,8 @@ export interface TraceStep {
   tone: StepTone;
   label: string;
   detail: string | null;
+  /** A booked step is drawn in its service's colour. */
+  color?: string;
 }
 
 /** Something that happened, for the history in the person's panel. */
@@ -317,7 +321,12 @@ function buildPerson(
       trace.push(
         b.status === 'cancelled'
           ? { tone: 'cancelled', label: 'Cancelled', detail: `${b.eventTypeName} · ${appointmentLabel(b.startsAt, timezone, nowIso)}` }
-          : { tone: 'booked', label: b.eventTypeName, detail: appointmentLabel(b.startsAt, timezone, nowIso) },
+          : {
+              tone: 'booked',
+              label: b.eventTypeName,
+              detail: appointmentLabel(b.startsAt, timezone, nowIso),
+              color: b.eventTypeColor,
+            },
       );
     }
   }
@@ -412,6 +421,7 @@ function packStep(list: PeopleBooking[], timezone: string, nowIso: string): Trac
   return {
     tone: 'booked',
     label: name,
+    color: list[0]!.eventTypeColor,
     detail: next
       ? `${done} of ${size} done · next ${appointmentLabel(next.startsAt, timezone, nowIso)}`
       : `${done} of ${size} done`,

@@ -1,5 +1,6 @@
 import { formatMoney } from './money';
 import { setupStages, blockers, loose, type ServiceFacts, type Stage } from './service-setup';
+import { monogram, serviceColour } from './service-identity';
 import type { QuestionInsight, ServiceInsight } from './enquiry-analysis';
 
 /**
@@ -31,6 +32,8 @@ export interface FlowService {
   availableToExistingClients: boolean;
   active: boolean;
   ownQuestionCount: number;
+  /** One of the six service colours — see service-identity.ts. */
+  color: string;
 }
 
 export interface FlowInput {
@@ -60,6 +63,9 @@ export interface Lane {
   id: string;
   part: PartId;
   name: string;
+  /** How it is recognised at a glance, here and on the Week. */
+  color: string;
+  monogram: string;
   /** Price and length, or the first thing missing. */
   sub: string;
   fromPage: boolean;
@@ -128,6 +134,8 @@ export function buildFlow(input: FlowInput): FlowModel {
       id: s.id,
       part: `service:${s.id}` as PartId,
       name: s.name,
+      color: serviceColour(s.color),
+      monogram: monogram(s.name),
       sub: laneSub(s, input.tenant.currency, stages),
       fromPage: s.availableToProspects,
       fromClients: s.availableToExistingClients,
@@ -192,6 +200,9 @@ export interface DrawnNode {
   sub: string;
   tone: 'door' | 'part' | 'exit' | 'end' | 'broken';
   flag: string | null;
+  /** A service's own colour and mark; absent on every other part. */
+  color?: string;
+  monogram?: string;
 }
 
 export interface DrawnEdge {
@@ -202,6 +213,8 @@ export interface DrawnEdge {
   ly: number;
   anchor: 'start' | 'middle' | 'end';
   tone: 'on' | 'out' | 'gap';
+  /** Lines into and out of a lane are drawn in that service's colour. */
+  color?: string;
 }
 
 export interface FlowDrawing {
@@ -211,8 +224,8 @@ export interface FlowDrawing {
   edges: DrawnEdge[];
 }
 
-const COL = { door: 10, questions: 210, service: 420, calendar: 660, booked: 860 };
-const W = { door: 150, questions: 150, service: 180, calendar: 150, booked: 130 };
+const COL = { door: 10, questions: 210, service: 420, calendar: 700, booked: 900 };
+const W = { door: 150, questions: 150, service: 220, calendar: 150, booked: 130 };
 const NODE_H = 62;
 const LANE_GAP = 88;
 const TOP = 120;
@@ -342,6 +355,8 @@ export function drawFlow(model: FlowModel, slug: string): FlowDrawing {
       sub: l.sub,
       tone: l.live ? 'part' : 'broken',
       flag: null,
+      color: l.color,
+      monogram: l.monogram,
     })),
   ];
 
@@ -379,6 +394,7 @@ export function drawFlow(model: FlowModel, slug: string): FlowDrawing {
         ly: y - (l.fromClients ? 8 : 0) - 7,
         anchor: 'end',
         tone: 'on',
+        color: l.color,
       });
     }
     if (l.fromClients) {
@@ -390,6 +406,7 @@ export function drawFlow(model: FlowModel, slug: string): FlowDrawing {
         ly: y + (l.fromPage ? 8 : 0) + 15,
         anchor: 'end',
         tone: 'on',
+        color: l.color,
       });
     }
     if (!l.fromPage && !l.fromClients) {
@@ -414,6 +431,7 @@ export function drawFlow(model: FlowModel, slug: string): FlowDrawing {
       ly: y - 7,
       anchor: 'start',
       tone: reachesCalendar ? 'on' : 'gap',
+      color: reachesCalendar ? l.color : undefined,
     });
   });
 

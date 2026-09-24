@@ -52,6 +52,7 @@ export const EXPECTED_MIGRATIONS = [
   '0025_booking_packs',
   '0026_prior_balance',
   '0027_email_log',
+  '0028_service_colours',
 ] as const;
 
 /**
