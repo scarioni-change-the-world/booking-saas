@@ -6297,3 +6297,126 @@ g.is-lit > .fl-edge {
   font-weight: 700;
   color: var(--ink);
 }
+
+/* ── Console: every business as a small flow ────────────────────────────── */
+.mf {
+  display: flex;
+  margin: 12px 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.mf-part {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.mf-part + .mf-part::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: calc(50% + 9px);
+  width: calc(100% - 18px);
+  height: 2px;
+  background: var(--accent);
+}
+.mf-part.is-cut::before {
+  background: repeating-linear-gradient(90deg, var(--status-broken) 0 5px, transparent 5px 10px);
+}
+.mf-part i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--accent);
+  box-sizing: border-box;
+}
+.mf-part.is-thin i {
+  background: var(--surface);
+  border-style: dashed;
+  border-color: var(--emphasis);
+}
+.mf-part.is-broken i {
+  background: var(--surface);
+  border-color: var(--status-broken);
+}
+.mf-part.is-quiet i {
+  background: var(--surface);
+}
+.mf-part span {
+  font-size: 0.7rem;
+  color: var(--faint);
+}
+.mf-part.is-broken span {
+  color: var(--status-broken-ink);
+  font-weight: 600;
+}
+
+.biz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.biz-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  border: 1px solid var(--soft-border);
+  border-top: 4px solid var(--accent);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+}
+.biz-card.is-watch {
+  border-top-color: var(--emphasis);
+}
+.biz-card.is-stopped {
+  border-top-color: var(--status-broken);
+}
+.biz-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.biz-card-head a {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+}
+.biz-card-head a:hover {
+  text-decoration: underline;
+}
+.biz-card-meta {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.biz-card-sentence {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.biz-card-findings {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.biz-card-findings li + li {
+  margin-top: 3px;
+}
+.biz-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 0.8rem;
+}

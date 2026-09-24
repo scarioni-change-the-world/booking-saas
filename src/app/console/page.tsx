@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { MiniFlow } from '@/components/console/MiniFlow';
+import type { MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
 
 interface Finding {
   severity: 'stopped' | 'watch';
@@ -14,6 +16,7 @@ interface HealthRow {
   slug: string;
   name: string;
   findings: Finding[];
+  flow: MiniFlowModel | null;
   activity: { lastBookingAt: string | null; lastEnquiryAt: string | null; activeServices: number } | null;
 }
 
@@ -151,17 +154,6 @@ export default function ConsolePage() {
         </div>
       )}
 
-      {/* What needs looking at, before the list of everybody.
-       *
-       * Counts, dates and fixed phrases — no client, no address, no
-       * question, no answer. That is not a limitation worked around: every
-       * support case worth chasing is a shape, and none of them need a
-       * name. Reading somebody's client list to discover they have no
-       * opening hours would be both a violation and a waste of time.
-       *
-       * Absent when nothing is wrong. A panel that says "all fine" every
-       * day is a panel nobody reads on the day it doesn't. */}
-      {health && <HealthPanel health={health} />}
 
       {creating && (
         <form className="card" onSubmit={submitCreate} style={{ marginBottom: 14 }}>
@@ -262,35 +254,12 @@ export default function ConsolePage() {
         <p className="notice notice-muted">No businesses yet.</p>
       )}
 
-      <div className="admin-list">
-        {tenants.map((t) => {
-          const tone = STATUS_TONE[t.status];
-          return (
-            <a
-              key={t.id}
-              href={`/console/${t.id}`}
-              className="card admin-row"
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
-                  <h2 style={{ fontSize: '1.05rem' }}>{t.name}</h2>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>{t.slug}</span>
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
-                  {t.timezone} · joined {dateFormat.format(new Date(t.createdAt))} · {t.plan}
-                </p>
-              </div>
-              <span
-                className="notice"
-                style={{ padding: '4px 11px', margin: 0, background: tone.bg, color: tone.fg }}
-              >
-                {tone.label}
-              </span>
-            </a>
-          );
-        })}
-      </div>
+      {/* Every business as its own small flow, worst first, so the list is
+          a queue: where the line breaks is where to look. Counts, dates and
+          fixed phrases — no client, no address, no question, no answer.
+          Every support case worth chasing is a shape, and none of them
+          needs a name. */}
+      {!loading && tenants.length > 0 && <Businesses tenants={tenants} health={health} />}
     </>
   );
 }
@@ -304,72 +273,73 @@ function sinceLabel(iso: string | null): string {
   return `${days} days ago`;
 }
 
-function HealthPanel({ health }: { health: HealthPayload }) {
-  const needsLook = health.tenants.filter((t) => t.findings.length > 0);
 
-  if (needsLook.length === 0) {
-    return (
-      <div className="health-panel is-quiet">
-        <p>
-          Nothing needs looking at. {health.tenants.length}{' '}
-          {health.tenants.length === 1 ? 'business' : 'businesses'}, none of them stuck.
-        </p>
-      </div>
-    );
-  }
+function Businesses({ tenants, health }: { tenants: Tenant[]; health: HealthPayload | null }) {
+  const byId = new Map((health?.tenants ?? []).map((h) => [h.id, h]));
+  /* Health's order is worst first; anything it does not know about follows. */
+  const ordered = [
+    ...(health?.tenants ?? []).map((h) => tenants.find((t) => t.id === h.id)).filter((t): t is Tenant => !!t),
+    ...tenants.filter((t) => !byId.has(t.id)),
+  ];
+  const needsLook = (health?.tenants ?? []).filter((h) => h.findings.length > 0).length;
 
   return (
-    <div className="health-panel">
-      <div className="health-panel-head">
-        <h2>Needs a look</h2>
-        <p>
-          {needsLook.length} of {health.tenants.length}, worst first. Configuration and
-          delivery only — never anybody&apos;s clients or answers.
-        </p>
-      </div>
-
-      <ul className="health-list">
-        {needsLook.map((tenant) => {
-          const stopped = tenant.findings.some((f) => f.severity === 'stopped');
+    <>
+      <p className="section-note" style={{ maxWidth: '72ch' }}>
+        {tenants.length} {tenants.length === 1 ? 'business' : 'businesses'}
+        {health
+          ? needsLook === 0
+            ? ', none of them stuck.'
+            : `, ${needsLook} worth a look — worst first.`
+          : '.'}{' '}
+        Each is drawn as its own flow from counts alone: where the line breaks is what stops their bookings.
+        Never anybody&apos;s clients or answers.
+      </p>
+      <div className="biz-grid">
+        {ordered.map((t) => {
+          const h = byId.get(t.id);
+          const stopped = h?.findings.some((f) => f.severity === 'stopped');
+          const tone = STATUS_TONE[t.status];
           return (
-            <li key={tenant.id} className={`health-row${stopped ? ' is-stopped' : ''}`}>
-              <div className="health-row-head">
-                <a className="health-row-name" href={`/console/${tenant.id}`}>
-                  {tenant.name}
-                </a>
-                {/* Their booking page is public, so this is the one place a
-                    support person can look at what a client sees without
-                    asking anybody's permission for anything. */}
-                <a
-                  className="health-row-visit"
-                  href={`/t/${tenant.slug}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  See their booking page →
-                </a>
+            <article key={t.id} className={`biz-card${stopped ? ' is-stopped' : h && h.findings.length > 0 ? ' is-watch' : ''}`}>
+              <div className="biz-card-head">
+                <a href={`/console/${t.id}`}>{t.name}</a>
+                {t.status !== 'active' && (
+                  <span className="notice" style={{ padding: '2px 9px', margin: 0, background: tone.bg, color: tone.fg }}>
+                    {tone.label}
+                  </span>
+                )}
               </div>
-
-              <ul className="health-findings">
-                {tenant.findings.map((finding) => (
-                  <li key={finding.headline} className={`is-${finding.severity}`}>
-                    <strong>{finding.headline}</strong>
-                    {finding.detail && <span>{finding.detail}</span>}
-                  </li>
-                ))}
-              </ul>
-
-              {tenant.activity && (
-                <p className="health-row-activity">
-                  Last booking {sinceLabel(tenant.activity.lastBookingAt)} · last enquiry{' '}
-                  {sinceLabel(tenant.activity.lastEnquiryAt)} · {tenant.activity.activeServices}{' '}
-                  {tenant.activity.activeServices === 1 ? 'service' : 'services'}
-                </p>
+              <p className="biz-card-meta">
+                {t.slug} · {t.plan} · joined {dateFormat.format(new Date(t.createdAt))}
+              </p>
+              {h?.flow && <MiniFlow flow={h.flow} />}
+              {h?.flow && <p className="biz-card-sentence">{h.flow.sentence}</p>}
+              {h && h.findings.length > 1 && (
+                <ul className="biz-card-findings">
+                  {h.findings.slice(1).map((f) => (
+                    <li key={f.headline}>{f.headline}</li>
+                  ))}
+                </ul>
               )}
-            </li>
+              <div className="biz-card-foot">
+                <a href={`/console/${t.id}`}>Open</a>
+                {/* Their booking page is public, so this is the one place a
+                    support person can see what a client sees without asking
+                    anybody's permission for anything. */}
+                <a href={`/t/${t.slug}`} target="_blank" rel="noreferrer">
+                  Their booking page →
+                </a>
+                {h?.activity && (
+                  <span className="wk-muted">
+                    Last booking {sinceLabel(h.activity.lastBookingAt)}
+                  </span>
+                )}
+              </div>
+            </article>
           );
         })}
-      </ul>
-    </div>
+      </div>
+    </>
   );
 }

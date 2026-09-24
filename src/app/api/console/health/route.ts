@@ -1,7 +1,7 @@
 import { handleError, ok } from '@/lib/api';
 import { requirePlatformStaff } from '@/lib/auth';
 import { listAllTenants, loadPlatformHealth } from '@/lib/db/console';
-import { byUrgency, diagnose } from '@/lib/tenant-health';
+import { byUrgency, diagnose, miniFlow } from '@/lib/tenant-health';
 
 const WINDOW_DAYS = 14;
 
@@ -33,6 +33,9 @@ export async function GET(request: Request) {
         slug: tenant.slug,
         name: tenant.name,
         findings: facts ? diagnose(facts) : [],
+        /* The same facts drawn as the business's flow, five parts long —
+           still nothing but counts and fixed words. */
+        flow: facts ? miniFlow(facts) : null,
         activity: facts
           ? {
               lastBookingAt: facts.lastBookingAt,

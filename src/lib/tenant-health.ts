@@ -83,6 +83,9 @@ export interface TenantFacts {
   syncErrorClasses: readonly ErrorClass[];
   lastBookingAt: string | null;
   lastEnquiryAt: string | null;
+  /** Bookings made, and enquiries started, in the window. Counts only. */
+  bookingsInWindow: number;
+  enquiriesInWindow: number;
   createdAt: string;
 }
 
@@ -223,4 +226,119 @@ export function byUrgency<T extends { findings: readonly Finding[] }>(rows: T[])
     return s === 'stopped' ? 0 : s === 'watch' ? 1 : 2;
   };
   return [...rows].sort((a, b) => rank(a) - rank(b) || b.findings.length - a.findings.length);
+}
+
+/* ── The same facts, drawn as a small flow ───────────────────────────────
+ *
+ * The business's own Flow screen, reduced to five parts and redrawn from
+ * the counts above — so a support person sees where the line breaks
+ * without seeing a single client, address or answer. Still shape only:
+ * everything here is computed from TenantFacts, which holds nothing else.
+ */
+
+export type MiniPartId = 'page' | 'questions' | 'services' | 'hours' | 'booked';
+
+/**
+ * 'ok' works; 'thin' works but is missing something worth a word;
+ * 'broken' stops bookings; 'quiet' is the end of a line that works but
+ * nothing has come through yet.
+ */
+export type MiniPartState = 'ok' | 'thin' | 'broken' | 'quiet';
+
+export interface MiniPart {
+  id: MiniPartId;
+  label: string;
+  state: MiniPartState;
+  /** Said to a screen reader, and on hover. */
+  note: string;
+}
+
+export interface MiniFlow {
+  parts: MiniPart[];
+  /** Whether the line into each part (after the first) is whole. */
+  links: boolean[];
+  /** One sentence, the way you would say it on the phone. */
+  sentence: string;
+}
+
+export function miniFlow(facts: TenantFacts): MiniFlow {
+  const noServices = facts.activeServices === 0;
+  const allHidden = !noServices && facts.servicesOfferedToNobody === facts.activeServices;
+  const someHidden = !noServices && !allHidden && facts.servicesOfferedToNobody > 0;
+  const noHours = facts.availabilityRuleCount === 0;
+  const delivery = facts.emailsFailed + facts.syncsFailed;
+
+  const parts: MiniPart[] = [
+    { id: 'page', label: 'page', state: 'ok', note: 'Their booking page is up' },
+    {
+      id: 'questions',
+      label: 'questions',
+      state: facts.questionCount === 0 ? 'thin' : 'ok',
+      note: facts.questionCount === 0 ? 'Nobody is asked anything' : `${facts.questionCount} questions`,
+    },
+    {
+      id: 'services',
+      label: 'service',
+      state: noServices || allHidden ? 'broken' : someHidden ? 'thin' : 'ok',
+      note: noServices
+        ? 'No services'
+        : allHidden
+          ? 'Every service is offered to nobody'
+          : someHidden
+            ? `${facts.servicesOfferedToNobody} of ${facts.activeServices} offered to nobody`
+            : `${facts.activeServices} ${facts.activeServices === 1 ? 'service' : 'services'}`,
+    },
+    {
+      id: 'hours',
+      label: 'hours',
+      state: noHours ? 'broken' : 'ok',
+      note: noHours ? 'No opening hours' : 'Opening hours set',
+    },
+    {
+      id: 'booked',
+      label: 'booked',
+      state: delivery > 0 ? 'thin' : facts.bookingsInWindow > 0 ? 'ok' : 'quiet',
+      note:
+        facts.bookingsInWindow > 0
+          ? `${facts.bookingsInWindow} ${facts.bookingsInWindow === 1 ? 'booking' : 'bookings'} recently`
+          : 'No bookings recently',
+    },
+  ];
+
+  /* Everything after the first break is cut: a booking cannot get past a
+     part that stops it, whatever is set further along. */
+  const firstBreak = parts.findIndex((p) => p.state === 'broken');
+  const links = parts.slice(1).map((_, i) => firstBreak === -1 || i + 1 < firstBreak);
+
+  return { parts, links, sentence: flowSentence(facts, parts, firstBreak) };
+}
+
+function flowSentence(facts: TenantFacts, parts: MiniPart[], firstBreak: number): string {
+  if (firstBreak !== -1) {
+    const part = parts[firstBreak]!;
+    if (part.id === 'services') {
+      return facts.activeServices === 0
+        ? 'No services yet. Nothing exists to book.'
+        : 'Every service is offered to nobody, so the page is empty.';
+    }
+    return 'No opening hours. The page offers nothing.';
+  }
+
+  const delivery: string[] = [];
+  if (facts.emailsFailed > 0) {
+    delivery.push(`${facts.emailsFailed} ${facts.emailsFailed === 1 ? 'email' : 'emails'} did not arrive`);
+  }
+  if (facts.syncsFailed > 0) {
+    delivery.push(`${facts.syncsFailed} ${facts.syncsFailed === 1 ? 'booking' : 'bookings'} missed their calendar`);
+  }
+  const traffic =
+    facts.bookingsInWindow > 0
+      ? `${facts.bookingsInWindow} ${facts.bookingsInWindow === 1 ? 'booking' : 'bookings'} recently`
+      : facts.enquiriesInWindow > 0
+        ? `${facts.enquiriesInWindow} ${facts.enquiriesInWindow === 1 ? 'enquiry' : 'enquiries'}, no bookings yet`
+        : 'nothing has come through yet';
+
+  const opening = facts.questionCount === 0 ? 'Nobody is asked anything' : 'Connected end to end';
+  const rest = [traffic, ...delivery].join('; ');
+  return `${opening}. ${rest.charAt(0).toUpperCase()}${rest.slice(1)}.`;
 }

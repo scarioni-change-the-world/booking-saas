@@ -345,6 +345,8 @@ export async function loadPlatformHealth(sinceIso: string): Promise<Map<string, 
       syncErrorClasses: [],
       lastBookingAt: null,
       lastEnquiryAt: null,
+      bookingsInWindow: 0,
+      enquiriesInWindow: 0,
       createdAt: row.created_at,
     });
   }
@@ -401,6 +403,7 @@ export async function loadPlatformHealth(sinceIso: string): Promise<Map<string, 
           : f.syncErrorClasses,
         lastBookingAt:
           !f.lastBookingAt || b.created_at > f.lastBookingAt ? b.created_at : f.lastBookingAt,
+        bookingsInWindow: f.bookingsInWindow + 1,
       };
     });
   }
@@ -408,6 +411,7 @@ export async function loadPlatformHealth(sinceIso: string): Promise<Map<string, 
   for (const r of (responses.data ?? []) as Array<{ tenant_id: string; started_at: string }>) {
     bump(r.tenant_id, (f) => ({
       ...f,
+      enquiriesInWindow: f.enquiriesInWindow + 1,
       lastEnquiryAt:
         !f.lastEnquiryAt || r.started_at > f.lastEnquiryAt ? r.started_at : f.lastEnquiryAt,
     }));

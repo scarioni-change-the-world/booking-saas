@@ -7,6 +7,7 @@ import {
   severityOf,
   type ErrorClass,
   type TenantFacts,
+  miniFlow,
 } from '@/lib/tenant-health';
 
 const NOW = new Date('2026-09-23T12:00:00Z');
@@ -22,6 +23,8 @@ const healthy: TenantFacts = {
   syncErrorClasses: [],
   lastBookingAt: '2026-09-22T09:00:00Z',
   lastEnquiryAt: '2026-09-22T08:00:00Z',
+  bookingsInWindow: 6,
+  enquiriesInWindow: 9,
   createdAt: '2026-01-01T00:00:00Z',
 };
 
@@ -180,5 +183,51 @@ describe('byUrgency', () => {
       { id: 'stopped', findings: diagnose({ ...healthy, availabilityRuleCount: 0 }, NOW) },
     ];
     expect(byUrgency(rows).map((r) => r.id)).toEqual(['stopped', 'watch', 'fine']);
+  });
+});
+
+describe('miniFlow', () => {
+  it('is whole end to end for a business with nothing wrong', () => {
+    const flow = miniFlow(healthy);
+    expect(flow.parts.map((p) => p.state)).toEqual(['ok', 'ok', 'ok', 'ok', 'ok']);
+    expect(flow.links).toEqual([true, true, true, true]);
+    expect(flow.sentence).toBe('Connected end to end. 6 bookings recently.');
+  });
+
+  it('breaks the line at the first part that stops bookings, and keeps it broken after', () => {
+    const flow = miniFlow({ ...healthy, availabilityRuleCount: 0, bookingsInWindow: 0 });
+    expect(flow.parts.find((p) => p.id === 'hours')!.state).toBe('broken');
+    expect(flow.links).toEqual([true, true, false, false]);
+    expect(flow.sentence).toBe('No opening hours. The page offers nothing.');
+  });
+
+  it('breaks at services before hours when both are missing', () => {
+    const flow = miniFlow({ ...healthy, activeServices: 0, availabilityRuleCount: 0 });
+    expect(flow.links).toEqual([true, false, false, false]);
+    expect(flow.sentence).toBe('No services yet. Nothing exists to book.');
+  });
+
+  it('draws a thin part without breaking the line', () => {
+    const flow = miniFlow({ ...healthy, questionCount: 0 });
+    expect(flow.parts[1]!.state).toBe('thin');
+    expect(flow.links.every(Boolean)).toBe(true);
+    expect(flow.sentence).toBe('Nobody is asked anything. 6 bookings recently.');
+  });
+
+  it('says what went wrong with delivery, as counts', () => {
+    const flow = miniFlow({ ...healthy, emailsFailed: 3 });
+    expect(flow.parts[4]!.state).toBe('thin');
+    expect(flow.sentence).toBe('Connected end to end. 6 bookings recently; 3 emails did not arrive.');
+  });
+
+  it('is quiet at the end when nothing has come through, and says so', () => {
+    const flow = miniFlow({ ...healthy, bookingsInWindow: 0, enquiriesInWindow: 0 });
+    expect(flow.parts[4]!.state).toBe('quiet');
+    expect(flow.sentence).toBe('Connected end to end. Nothing has come through yet.');
+  });
+
+  it('holds nothing but counts and fixed words', () => {
+    const flow = miniFlow({ ...healthy, emailsFailed: 1, emailErrorClasses: ['rejected'] });
+    expect(JSON.stringify(flow)).not.toMatch(/@/);
   });
 });

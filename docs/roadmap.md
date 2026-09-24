@@ -63,8 +63,11 @@ Six rules every screen follows:
    new things to book underneath. Fixed on the way: an email lookup that
    treated "_" as a wildcard could file one person's booking under
    another's client record.
-8. **Console as small flows** — each business drawn as its own flow, the
-   problem where the line breaks. Still shape only, never content.
+8. ~~**Console as small flows**~~ — done. Every business is a card with
+   its flow five parts long (page, questions, service, hours, booked),
+   drawn from counts alone: the line is cut from the first part that stops
+   bookings, a thin part is dashed, and one sentence says it. Worst first.
+   The same small flow heads each business's own Console page.
 9. **Account** — what is left of Settings.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
