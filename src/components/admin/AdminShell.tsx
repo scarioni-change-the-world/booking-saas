@@ -10,10 +10,10 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
  * The sidebar listed eight screens, and every one of them answered one of
  * three questions: how does somebody reach me, when am I available, and who
  * has been through. Each question has one place now — Flow, Week, People —
- * and what is left is housekeeping, in Settings. See docs/roadmap.md.
+ * and what is left is housekeeping, in Account. See docs/roadmap.md.
  *
  * Three fit a phone's width as tabs, so the phone gets the same bar the
- * desktop does rather than a menu to open first. Settings and signing out
+ * desktop does rather than a menu to open first. Account and signing out
  * sit at the right, and under a menu button on a phone.
  *
  * The screens Flow grew out of — Services, a service's own settings,
@@ -77,11 +77,11 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
         <div className="shell-account">
           <span className="shell-tenant">{tenantName}</span>
           <a
-            href={`/admin/${slug}/settings`}
-            className={`shell-link${under('settings') ? ' active' : ''}`}
-            aria-current={under('settings') ? 'page' : undefined}
+            href={`/admin/${slug}/account`}
+            className={`shell-link${under('account') ? ' active' : ''}`}
+            aria-current={under('account') ? 'page' : undefined}
           >
-            Settings
+            Account
           </a>
           <button type="button" className="btn-link shell-link" onClick={() => void signOut()}>
             Sign out
@@ -103,8 +103,8 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
       {menuOpen && (
         <div className="shell-menu">
           <span className="shell-tenant">{tenantName}</span>
-          <a href={`/admin/${slug}/settings`} className="shell-link">
-            Settings
+          <a href={`/admin/${slug}/account`} className="shell-link">
+            Account
           </a>
           <button type="button" className="btn-link shell-link" onClick={() => void signOut()}>
             Sign out

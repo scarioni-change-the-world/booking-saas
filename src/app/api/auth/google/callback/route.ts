@@ -15,9 +15,10 @@ import type { CalendarConnectionRow } from '@/lib/db/types';
  * admin a start URL naming a different tenant and capture the resulting grant.
  */
 
+/** Back to the Week, where the calendar connection now lives. */
 function settingsUrl(slug: string | null, params: Record<string, string>): string {
   const base = baseUrl();
-  const path = slug ? `/admin/${slug}/settings` : '/';
+  const path = slug ? `/admin/${slug}/week` : '/';
   const url = new URL(path, base || 'http://localhost:3000');
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   return url.toString();

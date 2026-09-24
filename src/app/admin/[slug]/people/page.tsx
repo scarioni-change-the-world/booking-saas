@@ -70,13 +70,13 @@ function seedFilter(show: string | null): PeopleFilter | 'all' {
 /**
  * What actually happened to the invite, said plainly. 'not_configured' is
  * its own case rather than a kind of failure: nothing is broken, email
- * simply isn't set up yet, and the fix is in Settings — not a retry.
+ * simply isn't set up yet, and the fix is not a retry.
  */
 function inviteMessage(name: string, status: InviteStatus | null): string | null {
   if (status === null) return `${name} has their own link. Copy it from their panel to send it yourself.`;
   if (status === 'sent') return `${name} has their own link — it's on its way to them.`;
   if (status === 'not_configured') {
-    return `${name} has their own link, but no email was sent: email isn't set up yet. Copy the link from their panel and send it yourself, or set up email in Settings.`;
+    return `${name} has their own link, but no email was sent: email isn't set up yet. Copy the link from their panel and send it yourself.`;
   }
   return `${name} has their own link, but the email didn't go out. Try "Send link" again, or copy it and send it yourself.`;
 }

@@ -6420,3 +6420,115 @@ g.is-lit > .fl-edge {
   padding-top: 12px;
   font-size: 0.8rem;
 }
+
+/* ── Account, and settings living where they take effect ─────────────────── */
+.acct {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .acct {
+    grid-template-columns: 1fr;
+  }
+}
+.acct-card {
+  margin-bottom: 14px;
+}
+.acct-line {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.acct-team {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.acct-team li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9rem;
+}
+.acct-team li:first-child {
+  border-top: 0;
+}
+.acct-side {
+  position: sticky;
+  top: 80px;
+  padding: 16px 18px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+}
+.acct-moved {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.acct-moved a {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.acct-moved span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+.wk-rules {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.wk-rules .btn-link {
+  min-height: 0;
+  padding: 0;
+}
+.cal-conn-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+}
+.fl-embed {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+.fl-embed summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+  margin-bottom: 8px;
+}
+.fl-embed .embed-snippet {
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.ms-addresses-wrap {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+}
+.ms-addresses {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.ms-addresses .btn-link {
+  min-height: 0;
+  padding: 0;
+}

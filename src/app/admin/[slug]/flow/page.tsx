@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
+import { EmbedSites } from '@/components/admin/EmbedSites';
 import {
   asksQuestions,
   bookedByNew,
@@ -774,7 +775,7 @@ function Panel({
           <a className="btn-secondary" href={a('week')}>
             {model.calendar.noHours ? 'Set your hours' : 'Open the Week'}
           </a>
-          {data.calendarStatus !== 'active' && <a href={a('settings')}>Google Calendar, in Settings</a>}
+          {data.calendarStatus !== 'active' && <a href={a('week#calendar')}>Connect Google Calendar</a>}
         </div>
       </div>
     );
@@ -893,9 +894,10 @@ function PagePanel({ slug, model, head }: { slug: string; model: FlowModel; head
         apart, because the questions are for strangers.{' '}
         {model.page.returning > 0 && <a href={`/admin/${slug}/people?figure=returning`}>See who</a>}
       </p>
-      <p className="wk-side-hint">
-        To put the page on your own website, use the embed code in <a href={`/admin/${slug}/settings`}>Settings</a>.
-      </p>
+      <details className="fl-embed">
+        <summary>Put it on your own website</summary>
+        <EmbedSites slug={slug} />
+      </details>
     </div>
   );
 }

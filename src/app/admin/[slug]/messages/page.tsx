@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
+import { EmailAddresses } from '@/components/admin/EmailAddresses';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { TEMPLATE_TOKENS } from '@/lib/email/templates';
 import {
@@ -163,6 +164,11 @@ export default function MessagesPage() {
             </p>
           )}
 
+          {/* Where alerts and replies go, beside the emails they apply to. */}
+          <div id="addresses" className="ms-addresses-wrap">
+            <EmailAddresses slug={slug} onSaved={() => void load()} />
+          </div>
+
           <div className="ms-journey-wrap">
             <ol className="ms-journey" aria-label="The client's journey">
               {MOMENTS.map((moment) => (
@@ -321,7 +327,7 @@ function EmailEditor({
             ) : (
               <>No address is set, so this is not sent. </>
             )}
-            <a href={`/admin/${slug}/settings`}>Change it in Settings</a>
+            <a href="#addresses">Change it above</a>
           </p>
         )}
 

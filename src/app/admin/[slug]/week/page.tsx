@@ -9,6 +9,8 @@ import DaySchedule from '@/components/admin/DaySchedule';
 import { BookingList } from '@/components/admin/BookingList';
 import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
+import { BookingRules } from '@/components/admin/BookingRules';
+import { CalendarConnection } from '@/components/admin/CalendarConnection';
 import { monogram } from '@/lib/service-identity';
 import {
   emailBadge,
@@ -92,6 +94,14 @@ export default function WeekPage() {
   /* Seeded once from the address, like the other screens: an old link to
      Bookings arrives here with ?view=list and lands on the list. */
   const [view, setView] = useState<'week' | 'list'>(search.get('view') === 'list' ? 'list' : 'week');
+  /* Google sends people back here after connecting. Success needs no note —
+     the connection's own badge says so, and a note could contradict it —
+     but a failure would otherwise leave no trace. */
+  const [calendarNotice] = useState<{ ok: boolean; text: string } | null>(() =>
+    search.get('calendar') === 'error'
+      ? { ok: false, text: 'Google Calendar could not be connected. Try again.' }
+      : null,
+  );
   /* ?from= opens a given week — People links each appointment to its own. */
   const [monday, setMonday] = useState(() => {
     const from = search.get('from');
@@ -439,7 +449,24 @@ export default function WeekPage() {
                     />
                   </div>
                 ) : (
-                  <WeekSummary week={week} bookings={bookings.length} owed={owed} />
+                  <>
+                    <WeekSummary week={week} bookings={bookings.length} owed={owed} />
+                    {/* The rules and the calendar that narrow these hours,
+                        beside them — they lived in Settings, a page away. */}
+                    <div className="wk-rules">
+                      <p className="wk-side-eyebrow">How people can book</p>
+                      <BookingRules slug={slug} />
+                    </div>
+                    <div className="wk-rules" id="calendar">
+                      <p className="wk-side-eyebrow">Google Calendar</p>
+                      {calendarNotice && (
+                        <p className={`notice ${calendarNotice.ok ? 'notice-muted' : 'notice-error'}`} role="status">
+                          {calendarNotice.text}
+                        </p>
+                      )}
+                      <CalendarConnection slug={slug} />
+                    </div>
+                  </>
                 )}
               </aside>
             </div>

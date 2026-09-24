@@ -68,7 +68,13 @@ Six rules every screen follows:
    drawn from counts alone: the line is cut from the first part that stops
    bookings, a thin part is dashed, and one sentence says it. Worst first.
    The same small flow heads each business's own Console page.
-9. **Account** — what is left of Settings.
+9. ~~**Account**~~ — done. Settings is gone; each setting moved to where
+   it takes effect. Notice, booking window and Google Calendar sit on the
+   Week (Google now returns there); the embed code sits under Flow → Your
+   page; notification and reply-to addresses head Messages. Account keeps
+   the business's name, time zone (with a preview of what changing it
+   does), currency (relabelled, not converted — it says so), signing in,
+   the team (read-only) and the plan, with a map of where the rest went.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 
