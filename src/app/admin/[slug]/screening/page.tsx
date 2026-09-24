@@ -950,7 +950,7 @@ export default function ScreeningQuestionsPage() {
               if (eventTypeId) setViewServiceId(eventTypeId);
             }}
           />
-          <a href={`/admin/${slug}/sessions`} className="text-action">
+          <a href={`/admin/${slug}/flow`} className="text-action">
             See what&apos;s bookable
             <span aria-hidden="true" className="text-action-arrow">
               →

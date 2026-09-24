@@ -39,9 +39,13 @@ Six rules every screen follows:
    with a live preview, with 30-day delivery counts from a new send log
    (migration 0027). Replaced Settings' email templates and the Next steps
    tab under Questions.
-4. **Flow as the home screen** — the new shell that replaces the sidebar:
-   lanes per service, two ways in, parts open beside the flow, a
-   top-to-bottom version for phones, and a plain list for screen readers.
+4. ~~**Flow as the home screen**~~ — done. A top bar with three places
+   (Flow, Week, People) and Settings replaced the sidebar. Flow draws two
+   ways in, a lane per service with its gaps as broken lines, and the
+   30-day counts on the lines; every part opens beside it. Overview, the
+   Services list and the Enquiries analysis folded into it; a list version
+   serves phones and screen readers. Services, Questions and Messages stay
+   as pages reached from their part of the flow.
 5. **Try your booking page** — the real booking page in a test mode, with
    the route lighting up.
 6. **See a change before saving it** — replay last month's answers against

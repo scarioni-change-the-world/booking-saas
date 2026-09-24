@@ -5,81 +5,30 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
 /**
- * The nav list — grouped by how often it gets used, not by topic. Overview,
- * Meetings, Clients, Availability and Intake are the things a tenant checks
- * day to day; Sessions and Settings are set up once and revisited rarely.
- * `divider: true` on Sessions is what makes that grouping visible rather
- * than just a comment here that nobody looking at the sidebar can see — a
- * UX audit of this shell flagged the two being disconnected as a real gap.
- * Same order and same items on desktop and mobile — see the note in
- * globals.css on why mobile doesn't fold anything under a "More" tab.
+ * Three places, and the account.
  *
- * Enquiries sits in the daily group and Questions below the divider, which
- * is the split those two always wanted: watching how the questionnaire is
- * converting is worth checking often, same as Meetings or Clients, while
- * writing the questions is a pure builder nobody opens twice in a week.
- * They were one entry until the reading half outgrew being a tab on the
- * writing half.
- * Sessions stayed below the divider on its own merits: it is a catalogue
- * of what's bookable, genuinely configured once and rarely revisited, like
- * Settings next to it.
+ * The sidebar listed eight screens, and every one of them answered one of
+ * three questions: how does somebody reach me, when am I available, and who
+ * has been through. Each question has one place now — Flow, Week, People —
+ * and what is left is housekeeping, in Settings. See docs/roadmap.md.
  *
- * Labels only, not the URLs: "screening" and "bookings" stay as route
- * segments (nothing bookmarked or linked should break over a rename), but
- * the brand guide's own preferred language — "meeting" over "booking",
- * "intake" over "screening" — is what a tenant actually reads.
+ * Three fit a phone's width as tabs, so the phone gets the same bar the
+ * desktop does rather than a menu to open first. Settings and signing out
+ * sit at the right, and under a menu button on a phone.
  *
- * No per-item icon set any more — a UX pass swapped it for a numbered
- * badge (see navItems below and .admin-nav-badge in globals.css): the
- * icons were decorative wayfinding that didn't match anything else in the
- * app, where a plain number does the same "which item" job and, filled
- * solid on the active one, a stronger "where am I" job than a tinted icon
- * ever did.
+ * The screens Flow grew out of — Services, a service's own settings,
+ * Questions, Messages — are still pages, reached from the part of the flow
+ * they belong to. While on one, Flow stays the lit place and a way back to
+ * it sits above the page, so nobody is somewhere the bar does not explain.
  */
-/* Labels follow the redesign brief's vocabulary — the words a service
- * professional would use, not the ones the schema happens to use. Routes are
- * untouched; only what the person reads changed.
- *
- *   Meetings -> Bookings   the brief's word for the thing itself
- *   Intake   -> Enquiries  "intake" is a form someone fills in at a clinic
- *
- * Enquiries and Questions are two entries rather than one, and which side of
- * the divider they fall on is the point: writing the questions is something
- * a business finishes, and sits with Services and Settings; reading what
- * came back is something they return to weekly, and sits with the screens
- * they check. Filing the second under the first framed a month of evidence
- * as the last step of a setup wizard.
- *   Sessions -> Services   what a business sells, not what the table is called
- *
- * "Messages" has a page now, and so an entry: every email and the
- * next-steps message, pinned to the moment in a client's journey that sends
- * each one, with how many arrived. It took the email templates out of
- * Settings and the Next steps tab out of Questions. Below the divider,
- * beside Questions: wording is set up and returned to now and then, not
- * checked daily.
- *
- * "Week" replaced two entries, Bookings and Availability. They were two
- * screens about the same seven days — when you are open, and what is in it
- * — and neither could show the one thing a business looks for, which is
- * where the week is full and where it is empty. See docs/roadmap.md: this is
- * the first of the three places the app is becoming.
- *
- * "People" replaced Clients, and took the list half of Enquiries with it.
- * A client list, an enquiry list and a booking list were three partial
- * views of the same people; one row per person, drawn as the route they
- * took, is the second of the three places. Enquiries keeps the figures —
- * which question turns people away, which service converts — until Flow
- * takes those over. */
-const NAV = [
-  { href: 'overview', label: 'Overview' },
+const PLACES = [
+  { href: 'flow', label: 'Flow' },
   { href: 'week', label: 'Week' },
   { href: 'people', label: 'People' },
-  { href: 'enquiries', label: 'Enquiries' },
-  { href: 'sessions', label: 'Services', divider: true },
-  { href: 'screening', label: 'Questions' },
-  { href: 'messages', label: 'Messages' },
-  { href: 'settings', label: 'Settings' },
 ];
+
+/** Routes that are parts of the flow, opened from it. */
+const FLOW_PARTS = ['sessions', 'screening', 'messages', 'enquiries', 'overview'];
 
 interface Props {
   slug: string;
@@ -90,102 +39,87 @@ interface Props {
 export default function AdminShell({ slug, tenantName, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // startsWith, not ===: a section can have sub-routes, and the sidebar
-  // entry should stay highlighted across all of them. The
-  // trailing slash on the prefix keeps "screening" from matching a
-  // future "screening-x" segment.
-  const isActive = (href: string) => {
+  // startsWith, not ===: a place has sub-routes, and it should stay lit
+  // across all of them. The trailing slash keeps "people" from matching a
+  // future "people-x" segment.
+  const under = (href: string) => {
     const base = `/admin/${slug}/${href}`;
     return pathname === base || pathname.startsWith(`${base}/`);
   };
+  const inFlowPart = FLOW_PARTS.some(under);
+  const isActive = (href: string) => under(href) || (href === 'flow' && inFlowPart);
 
   async function signOut() {
     await supabaseBrowser().auth.signOut();
     router.push('/admin/login');
   }
 
-  const navItems = (onNavigate?: () => void) =>
-    NAV.map((item, index) => (
-      <div key={item.href}>
-        {item.divider && <div className="admin-nav-divider" role="separator" />}
-        <a
-          href={`/admin/${slug}/${item.href}`}
-          className={`admin-nav-item${isActive(item.href) ? ' active' : ''}`}
-          onClick={onNavigate}
-        >
-          <span className="admin-nav-badge" aria-hidden="true">
-            {String(index + 1).padStart(2, '0')}
-          </span>
-          {item.label}
-        </a>
-      </div>
-    ));
-
   return (
-    <div className="admin-app">
-      <aside className="admin-side">
-        <a href={`/admin/${slug}/overview`} className="admin-brand">
+    <div className="admin-app shell">
+      <header className="shell-bar">
+        <a href={`/admin/${slug}/flow`} className="admin-brand">
           intro
         </a>
-        <nav className="admin-nav">{navItems()}</nav>
-        <div className="admin-side-foot">
-          {tenantName}
-          <br />
+        <nav className="shell-places" aria-label="Places">
+          {PLACES.map((item) => (
+            <a
+              key={item.href}
+              href={`/admin/${slug}/${item.href}`}
+              className={`shell-place${isActive(item.href) ? ' active' : ''}`}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div className="shell-account">
+          <span className="shell-tenant">{tenantName}</span>
           <a
-            href="#"
-            className="btn-link"
-            onClick={(e) => {
-              e.preventDefault();
-              void signOut();
-            }}
+            href={`/admin/${slug}/settings`}
+            className={`shell-link${under('settings') ? ' active' : ''}`}
+            aria-current={under('settings') ? 'page' : undefined}
           >
+            Settings
+          </a>
+          <button type="button" className="btn-link shell-link" onClick={() => void signOut()}>
             Sign out
-          </a>
-        </div>
-      </aside>
-
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="admin-topbar">
-          <a href={`/admin/${slug}/overview`} className="admin-brand">
-            intro
-          </a>
-          <button
-            type="button"
-            className="admin-menu-btn"
-            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileNavOpen}
-            onClick={() => setMobileNavOpen((open) => !open)}
-          >
-            {mobileNavOpen ? (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                <path d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            )}
           </button>
         </div>
+        <button
+          type="button"
+          className="shell-menu-btn"
+          aria-label={menuOpen ? 'Close account menu' : 'Open account menu'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+            {menuOpen ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+        </button>
+      </header>
 
-        <nav className={`admin-mobile-nav${mobileNavOpen ? ' open' : ''}`}>
-          {navItems(() => setMobileNavOpen(false))}
-          <a
-            href="#"
-            className="admin-nav-item"
-            onClick={(e) => {
-              e.preventDefault();
-              void signOut();
-            }}
-          >
-            Sign out
+      {menuOpen && (
+        <div className="shell-menu">
+          <span className="shell-tenant">{tenantName}</span>
+          <a href={`/admin/${slug}/settings`} className="shell-link">
+            Settings
           </a>
-        </nav>
+          <button type="button" className="btn-link shell-link" onClick={() => void signOut()}>
+            Sign out
+          </button>
+        </div>
+      )}
 
-        <main className="admin-main">{children}</main>
-      </div>
+      <main className="admin-main">
+        {inFlowPart && (
+          <a className="shell-back" href={`/admin/${slug}/flow`}>
+            <span aria-hidden="true">←</span> Flow
+          </a>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

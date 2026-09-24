@@ -94,7 +94,7 @@ export default function ServicePage() {
       <>
         <PageHeader eyebrow="Set up" title="That service is not here" />
         <p className="notice notice-muted">
-          It may have been archived. <a href={`/admin/${slug}/sessions`}>Back to Services</a>.
+          It may have been archived. <a href={`/admin/${slug}/flow`}>Back to the flow</a>.
         </p>
       </>
     );
@@ -148,8 +148,8 @@ export default function ServicePage() {
             : 'Work through these in any order. Nothing is lost if you leave and come back.'
         }
         actions={
-          <a className="btn-secondary" href={`/admin/${slug}/sessions`}>
-            Back to Services
+          <a className="btn-secondary" href={`/admin/${slug}/flow?part=service:${service.id}`}>
+            See it in the flow
           </a>
         }
       />

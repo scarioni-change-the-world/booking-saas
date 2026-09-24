@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
         );
       }
 
-      window.location.href = `/admin/${first.slug}/sessions`;
+      window.location.href = `/admin/${first.slug}/flow`;
     } catch (cause) {
       setError((cause as Error).message);
       setBusy(false);

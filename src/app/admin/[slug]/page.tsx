@@ -1,14 +1,7 @@
 import { redirect } from 'next/navigation';
 
-/**
- * /admin/[slug] has nothing of its own to show yet — Overview is still a
- * stub (see overview/page.tsx) — so land on the one screen that is real.
- */
-export default async function AdminIndexPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+/** Home is the Flow: how people reach you, drawn as it is. */
+export default async function AdminIndexPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  redirect(`/admin/${slug}/sessions`);
+  redirect(`/admin/${slug}/flow`);
 }

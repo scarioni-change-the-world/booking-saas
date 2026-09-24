@@ -1224,20 +1224,6 @@ a.btn-secondary {
   min-height: 100vh;
 }
 
-/* Warm Chalk column, Mist divider, lighter canvas beside it — the brief's
-   shell exactly. The sidebar used to be a deeper beige carrying the
-   boundary by weight; now the boundary is the divider's job, which is what
-   lets the chrome recede. */
-.admin-side {
-  width: 236px;
-  flex: 0 0 auto;
-  background: var(--canvas);
-  border-right: 1px solid var(--border);
-  padding: 26px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
-}
 /* A real <a> back to Overview now, not an inert div — clicking the wordmark
    to get home is close to universal in this category and cost nothing to add.
    display/text-decoration reset it back to how the div used to lay out. */
@@ -1253,100 +1239,6 @@ a.btn-secondary {
   padding-left: 3px;
   text-decoration: none;
 }
-.admin-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-/* The gap between the "checked daily" and "set up once" groups (see the NAV
-   comment in AdminShell.tsx) — without this the grouping only existed in a
-   code comment nobody using the sidebar could see. */
-.admin-nav-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 10px 3px;
-}
-.admin-nav-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 9px 11px;
-  border-radius: var(--radius-sm);
-  font-size: 13.5px;
-  color: var(--muted);
-  text-decoration: none;
-  transition: background 0.15s, color 0.15s;
-}
-/* The step-number badge that replaced the old per-item icon set (a UX pass
-   flagged the icons as decorative wayfinding, unlike anything else in the
-   app). At rest it's a quiet outline with a muted number — same weight as
-   the label next to it. .active below fills it solid: the same "circled
-   number marks the current stage" device the marketing site's step list
-   uses, borrowed for a flat nav rather than a wizard, so it reads as
-   "you're on 04" rather than implying Overview→Settings is a sequence you
-   complete in order. */
-.admin-nav-badge {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  font-family: var(--font-heading);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--faint);
-  transition: width 0.15s, height 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
-}
-.admin-nav-item:hover {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
-/* Where you are, said quietly.
- *
- * This was a solid Mineral block with a white label and an Ochre badge —
- * the loudest element on every screen in the app, on a surface the user
- * looks past rather than at. The redesign brief rules that out directly
- * ("do not use large coloured navigation blocks") and it is right: a
- * workspace should put its emphasis on the work, and a filled block in the
- * chrome competes with the panel the person actually came to read.
- *
- * Pale Mineral tint, Ink label, Mineral badge. Still unambiguous — it is
- * the only tinted row in the column — without being the brightest thing in
- * the window. Declared after :hover so a tie resolves in its favour when
- * the active item is also hovered.
- *
- * Weight rather than colour carries the state as well, which is what keeps
- * it legible for anyone who cannot rely on the tint. */
-.admin-nav-item.active {
-  background: var(--pale-mineral);
-  color: var(--ink);
-  font-weight: 600;
-}
-.admin-nav-item.active .admin-nav-badge {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
-}
-@media (prefers-reduced-motion: reduce) {
-  .admin-nav-item,
-  .admin-nav-badge {
-    transition: none;
-  }
-}
-.admin-side-foot {
-  margin-top: auto;
-  font-size: 11.5px;
-  color: var(--faint);
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-  line-height: 1.6;
-}
-
 /* The working canvas: warm, but a step lighter than the sidebar beside it,
    so the column reads as chrome and this reads as the page. Padding is the
    brief's 32-48px desktop band, on an 8px grid. */
@@ -1381,59 +1273,120 @@ a.btn-secondary {
   margin-bottom: 7px;
 }
 
-.admin-topbar {
-  display: none;
-}
-/* The mobile nav reuses .admin-nav / .admin-nav-item — same markup, same 7
-   items as the desktop sidebar, just toggled open from the topbar's menu
-   button instead of always visible. A 7-item list does not fit a thumb-width
-   bottom bar, and folding some sections under an unbuilt "More" page would
-   have hidden Sessions on a phone — the thing this pass exists to add. */
-.admin-mobile-nav {
-  display: none;
-}
+/* The bar across the top: three places and the account.
 
+   Replaced a 236px sidebar of eight entries. Three places fit a phone as
+   tabs, so there is one bar at every width; only the account links fold
+   under a menu button when the width runs out. Where you are is said the
+   way the old nav said it — a pale tint and weight, not a filled block. */
+.admin-app.shell {
+  flex-direction: column;
+}
+.shell-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px 22px;
+  padding: 12px 40px;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--border);
+}
+.shell-places {
+  display: flex;
+  gap: 4px;
+}
+.shell-place {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.shell-place:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.shell-place.active {
+  background: var(--pale-mineral);
+  color: var(--ink);
+  font-weight: 600;
+}
+.shell-account {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+.shell-tenant {
+  color: var(--faint);
+}
+.shell-link {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.shell-link.active {
+  color: var(--ink);
+  font-weight: 600;
+}
+.shell-menu-btn {
+  display: none;
+}
+.shell-menu {
+  display: none;
+}
+.shell-back {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+  color: var(--faint);
+  text-decoration: none;
+}
+.shell-back:hover {
+  color: var(--ink);
+}
 @media (max-width: 860px) {
-  .admin-app {
-    flex-direction: column;
+  .shell-bar {
+    flex-wrap: wrap;
+    padding: 10px 16px;
   }
-  .admin-side {
+  .shell-places {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .shell-place {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+  }
+  .shell-account {
     display: none;
   }
-  .admin-topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 18px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .admin-menu-btn {
-    /* 44px meets WCAG 2.5.5's touch-target minimum — this is the only way to
-       open navigation on mobile, so missing the tap here isn't a minor
-       inconvenience, it's "can't get to another page." */
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface);
+  .shell-menu-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    width: 44px;
+    height: 44px;
     min-height: 0;
+    margin-left: auto;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
   }
-  .admin-main {
-    padding: 22px 18px 50px;
-  }
-  .admin-mobile-nav.open {
+  .shell-menu {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 0 18px 14px;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--canvas);
     border-bottom: 1px solid var(--border);
-  }
-  .admin-mobile-nav .admin-nav-item {
-    padding: 11px 11px;
   }
 }
 
@@ -5601,4 +5554,268 @@ body:has(.bk-embedded) {
 .ms-chip {
   background: var(--emphasis-tint);
   color: var(--emphasis-ink);
+}
+
+/* ── Flow ───────────────────────────────────────────────────────────────
+   The home screen: the pipeline drawn as it is. Lines are Mineral where
+   people move, Ochre where they are sent elsewhere, and dashed where a
+   connection is missing — the same three the rest of the app uses. The
+   diagram gives way to its list on a phone; the list is also what a
+   screen reader walks. */
+.fl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.fl-main {
+  min-width: 0;
+}
+.fl-diagram {
+  overflow-x: auto;
+  padding: 10px 8px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-surface, 12px);
+  background: var(--surface);
+}
+.fl-diagram.is-hidden {
+  display: none;
+}
+.fl-svg {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+}
+.fl-edge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.fl-edge.tone-out {
+  stroke: var(--emphasis);
+}
+.fl-edge.tone-gap {
+  stroke: var(--ghost);
+  stroke-dasharray: 5 6;
+}
+.fl-count {
+  /* A halo in the surface colour, so a count stays legible where a line
+     runs under it. */
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--accent-ink);
+  font-variant-numeric: tabular-nums;
+}
+.fl-count.tone-out {
+  fill: var(--emphasis-ink);
+}
+.fl-count.tone-gap {
+  fill: var(--faint);
+  font-weight: 500;
+  font-style: italic;
+}
+.fl-node {
+  cursor: pointer;
+  outline: none;
+}
+.fl-node rect {
+  fill: var(--surface);
+  stroke: var(--strong-border);
+  stroke-width: 1.5;
+}
+.fl-node:hover rect {
+  stroke: var(--accent);
+}
+.fl-node:focus-visible rect {
+  stroke: var(--emphasis);
+  stroke-width: 3;
+}
+.fl-node.is-selected rect {
+  fill: var(--selected-mineral);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+.fl-node.tone-door rect {
+  fill: var(--pale-mineral);
+}
+.fl-node.tone-end rect {
+  fill: var(--status-live-tint);
+  stroke: var(--status-live);
+}
+.fl-node.tone-exit rect {
+  fill: var(--emphasis-tint);
+  stroke: var(--emphasis);
+}
+.fl-node.tone-broken rect {
+  fill: var(--app-canvas);
+  stroke: var(--ghost);
+  stroke-dasharray: 5 5;
+}
+.fl-title {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+.fl-sub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  fill: var(--faint);
+}
+.fl-node.tone-broken .fl-sub {
+  font-style: italic;
+}
+.fl-flag {
+  fill: var(--status-broken);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.fl-list {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fl-list.is-shown {
+  display: grid;
+  gap: 8px;
+}
+.fl-list ol {
+  list-style: none;
+  margin: 6px 0 0 22px;
+  padding: 0;
+}
+.fl-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 2px;
+  width: 100%;
+  min-height: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--soft-border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fl-item[aria-pressed='true'] {
+  background: var(--selected-mineral);
+  border-color: var(--accent);
+}
+.fl-item b {
+  font-size: 0.92rem;
+}
+.fl-item span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.fl-item.is-door {
+  border-left-color: var(--pale-mineral);
+}
+.fl-item.is-exit {
+  border-left-color: var(--emphasis);
+}
+.fl-item.is-end {
+  border-left-color: var(--status-live);
+}
+.fl-item.is-broken {
+  border-left-style: dashed;
+  border-left-color: var(--ghost);
+}
+.fl-item-flag {
+  color: var(--status-broken-ink) !important;
+  font-weight: 600;
+}
+/* A phone reads the flow top to bottom. */
+@media (max-width: 760px) {
+  .fl-diagram {
+    display: none;
+  }
+  .fl-list {
+    display: grid;
+    gap: 8px;
+  }
+}
+
+.fl-archived {
+  margin: 10px 2px 0;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.fl-insights {
+  display: grid;
+  gap: 12px;
+}
+.fl-insight p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+.fl-insight small {
+  display: block;
+  margin: 2px 0 5px;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.fl-gaps ul {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.fl-gaps li {
+  padding: 9px 11px;
+  border: 1px dashed var(--ghost);
+  border-radius: var(--radius-sm);
+  background: var(--app-canvas);
+}
+.fl-gaps li.is-blocking {
+  border-color: var(--emphasis);
+  background: var(--emphasis-tint);
+}
+.fl-gaps b {
+  display: block;
+  font-size: 0.86rem;
+}
+.fl-gaps small {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.fl-gaps a {
+  font-size: 0.82rem;
+}
+.fl-next {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.fl-next small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.fl-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.fl-add .field {
+  flex: 1 1 260px;
+  margin-bottom: 0;
 }

@@ -124,7 +124,7 @@ export default function ResetPasswordPage() {
       // The password change stuck either way, so never report this as a
       // failure to change it. Sign-in is where an unlinked account gets the
       // explanation it needs.
-      window.location.href = first ? `/admin/${first.slug}/sessions` : '/admin/login';
+      window.location.href = first ? `/admin/${first.slug}/flow` : '/admin/login';
     } catch (cause) {
       setError((cause as Error).message);
       setBusy(false);
