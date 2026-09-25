@@ -122,7 +122,9 @@ Six rules every screen follows:
    Ink light, and People's routes are told by shape. Services no longer
    carry a colour here — they are told by their two letters, always beside
    their name — so the colour picker left a service's settings (the column
-   stays, unused).
+   stays, unused). The darkest colour is a very dark granite (#353a38),
+   not a black, and the main action is a Mineral outline with an empty
+   fill — as is the filter you chose.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

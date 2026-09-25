@@ -7860,3 +7860,41 @@ body:has(.bk-embedded) {
   color: inherit;
   font-weight: 600;
 }
+
+/* ── Granite, and Mineral on the main keys ──────────────────────────────
+   The darkest colour in the admin is a very dark granite, not a black:
+   text, "on" lights, instruments and the pressed keys all take it. Mineral
+   is the main action, drawn as an outline with an empty fill — a key
+   waiting to be pressed rather than a block of colour — and marks the
+   filter you chose the same way. Ochre stays for what needs you. */
+.admin-app {
+  --ink: #353a38;
+  color: var(--ink);
+}
+.admin-app .btn-primary {
+  border-width: 1.5px;
+  border-color: var(--accent);
+  background: transparent;
+  color: var(--accent);
+  box-shadow: none;
+}
+.admin-app .btn-primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+  color: var(--accent-ink);
+}
+.admin-app .btn-primary:disabled {
+  border-color: var(--stone-border);
+  color: var(--faint);
+  opacity: 1;
+}
+.admin-app .filter-chip.active,
+.admin-app .filter-chip[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 0 1.5px var(--accent), var(--key-shadow);
+}
+.admin-app .filter-chip[aria-pressed='true'] b,
+.admin-app .filter-chip.active .pp-chip-count {
+  color: var(--accent);
+}
