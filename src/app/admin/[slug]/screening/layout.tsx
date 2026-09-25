@@ -14,7 +14,6 @@ export default function ScreeningLayout({ children }: { children: React.ReactNod
   return (
     <>
       <PageHeader
-        eyebrow="Questions"
         title="What people answer before booking"
         description="Write the questions, and decide where each answer leads. What people are told is under Messages; what came back is under People."
       />

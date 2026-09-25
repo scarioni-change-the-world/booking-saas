@@ -149,7 +149,6 @@ export default function PeoplePage() {
   return (
     <>
       <PageHeader
-        eyebrow="People"
         title="Everyone, with the route they took"
         description="One row per person — whether they answered your questions, booked, or you added them yourself. The last year, most recent first."
         actions={

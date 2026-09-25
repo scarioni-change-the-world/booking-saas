@@ -64,7 +64,6 @@ export default function AccountPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Account"
         title={account?.business.name ?? 'Account'}
         description="Things set once and rarely touched. Everything else lives where it takes effect."
       />

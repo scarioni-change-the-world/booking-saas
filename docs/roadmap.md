@@ -125,6 +125,13 @@ Six rules every screen follows:
    stays, unused). The darkest colour is a very dark granite (#353a38),
    not a black, and the main action is a Mineral outline with an empty
    fill — as is the filter you chose.
+   **Marks, Messages, titles** — done. No two services share their two
+   letters: the oldest keeps its usual mark and a newer one that would
+   repeat it takes its next (CV check beside Career coaching is CV), the
+   same on every screen. Messages — where the confirmation and reminder
+   emails are written — is a fourth place in the bar; reached only through
+   Flow, it could not be found. The small section name above each page
+   title is gone: the bar already says where you are.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

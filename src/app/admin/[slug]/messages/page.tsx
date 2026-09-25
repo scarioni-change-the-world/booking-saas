@@ -134,7 +134,6 @@ export default function MessagesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Messages"
         title="What people are told, and when"
         description="Every message you send, at the moment in someone's journey that sends it. Choose one to change its wording and see it as they will. Counts are the last 30 days."
       />

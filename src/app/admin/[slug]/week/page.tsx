@@ -12,7 +12,7 @@ import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { BookingRules } from '@/components/admin/BookingRules';
 import { CalendarConnection } from '@/components/admin/CalendarConnection';
 import { Gauge } from '@/components/admin/Instruments';
-import { monogram } from '@/lib/service-identity';
+import { useServiceMark } from '@/components/admin/ServiceMarks';
 import {
   emailBadge,
   formatRange,
@@ -261,7 +261,6 @@ export default function WeekPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Week"
         title={view === 'week' ? `Week of ${DateTime.fromISO(monday).toFormat('d LLLL')}` : 'Every booking'}
         description={
           view === 'week'
@@ -571,6 +570,7 @@ function WeekGrid({
     };
   }, []);
 
+  const mark = useServiceMark();
   const cellsPerDay = (range.endMinutes - range.startMinutes) / CELL_MINUTES;
 
   return (
@@ -691,7 +691,7 @@ function WeekGrid({
                   >
                     <span className="wk-b-name">
                       <span className="wk-b-mark" aria-hidden="true">
-                        {monogram(b.eventTypeName)}
+                        {mark(b.eventTypeName)}
                       </span>
                       {b.name}
                     </span>

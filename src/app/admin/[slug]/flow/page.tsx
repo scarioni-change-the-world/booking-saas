@@ -269,7 +269,6 @@ export default function FlowPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Flow"
         title="Your services"
         description="Choose a service to configure it."
         actions={

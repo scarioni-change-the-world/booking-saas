@@ -11,7 +11,7 @@ import {
   toMoneyInput,
 } from '@/lib/money';
 import { LOCATION_OPTIONS } from '@/lib/service-location';
-import { monogram } from '@/lib/service-identity';
+import { useServiceMark } from '@/components/admin/ServiceMarks';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
@@ -94,7 +94,7 @@ export default function ServicePage() {
   if (!service || !payload) {
     return (
       <>
-        <PageHeader eyebrow="Set up" title="That service is not here" />
+        <PageHeader title="That service is not here" />
         <p className="notice notice-muted">
           It may have been deleted. <a href={`/admin/${slug}/flow`}>Back to your services</a>.
         </p>
@@ -142,7 +142,6 @@ export default function ServicePage() {
            where you change the price. Same screen, and it should not keep
            calling itself a wizard once there is nothing left to walk
            through. */
-        eyebrow={outstanding === 0 ? 'Service' : 'Set up'}
         title={service.name}
         description={
           outstanding === 0
@@ -603,11 +602,12 @@ function ReviewStageForm({
  * kept for what needs you and where you are — so this only shows the mark.
  */
 function ServiceIdentity({ service }: { service: SerializedEventType }) {
+  const mark = useServiceMark();
   return (
     <div className="svc-identity">
       <ServiceBadge name={service.name} size="lg" />
       <p className="svc-identity-label" style={{ margin: 0 }}>
-        Shown as <b>{monogram(service.name)}</b> on your Flow, Week and People, always beside its name.
+        Shown as <b>{mark(service.name)}</b> on your Flow, Week and People, always beside its name.
       </p>
     </div>
   );
