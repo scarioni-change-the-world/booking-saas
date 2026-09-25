@@ -8,6 +8,7 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { EmbedSites } from '@/components/admin/EmbedSites';
+import { Dial, Grille, Lamp } from '@/components/admin/Instruments';
 import {
   asksQuestions,
   buildFlow,
@@ -52,8 +53,8 @@ const START: Walked = { steps: new Set(['find']), current: 'find', elsewhere: fa
  * Flow: each service as the path people take to book it.
  *
  * Every service is a row floating on the page, with its numbers; adding one
- * is a button beside the title. Choosing a service opens its flow in its
- * own card underneath, like a drop-down: four
+ * is a button beside the title. Choosing a service opens its flow right
+ * under its row, in its own card, like a drop-down: four
  * numbered chips — your page, questions, choose a time, booked — each with
  * one count of people and, when something needs doing, a few words saying
  * so. A step that stops the service is said in a sentence above the chips,
@@ -152,6 +153,120 @@ export default function FlowPage() {
   const activeCount = data?.services.filter((s) => s.active).length ?? 0;
   const a = (path: string) => `/admin/${slug}/${path}`;
 
+  /* The chosen service's flow, opened right under its row like a drop-down. */
+  function renderFlow(model: FlowModel, lane: Lane, data: Payload) {
+    return (
+      <section
+        id="fc-flow"
+        className="fc-card fc-flow"
+        style={{ ['--svc' as string]: lane.color }}
+        aria-labelledby="fc-flow-title"
+      >
+        <div className="fc-card-head">
+          <div className="fc-flow-title">
+            <div>
+              <p className="fc-eyebrow">How people book it · last 30 days</p>
+              <h2 id="fc-flow-title">{lane.name}</h2>
+            </div>
+          </div>
+          <div className="fl-actions">
+            {trying ? (
+              <button type="button" className="btn-secondary" onClick={() => setTrying(false)}>
+                Stop the test
+              </button>
+            ) : (
+              <>
+                {/* The real booking page, in a test run that saves and
+                    sends nothing, with these steps lighting up as it
+                    is walked: a test of this flow, so it sits here. */}
+                <button type="button" className="btn-secondary" onClick={startTrying}>
+                  Test as a client
+                </button>
+                <a className="btn-secondary" href={a(`sessions/${lane.id}`)}>
+                  Service settings
+                </a>
+              </>
+            )}
+          </div>
+        </div>
+
+        {(() => {
+          const missing = steps.find((st) => st.state === 'missing');
+          if (!missing || trying) return null;
+          return (
+            <div className="fc-callout" role="status">
+              <span>{readout(model, lane).text}</span>
+              {missing.change && (
+                <a className="btn-primary" href={a(missing.change.href)}>
+                  {missing.change.label}
+                </a>
+              )}
+            </div>
+          );
+        })()}
+
+        <ol className="fc-path" aria-label={`How people book ${lane.name}`}>
+          {steps.map((st, i) => (
+            <li key={st.id}>
+              <button
+                type="button"
+                className={`fc-step is-${st.state}${openStep === st.id ? ' is-open' : ''}${trying && walked.steps.has(st.id) ? ' is-lit' : ''}${trying && walked.current === st.id ? ' is-here' : ''}`}
+                aria-expanded={openStep === st.id}
+                aria-controls="fc-panel"
+                onClick={() => setOpenStep((cur) => (cur === st.id ? null : st.id))}
+                disabled={trying}
+              >
+                <span className="fc-label">
+                  {i + 1} · {st.label}
+                </span>
+                <StepReadout step={st} lane={lane} />
+                <span className="fc-step-foot">
+                  {st.flag && (
+                    <span className="fc-flag">
+                      <Lamp tone="need" />
+                      {st.flag}
+                    </span>
+                  )}
+                  {trying && walked.current === st.id && (
+                    <span className="fc-flag">
+                      <Lamp tone="need" />
+                      {walked.elsewhere && st.id === 'questions' ? 'Sent elsewhere' : 'The test is here'}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+
+        {trying && <TryLegend walked={walked} lane={lane} />}
+
+        {!trying && opened && (
+          <StepPanel step={opened} slug={slug} onClose={() => setOpenStep(null)}>
+            <StepDetail id={opened.id} model={model} lane={lane} data={data} slug={slug} />
+          </StepPanel>
+        )}
+
+        {/* The hint and the way to pause, on one line under the path. */}
+        {!trying && (
+          <div className="fc-foot">
+            {!opened && <p className="fc-hint">Choose a step to see more, or to change it.</p>}
+            <PauseService
+              key={lane.id}
+              slug={slug}
+              lane={lane}
+              onPaused={() => {
+                setLaneId(null);
+                setOpenStep(null);
+                void load();
+              }}
+            />
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -160,8 +275,11 @@ export default function FlowPage() {
         description="Choose a service to configure it."
         actions={
           model && !trying ? (
-            <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
-              + Add a service
+            <button type="button" className="btn-primary btn-add" onClick={() => setAdding(true)}>
+              <span className="btn-add-plus" aria-hidden="true">
+                +
+              </span>
+              Add a service
             </button>
           ) : undefined
         }
@@ -199,7 +317,7 @@ export default function FlowPage() {
                           onClick={() => chooseLane(l.id)}
                           disabled={trying && !isOpen}
                         >
-                          <ServiceBadge name={l.name} color={l.color} />
+                          <ServiceBadge name={l.name} color={l.color} off={!state.live} />
                           <span className="fc-row-name">
                             <b>{l.name}</b>
                             <small>{l.words}</small>
@@ -210,11 +328,16 @@ export default function FlowPage() {
                               {l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}
                             </span>
                           )}
-                          <span className={`fc-state${state.live ? '' : ' is-off'}`}>{state.label}</span>
+                          <span className={`fc-state${state.live ? '' : ' is-off'}`}>
+                            <Lamp tone={state.live ? 'live' : 'need'} />
+                            {state.label}
+                          </span>
+                          {/* A knob that turns: filled while its flow is open. */}
                           <span className="fc-row-toggle" aria-hidden="true">
-                            {isOpen ? 'Hide flow ▴' : 'Show flow ▾'}
+                            {isOpen ? '▴' : '▾'}
                           </span>
                         </button>
+                        {isOpen && renderFlow(model, l, data)}
                       </li>
                     );
                   })}
@@ -223,115 +346,6 @@ export default function FlowPage() {
 
             </section>
 
-            {lane && (
-              <section
-                id="fc-flow"
-                className="fc-card fc-flow"
-                style={{ ['--svc' as string]: lane.color }}
-                aria-labelledby="fc-flow-title"
-              >
-                <div className="fc-card-head">
-                  <div className="fc-flow-title">
-                    <ServiceBadge name={lane.name} color={lane.color} size="lg" />
-                    <div>
-                      <p className="fc-eyebrow">How people book it · last 30 days</p>
-                      <h2 id="fc-flow-title">{lane.name}</h2>
-                    </div>
-                  </div>
-                  <div className="fl-actions">
-                    {trying ? (
-                      <button type="button" className="btn-secondary" onClick={() => setTrying(false)}>
-                        Stop the test
-                      </button>
-                    ) : (
-                      <>
-                        {/* The real booking page, in a test run that saves and
-                            sends nothing, with these steps lighting up as it
-                            is walked: a test of this flow, so it sits here. */}
-                        <button type="button" className="btn-secondary" onClick={startTrying}>
-                          Test as a client
-                        </button>
-                        <a className="btn-secondary" href={a(`sessions/${lane.id}`)}>
-                          Service settings
-                        </a>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {(() => {
-                  const missing = steps.find((st) => st.state === 'missing');
-                  if (!missing || trying) return null;
-                  return (
-                    <div className="fc-callout" role="status">
-                      <span>{readout(model, lane).text}</span>
-                      {missing.change && (
-                        <a className="btn-primary" href={a(missing.change.href)}>
-                          {missing.change.label}
-                        </a>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                <ol className="fc-path" aria-label={`How people book ${lane.name}`}>
-                  {steps.map((st, i) => (
-                    <li key={st.id}>
-                      <button
-                        type="button"
-                        className={`fc-step is-${st.state}${openStep === st.id ? ' is-open' : ''}${trying && walked.steps.has(st.id) ? ' is-lit' : ''}${trying && walked.current === st.id ? ' is-here' : ''}`}
-                        aria-expanded={openStep === st.id}
-                        aria-controls="fc-panel"
-                        onClick={() => setOpenStep((cur) => (cur === st.id ? null : st.id))}
-                        disabled={trying}
-                      >
-                        <span className="fc-label">
-                          {i + 1} · {st.label}
-                        </span>
-                        {st.figure ? (
-                          <>
-                            <b className="fc-value">{st.figure.value}</b>
-                            <span className="fc-caption">
-                              {st.figure.label}
-                              {st.figure.sub ? ` · ${st.figure.sub}` : ''}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="fc-short">{st.short}</span>
-                        )}
-                        {st.flag && <span className="fc-flag">{st.flag}</span>}
-                        {trying && walked.current === st.id && (
-                          <span className="fc-flag">{walked.elsewhere && st.id === 'questions' ? 'Sent elsewhere' : 'The test is here'}</span>
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-
-                {!trying && !opened && <p className="fc-hint">Choose a step to see more, or to change it.</p>}
-
-                {trying && <TryLegend walked={walked} lane={lane} />}
-
-                {!trying && opened && (
-                  <StepPanel step={opened} slug={slug} onClose={() => setOpenStep(null)}>
-                    <StepDetail id={opened.id} model={model} lane={lane} data={data} slug={slug} />
-                  </StepPanel>
-                )}
-
-                {!trying && (
-                  <PauseService
-                    key={lane.id}
-                    slug={slug}
-                    lane={lane}
-                    onPaused={() => {
-                      setLaneId(null);
-                      setOpenStep(null);
-                      void load();
-                    }}
-                  />
-                )}
-              </section>
-            )}
 
             {/* Below the open flow, so nothing comes between a service and
                 the flow it opens. */}
@@ -457,6 +471,7 @@ function PausedServices({
         {paused.map((x) => (
           <li key={x.id} className={deleting === x.id ? 'is-deleting' : undefined}>
             <div className="fc-paused-row">
+              <Lamp tone="off" />
               <span>
                 <b>{x.name}</b>
                 <small>No new appointments. Ones already booked stay.</small>
@@ -654,6 +669,62 @@ function DeleteService({
         </p>
       )}
     </div>
+  );
+}
+
+/* ── What a step reads out ──────────────────────────────────────────────── */
+
+/**
+ * A step's one number, read the way its instrument reads it: a large
+ * figure for a count, a dial for the share who finished the questions,
+ * and for Booked, a grille with one dot for each person who chose the
+ * service — lit for the ones who booked.
+ */
+function StepReadout({ step, lane }: { step: FlowStep; lane: Lane }) {
+  if (!step.figure) {
+    return <span className={`fc-short${step.state === 'missing' ? ' is-need' : ''}`}>{step.short}</span>;
+  }
+  const caption = (
+    <span className="fc-caption">
+      {step.figure.label}
+      {step.figure.sub ? ` · ${step.figure.sub}` : ''}
+    </span>
+  );
+  if (step.id === 'questions' && lane.started > 0) {
+    return (
+      <>
+        <Dial
+          part={lane.finished}
+          whole={lane.started}
+          label={`${lane.finished} of the ${lane.started} who started finished the questions`}
+        />
+        <span className="fc-caption">
+          finished{lane.sentElsewhere > 0 ? ` · ${lane.sentElsewhere} sent elsewhere` : ''}
+        </span>
+      </>
+    );
+  }
+  if (step.id === 'booked') {
+    const lit = Math.min(lane.bookedPeopleNew, lane.started);
+    return (
+      <>
+        <span className="fc-value-line">
+          <b className="fc-value">{step.figure.value}</b>
+          {caption}
+        </span>
+        <Grille
+          lit={lit}
+          of={lane.fromPage ? lane.started : 0}
+          label={`${lit} of the ${lane.started} who chose it on your page booked`}
+        />
+      </>
+    );
+  }
+  return (
+    <>
+      <b className="fc-value">{step.figure.value}</b>
+      {caption}
+    </>
   );
 }
 

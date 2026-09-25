@@ -11,6 +11,7 @@ import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { BookingRules } from '@/components/admin/BookingRules';
 import { CalendarConnection } from '@/components/admin/CalendarConnection';
+import { Gauge } from '@/components/admin/Instruments';
 import { monogram } from '@/lib/service-identity';
 import {
   emailBadge,
@@ -411,7 +412,10 @@ export default function WeekPage() {
                 />
               </div>
 
-              <aside className="wk-side" aria-live="polite">
+              <aside
+                className={`wk-side${!painting && !selectedBooking && selection?.kind !== 'day' ? ' is-plates' : ''}`}
+                aria-live="polite"
+              >
                 {painting && draft && original ? (
                   <PaintPanel
                     changed={changedWeekdays}
@@ -450,14 +454,21 @@ export default function WeekPage() {
                   </div>
                 ) : (
                   <>
-                    <WeekSummary week={week} bookings={bookings.length} owed={owed} />
+                    <section className="wk-plate">
+                      <WeekSummary
+                        week={week}
+                        bookings={bookings.length}
+                        bookedMinutes={placements.reduce((sum, p) => sum + (p.endMinutes - p.startMinutes), 0)}
+                        owed={owed}
+                      />
+                    </section>
                     {/* The rules and the calendar that narrow these hours,
                         beside them — they lived in Settings, a page away. */}
-                    <div className="wk-rules">
-                      <p className="wk-side-eyebrow">How people can book</p>
+                    <section className="wk-plate wk-rules">
+                      <p className="wk-side-eyebrow">Notice people must give</p>
                       <BookingRules slug={slug} />
-                    </div>
-                    <div className="wk-rules" id="calendar">
+                    </section>
+                    <section className="wk-plate wk-rules" id="calendar">
                       <p className="wk-side-eyebrow">Google Calendar</p>
                       {calendarNotice && (
                         <p className={`notice ${calendarNotice.ok ? 'notice-muted' : 'notice-error'}`} role="status">
@@ -465,7 +476,7 @@ export default function WeekPage() {
                         </p>
                       )}
                       <CalendarConnection slug={slug} />
-                    </div>
+                    </section>
                   </>
                 )}
               </aside>
@@ -673,7 +684,7 @@ function WeekGrid({
                     className={`wk-booking${b.pack ? ' is-programme' : ''}${selected ? ' is-selected' : ''}${
                       trouble ? ' has-trouble' : ''
                     }${painting ? ' is-ghost' : ''}`}
-                    style={{ top, height: h, background: b.eventTypeColor }}
+                    style={{ top, height: h, ['--svc' as string]: b.eventTypeColor }}
                     disabled={painting}
                     onClick={() => onSelect({ kind: 'booking', id: b.id })}
                     aria-label={`${b.name}, ${b.eventTypeName}, ${minutesToTimeLabel(p.startMinutes)}`}
@@ -706,33 +717,46 @@ function WeekGrid({
 
 /* ── Beside the grid ──────────────────────────────────────────────────── */
 
-function WeekSummary({ week, bookings, owed }: { week: WeekPayload; bookings: number; owed: Owed[] }) {
+function WeekSummary({
+  week,
+  bookings,
+  bookedMinutes,
+  owed,
+}: {
+  week: WeekPayload;
+  bookings: number;
+  bookedMinutes: number;
+  owed: Owed[];
+}) {
   const openMinutes = week.days.reduce((sum, d) => sum + coveredMinutes(d.windows), 0);
   const blocked = week.days.reduce((sum, d) => sum + d.blocks.length, 0);
   const exceptions = week.days.filter((d) => d.override).length;
-  const hours = Math.round((openMinutes / 60) * 10) / 10;
+  const tenth = (minutes: number) => Math.round((minutes / 60) * 10) / 10;
+  const hours = tenth(openMinutes);
+  const booked = tenth(bookedMinutes);
+  const also = [
+    `${bookings} ${bookings === 1 ? 'appointment' : 'appointments'}`,
+    blocked > 0 ? `${blocked} blocked` : null,
+    exceptions > 0 ? `${exceptions} ${exceptions === 1 ? 'date' : 'dates'} with its own hours` : null,
+  ].filter(Boolean);
 
   return (
     <div>
       <p className="wk-side-eyebrow">This week</p>
-      <dl className="wk-facts">
-        <div>
-          <dt>Open</dt>
-          <dd>{hours} h</dd>
-        </div>
-        <div>
-          <dt>Booked</dt>
-          <dd>{bookings}</dd>
-        </div>
-        <div>
-          <dt>Blocked</dt>
-          <dd>{blocked}</dd>
-        </div>
-        <div>
-          <dt>Dates with their own hours</dt>
-          <dd>{exceptions}</dd>
-        </div>
-      </dl>
+      {/* A needle across the open hours: how full the week is, at a glance.
+          Bookings outside the usual hours can carry it past the end. */}
+      {openMinutes > 0 && (
+        <Gauge
+          value={tenth(Math.min(bookedMinutes, openMinutes))}
+          max={hours}
+          unit="h"
+          label={`${booked} of ${hours} open hours booked`}
+        />
+      )}
+      <p className="wk-reading">
+        {booked} h <span>booked of {hours} h open</span>
+      </p>
+      <p className="wk-reading-sub">{also.join(' · ')}</p>
       {openMinutes === 0 && (
         <p className="wk-warning">
           No hours are open this week, so your booking page offers nothing. Choose Paint usual hours

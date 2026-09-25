@@ -100,6 +100,19 @@ Six rules every screen follows:
    The row stays, marked deleted, so past appointments keep their name and
    clients keep their history. The five-service allowance (active only) is
    now enforced on the server, on adding and on resuming.
+   **The Braun system** — done. The admin app is built the way a Braun
+   radio is, in intro's own colours and fonts: Soft White faceplates that
+   sit on Warm Chalk by their shadow, no outlines; round-ended keys for
+   buttons and filters, recessed strips for two-way choices; each service
+   a knob (its letters in a ring of its colour, dashed while nobody can
+   book it); states as small lights (teal on, Ochre needs doing, a ring
+   when paused). Numbers read off instruments (components/admin/
+   Instruments.tsx): large light figures, a dial for the share who
+   finished the questions, a grille with one dot per person who chose a
+   service, lit for those who booked, a needle for the week's booked
+   hours against its open ones, a slide scale for notice. A service's flow
+   now opens directly under its row, and its four steps are one ruled
+   panel. The client's booking page is unchanged.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

@@ -6701,3 +6701,1024 @@ body:has(.bk-embedded) {
   min-height: 0;
   padding: 0;
 }
+
+/* ══ The Braun system ═══════════════════════════════════════════════════
+ *
+ * The admin app in the manner of a Braun radio: the same colours and type,
+ * a different way of building with them. Faceplates instead of outlined
+ * boxes — a Soft White plate that sits on the Warm Chalk page by its shadow
+ * alone. Round keys for buttons. A service's mark as a knob. States as small
+ * indicator lights. Numbers read off instruments: large light figures, a
+ * dial for a share, a needle for a week, a grille with a dot per person.
+ *
+ * Scoped to .admin-app. The booking page a client sees keeps its own look.
+ */
+.admin-app {
+  --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 30px -24px rgba(32, 34, 33, 0.45);
+  --plate-shadow-lg: 0 1px 0 #fff inset, 0 30px 40px -28px rgba(32, 34, 33, 0.45);
+  --key-shadow: 0 1px 0 #fff inset, 0 6px 10px -8px rgba(32, 34, 33, 0.45);
+  --well: inset 0 2px 3px rgba(32, 34, 33, 0.15);
+  --radius-plate: 20px;
+  background: var(--canvas);
+}
+
+/* ── The bar: the wordmark, three places, the account ── */
+.admin-app .shell-bar {
+  min-height: 76px;
+  gap: 8px 40px;
+  padding: 0 64px;
+  border-bottom: 1px solid var(--soft-border);
+}
+.admin-app .admin-brand {
+  font-size: 24px;
+  letter-spacing: -0.04em;
+  padding-left: 0;
+}
+.admin-app .shell-places {
+  gap: 28px;
+}
+/* Where you are: the name in weight, and a small lit dot under it. */
+.admin-app .shell-place {
+  position: relative;
+  padding: 8px 0 12px;
+  border-radius: 0;
+  font-size: 0.95rem;
+  color: var(--faint);
+}
+.admin-app .shell-place:hover {
+  background: none;
+  color: var(--ink);
+}
+.admin-app .shell-place.active {
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+.admin-app .shell-place.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.admin-app .shell-account {
+  gap: 20px;
+  font-size: 0.88rem;
+}
+.admin-app .shell-account a.shell-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.admin-app .admin-main {
+  background: var(--canvas);
+  padding: 36px 64px 80px;
+}
+.admin-app .shell-back {
+  border: 0;
+  background: var(--surface);
+  box-shadow: var(--key-shadow);
+}
+@media (max-width: 1100px) {
+  .admin-app .shell-bar {
+    padding: 0 32px;
+  }
+  .admin-app .admin-main {
+    padding: 32px 32px 64px;
+  }
+}
+@media (max-width: 860px) {
+  .admin-app .shell-bar {
+    min-height: 0;
+    padding: 10px 18px 0;
+    gap: 6px 16px;
+  }
+  .admin-app .shell-places {
+    gap: 0;
+  }
+  .admin-app .shell-place {
+    padding: 10px 8px 14px;
+  }
+  .admin-app .shell-menu-btn {
+    border: 0;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: var(--key-shadow);
+  }
+  .admin-app .admin-main {
+    padding: 22px 18px 56px;
+  }
+}
+
+/* ── Page identity ── */
+.admin-app .admin-eyebrow,
+.admin-app .fc-eyebrow,
+.admin-app .wk-side-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.admin-app .page-header {
+  margin-bottom: 36px;
+}
+.admin-app .page-header h1 {
+  font-size: clamp(2rem, 3.2vw, 2.875rem);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+.admin-app .page-header-description {
+  font-size: 1.06rem;
+}
+
+/* ── Keys: every button is round-ended ── */
+.admin-app .btn-primary,
+.admin-app .btn-secondary,
+.admin-app .btn-danger,
+.admin-app .btn-destructive {
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: 999px;
+}
+.admin-app .btn-primary {
+  box-shadow: 0 10px 18px -12px rgba(32, 34, 33, 0.6);
+}
+.admin-app .btn-primary:disabled {
+  box-shadow: none;
+}
+.admin-app .btn-secondary {
+  border-width: 1.5px;
+  border-color: var(--accent);
+  background: transparent;
+  color: var(--ink);
+}
+.admin-app .btn-secondary:hover:not(:disabled) {
+  background: var(--selected-mineral);
+}
+.admin-app .btn-secondary:disabled {
+  border-color: var(--soft-border);
+  color: var(--faint);
+}
+/* The add key: a ringed plus, like the one on a Braun control. */
+.btn-add {
+  gap: 10px;
+}
+.btn-add-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Filters are keys on a strip: raised when off, lit in Mineral when on. */
+.admin-app .filter-chip {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--key-shadow);
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.admin-app .filter-chip:hover:not(:disabled) {
+  background: var(--selected-mineral);
+}
+.admin-app .filter-chip.active,
+.admin-app .filter-chip[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+/* Two or three choices of one thing: a recessed strip, the chosen key
+   raised out of it. */
+.admin-app .wk-view-switch,
+.admin-app .wk-mode {
+  gap: 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--side);
+  box-shadow: var(--well);
+}
+.admin-app .wk-view-switch .filter-chip,
+.admin-app .wk-mode .filter-chip {
+  background: transparent;
+  box-shadow: none;
+  color: var(--faint);
+}
+.admin-app .wk-view-switch .filter-chip[aria-pressed='true'],
+.admin-app .wk-mode .filter-chip[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 3px 6px -2px rgba(32, 34, 33, 0.35);
+}
+
+/* ── Faceplates ── */
+.admin-app .surface,
+.admin-app .card,
+.admin-app .wk-grid-wrap,
+.admin-app .wk-side,
+.admin-app .pp-list-wrap,
+.admin-app .acct-side,
+.admin-app .ms-addresses-wrap,
+.admin-app .fl-try {
+  border: 0;
+  border-radius: var(--radius-plate);
+  background: var(--surface);
+  box-shadow: var(--plate-shadow);
+}
+.admin-app .surface,
+.admin-app .wk-grid-wrap,
+.admin-app .pp-list-wrap {
+  box-shadow: var(--plate-shadow-lg);
+}
+/* A plate inside a plate is a panel set into it, not a second plate. */
+.admin-app .surface .card,
+.admin-app .card .card,
+.admin-app .wk-side .card {
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  box-shadow: none;
+}
+.admin-app .card + .card {
+  margin-top: 16px;
+}
+
+/* ── A service's knob ── */
+.svc-badge {
+  --svc: var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.18);
+  color: var(--svc);
+}
+.svc-badge-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 74%;
+  height: 74%;
+  border: 2px solid var(--svc);
+  border-radius: 50%;
+}
+.svc-badge.is-off .svc-badge-ring {
+  border-style: dashed;
+}
+.svc-badge-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 0.55rem;
+  box-shadow: none;
+  background: transparent;
+}
+.svc-badge-sm .svc-badge-ring {
+  width: 100%;
+  height: 100%;
+  border-width: 1.5px;
+}
+.svc-badge-md {
+  width: 52px;
+  height: 52px;
+  font-size: 0.8rem;
+}
+.svc-badge-lg {
+  width: 64px;
+  height: 64px;
+  font-size: 0.95rem;
+}
+
+/* ── Indicator lights ── */
+.lamp {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--status-live);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-live) 18%, transparent);
+}
+.lamp.is-need {
+  background: var(--emphasis);
+  box-shadow: none;
+}
+.lamp.is-off {
+  background: transparent;
+  border: 1.5px solid var(--ghost);
+  box-shadow: none;
+}
+
+/* ── Instruments ── */
+.dial {
+  display: block;
+  width: 150px;
+  max-width: 100%;
+  height: auto;
+}
+.dial-track,
+.dial-fill {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.dial-track {
+  stroke: var(--soft-border);
+}
+.dial-fill {
+  stroke: var(--accent);
+}
+.dial-ticks {
+  stroke: var(--ghost);
+  stroke-width: 1.2;
+}
+.dial-text {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 300;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.gauge {
+  display: block;
+  width: 100%;
+  max-width: 292px;
+  height: auto;
+}
+.gauge-track {
+  fill: none;
+  stroke: var(--soft-border);
+  stroke-width: 3;
+}
+.gauge-ticks {
+  stroke: var(--ghost);
+  stroke-width: 1;
+}
+.gauge-needle {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.gauge-hub {
+  fill: var(--accent);
+}
+.gauge-end {
+  font-family: var(--font-body);
+  font-size: 5px;
+  fill: var(--ghost);
+}
+.grille {
+  display: grid;
+  grid-template-columns: repeat(10, 11px);
+  gap: 7px;
+  margin-top: 6px;
+}
+.grille i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--soft-border);
+  box-shadow: inset 0 1px 1px rgba(32, 34, 33, 0.18);
+}
+.grille i.is-on {
+  background: var(--status-live);
+  box-shadow: none;
+}
+.scale {
+  display: flex;
+  gap: 18px;
+  margin: 4px 0 14px;
+}
+.scale-track {
+  position: relative;
+  flex: 0 0 12px;
+  width: 12px;
+  border-radius: 6px;
+  background: var(--side);
+  box-shadow: var(--well);
+}
+/* The slider rests on the stop in use: each stop is one line of the list
+   beside it, so the thumb moves down one line per stop. */
+.scale-thumb {
+  position: absolute;
+  left: -7px;
+  top: calc((var(--at) + 0.5) * (100% / var(--stops)) - 7px);
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 3px 5px -1px rgba(32, 34, 33, 0.45);
+}
+.scale-stops {
+  display: grid;
+  font-size: 0.88rem;
+  line-height: 1.9;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.scale-stops .is-on {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Flow ── */
+.admin-app .fc-services,
+.admin-app .fc-rows {
+  gap: 14px;
+}
+.admin-app .fc-stack {
+  gap: 14px;
+}
+.admin-app .fc-row {
+  gap: 20px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--svc) 12%, var(--canvas));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
+}
+.admin-app .fc-row:hover {
+  background: color-mix(in srgb, var(--svc) 16%, var(--canvas));
+}
+.admin-app .fc-row.is-open {
+  background: color-mix(in srgb, var(--svc) 18%, var(--surface));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 22px 30px -22px rgba(32, 34, 33, 0.45);
+}
+.admin-app .fc-row-name {
+  gap: 3px;
+}
+.admin-app .fc-row-name b {
+  font-size: 1.19rem;
+  font-weight: 600;
+}
+.admin-app .fc-row-name small {
+  font-size: 0.88rem;
+}
+.admin-app .fc-row-figs {
+  font-size: 0.94rem;
+  color: var(--muted);
+}
+.admin-app .fc-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 400;
+}
+.admin-app .fc-state.is-off {
+  background: none;
+  color: var(--emphasis-ink);
+  font-weight: 600;
+}
+/* The knob that opens a service: outlined when shut, filled when open. */
+.admin-app .fc-row-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  font-size: 0.8rem;
+  text-align: center;
+}
+.admin-app .fc-row.is-open .fc-row-toggle {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.admin-app .fc-card {
+  gap: 26px;
+  padding: 30px 34px;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--plate-shadow-lg);
+}
+.admin-app .fc-rows > li {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.admin-app .fc-card-head h2 {
+  font-size: 1.5rem;
+}
+.admin-app .fc-flow-title > div {
+  display: grid;
+  gap: 4px;
+}
+/* The four steps: one ruled panel, like the scale on a tuner, rather than
+   four separate cards. */
+.admin-app .fc-path {
+  gap: 0;
+  border-top: 1px solid var(--soft-border);
+  border-bottom: 1px solid var(--soft-border);
+}
+.admin-app .fc-path li + li {
+  border-left: 1px solid var(--soft-border);
+}
+.admin-app .fc-path li:not(:last-child)::after {
+  content: none;
+}
+.admin-app .fc-step {
+  gap: 10px;
+  min-height: 170px;
+  padding: 24px 26px 28px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-rows: auto auto auto 1fr auto;
+}
+.admin-app .fc-step:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 2.5%, var(--surface));
+  box-shadow: none;
+}
+.admin-app .fc-step.is-open {
+  background: color-mix(in srgb, var(--svc) 9%, var(--surface));
+  box-shadow: none;
+}
+.admin-app .fc-step:focus-visible {
+  outline-offset: -3px;
+}
+.admin-app .fc-label {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+.admin-app .fc-value {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(3rem, 5vw, 4.75rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.fc-value-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.admin-app .fc-caption {
+  font-size: 0.94rem;
+}
+.admin-app .fc-short {
+  margin-top: 6px;
+  font-size: 1.1rem;
+}
+.fc-short.is-need {
+  color: var(--emphasis-ink);
+}
+.fc-step-foot {
+  grid-row: 5;
+  display: grid;
+  gap: 6px;
+}
+.admin-app .fc-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--emphasis-ink);
+  font-size: 0.82rem;
+}
+/* A step that stops the service: an Ochre ground, not an outline. */
+.admin-app .fc-step.is-missing {
+  background: color-mix(in srgb, var(--emphasis) 8%, var(--surface));
+}
+.admin-app .fc-step.is-here {
+  box-shadow: inset 0 0 0 2px var(--emphasis);
+}
+.admin-app .fc-callout {
+  border-radius: 14px;
+}
+.admin-app .fc-panel {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+.fc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.fc-foot .fc-hint {
+  margin: 0;
+}
+.fc-foot .fc-archive {
+  margin-left: auto;
+}
+.fc-foot .fc-archive.is-asking {
+  flex: 1 1 100%;
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+.admin-app .fc-archived > ul > li {
+  padding: 14px 22px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--canvas));
+}
+.admin-app .fc-paused-row {
+  justify-content: flex-start;
+}
+.admin-app .fc-paused-row > span:nth-child(2) {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+.admin-app .fc-paused-row b {
+  color: var(--muted);
+}
+@media (max-width: 1000px) {
+  .admin-app .fc-path {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-app .fc-path li + li {
+    border-left: 0;
+  }
+  .admin-app .fc-path li:nth-child(2n) {
+    border-left: 1px solid var(--soft-border);
+  }
+  .admin-app .fc-path li:nth-child(n + 3) {
+    border-top: 1px solid var(--soft-border);
+  }
+  .admin-app .fc-step {
+    min-height: 0;
+  }
+}
+@media (max-width: 760px) {
+  .admin-app .fc-card {
+    padding: 18px 16px;
+    gap: 18px;
+  }
+  .admin-app .fc-row {
+    gap: 6px 14px;
+    padding: 14px;
+  }
+  .admin-app .svc-badge-md {
+    width: 40px;
+    height: 40px;
+    font-size: 0.66rem;
+  }
+  /* The knob stays at the row's right edge, beside the name. */
+  .admin-app .fc-row-toggle {
+    grid-column: 3;
+    grid-row: 1;
+    width: 34px;
+    height: 34px;
+    justify-self: end;
+  }
+  .admin-app .fc-path {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    border: 0;
+  }
+  .admin-app .fc-path li,
+  .admin-app .fc-path li:nth-child(2n),
+  .admin-app .fc-path li:nth-child(n + 3) {
+    border: 0;
+  }
+  .admin-app .fc-step {
+    padding: 14px;
+    gap: 4px;
+    border-radius: 16px;
+    background: var(--app-canvas);
+  }
+  .admin-app .fc-value {
+    font-size: 2.75rem;
+  }
+  .admin-app .dial {
+    width: 112px;
+  }
+  .grille {
+    grid-template-columns: repeat(7, 8px);
+    gap: 5px;
+  }
+  .grille i {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* ── Week ── */
+.admin-app .wk-grid-wrap {
+  padding: 16px 20px 20px;
+}
+.admin-app .wk-corner,
+.admin-app .wk-dayhead {
+  border-bottom-color: var(--soft-border);
+}
+.admin-app .wk-dayhead {
+  gap: 0;
+  padding: 6px 4px 10px;
+  border-left: 0;
+  border-radius: 12px 12px 0 0;
+}
+.admin-app .wk-dow {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.admin-app .wk-dnum {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+/* Today: its number in weight, with an Ochre light beside it. */
+.admin-app .wk-dayhead.is-today .wk-dnum {
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+.admin-app .wk-dayhead.is-today .wk-dnum::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--emphasis);
+}
+.admin-app .wk-dayhead.is-selected {
+  box-shadow: none;
+}
+/* Closed time is ruled, like the grille on a speaker; open hours are a
+   clear plate over it. */
+.admin-app .wk-col {
+  background: repeating-linear-gradient(0deg, transparent 0 11px, var(--rule) 11px 12px);
+  border-left-color: var(--rule);
+}
+.admin-app .wk-open {
+  left: 0;
+  right: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+}
+.admin-app .wk-col.is-today .wk-open {
+  background: var(--selected-mineral);
+}
+.admin-app .wk-blocked {
+  left: 6px;
+  right: 6px;
+  border: 0;
+  border-radius: 12px;
+  background: repeating-linear-gradient(135deg, var(--rule) 0 6px, var(--canvas) 6px 12px);
+}
+/* A booking is a key in its service's pale colour, its name in Ink. */
+.admin-app .wk-booking {
+  --svc: var(--accent);
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--svc) 20%, var(--surface));
+  color: var(--ink);
+  box-shadow: 0 6px 10px -8px rgba(32, 34, 33, 0.5);
+}
+.admin-app .wk-booking:hover {
+  filter: none;
+  background: color-mix(in srgb, var(--svc) 28%, var(--surface));
+}
+.admin-app .wk-booking.is-programme {
+  box-shadow: 0 6px 10px -8px rgba(32, 34, 33, 0.5);
+}
+.admin-app .wk-booking.is-selected {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.admin-app .wk-b-mark {
+  background: none;
+  padding: 0;
+  color: var(--svc);
+}
+.admin-app .wk-b-meta {
+  opacity: 1;
+  color: var(--muted);
+}
+.admin-app .wk-lg-open {
+  background: var(--surface);
+  border: 1px solid var(--soft-border);
+}
+.admin-app .wk-lg-blocked {
+  border: 0;
+  background: repeating-linear-gradient(135deg, var(--rule) 0 3px, var(--canvas) 3px 6px);
+}
+.admin-app .wk-legend i {
+  border-radius: 50%;
+}
+.admin-app .wk-nav .btn-secondary {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1rem;
+}
+.admin-app .wk-range {
+  font-size: 1rem;
+}
+.admin-app .wk-owed {
+  border: 0;
+  border-radius: 14px;
+  background: var(--emphasis-tint);
+}
+.admin-app .wk-layout {
+  gap: 28px;
+}
+.admin-app .wk-side {
+  padding: 22px 24px;
+}
+/* With nothing chosen, the side is a stack of small plates. */
+.admin-app .wk-side.is-plates {
+  display: grid;
+  gap: 18px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.wk-plate {
+  padding: 22px 24px;
+  border-radius: var(--radius-plate, 20px);
+  background: var(--surface);
+  box-shadow: var(--plate-shadow);
+}
+.admin-app .wk-plate.wk-rules {
+  margin: 0;
+  border-top: 0;
+}
+.wk-reading {
+  margin: 4px 0 0;
+  font-size: 2.1rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.wk-reading span {
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--faint);
+}
+.wk-reading-sub {
+  margin: 6px 0 10px;
+  font-size: 0.88rem;
+  color: var(--faint);
+}
+
+/* ── People ── */
+.admin-app .pp-search input {
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--side);
+  box-shadow: var(--well);
+}
+.admin-app .pp-list-wrap {
+  overflow: hidden;
+}
+.admin-app .pp-list > li + li {
+  border-top-color: var(--rule);
+}
+.admin-app .pp-row {
+  grid-template-columns: minmax(170px, 240px) minmax(0, 1fr);
+  gap: 20px;
+  padding: 18px 22px;
+}
+.admin-app .pp-list > li .pp-row {
+  border-radius: 0;
+}
+.admin-app .pp-row.is-selected {
+  box-shadow: none;
+}
+.admin-app .pp-who b {
+  font-size: 1rem;
+}
+.admin-app .pp-who small {
+  font-size: 0.82rem;
+}
+.admin-app .pp-mark {
+  padding: 2px 8px;
+  border-radius: 9px;
+  font-weight: 600;
+}
+.admin-app .pp-mark.back {
+  color: var(--muted);
+}
+/* The route between two dots is a hairline, the dots do the talking. */
+.admin-app .pp-trace .pp-step + .pp-step::before {
+  height: 1.5px;
+  background: var(--strong-border);
+}
+.admin-app .pp-trace .pp-step {
+  max-width: 140px;
+}
+.admin-app .pp-step span {
+  font-size: 0.78rem;
+}
+.admin-app .pp-step small {
+  color: var(--ghost);
+}
+.admin-app .pp-link {
+  border-radius: 12px;
+  background: var(--side);
+  box-shadow: var(--well);
+}
+.admin-app .wk-side.is-plates {
+  position: static;
+  max-height: none;
+}
+
+/* Figures beside a list: a light number on a set-in panel, no outline. */
+.admin-app .wk-facts div {
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+.admin-app .wk-facts dt {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.admin-app .wk-facts dd {
+  font-family: var(--font-body);
+  font-size: 1.9rem;
+  font-weight: 300;
+  line-height: 1.15;
+}
+/* Something to look at: an Ochre ground and a light, never a one-sided edge. */
+.admin-app .wk-warning {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+}
+.admin-app .wk-warning::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--emphasis);
+  transform: translateY(-1px);
+}
+.admin-app .ms-card {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--key-shadow);
+}
+.admin-app .ms-card:hover {
+  background: var(--selected-mineral);
+}
+.admin-app .ms-card[aria-pressed='true'] {
+  background: var(--selected-mineral);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.admin-app .card {
+  padding: 22px 26px;
+}
+.admin-app .admin-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+/* Fields round off to match the keys and plates around them. */
+.admin-app input[type='text'],
+.admin-app input[type='email'],
+.admin-app input[type='password'],
+.admin-app input[type='number'],
+.admin-app input[type='time'],
+.admin-app input[type='date'],
+.admin-app input[type='url'],
+.admin-app select,
+.admin-app textarea {
+  border-radius: 12px;
+  border-color: var(--soft-border);
+}
+@media (max-width: 760px) {
+  .gauge {
+    max-width: 220px;
+  }
+}

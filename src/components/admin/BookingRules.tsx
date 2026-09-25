@@ -2,10 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { SlideScale } from '@/components/admin/Instruments';
 
 interface Rules {
   bookingNoticeHours: number;
   bookingWindowDays: number;
+}
+
+/** The usual amounts of notice, as stops on the scale; any other amount gets its own. */
+function noticeStops(current: number) {
+  const values = [0, 12, 24, 48, 168];
+  if (!values.includes(current)) values.push(current);
+  return values.sort((a, b) => a - b).map((value) => ({ value, label: noticeLabel(value) }));
+}
+
+function noticeLabel(hours: number): string {
+  if (hours === 0) return 'None';
+  if (hours === 168) return '1 week';
+  if (hours % 24 === 0) return hours === 24 ? '1 day' : `${hours / 24} days`;
+  return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
 function noticeWords(hours: number): string {
@@ -63,13 +78,16 @@ export function BookingRules({ slug, onSaved }: { slug: string; onSaved?: () => 
   return (
     <div className="bk-rules">
       {!editing ? (
-        <p className="wk-side-lead" style={{ margin: 0 }}>
-          People can book with at least {noticeWords(rules.bookingNoticeHours)}, up to{' '}
-          {rules.bookingWindowDays} days ahead.{' '}
-          <button type="button" className="btn-link" onClick={() => setEditing(true)}>
-            Change
-          </button>
-        </p>
+        <>
+          <SlideScale stops={noticeStops(rules.bookingNoticeHours)} current={rules.bookingNoticeHours} />
+          <p className="wk-side-lead" style={{ margin: 0 }}>
+            People can book with at least {noticeWords(rules.bookingNoticeHours)}, up to{' '}
+            {rules.bookingWindowDays} days ahead.{' '}
+            <button type="button" className="btn-link" onClick={() => setEditing(true)}>
+              Change
+            </button>
+          </p>
+        </>
       ) : (
         <form onSubmit={save}>
           {error && (
