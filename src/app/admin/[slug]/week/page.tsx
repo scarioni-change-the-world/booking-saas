@@ -309,20 +309,6 @@ export default function WeekPage() {
             </div>
           )}
 
-          {/* Somebody owed a session has no time on the grid — that is
-              the whole problem — so they are said above it instead. */}
-          {owed.length > 0 && !painting && (
-            <div className="wk-owed">
-              <span className="wk-owed-label">Still to book</span>
-              {owed.map((o, i) => (
-                <span key={i} className="wk-owed-item">
-                  <a href={`/admin/${slug}/people?person=${encodeURIComponent(o.email)}`}>{o.clientName}</a> ·{' '}
-                  {o.serviceName} · {o.remaining}
-                </span>
-              ))}
-            </div>
-          )}
-
           <div className="wk-toolbar">
             <div className="wk-nav">
               <button
@@ -462,6 +448,7 @@ export default function WeekPage() {
                   <>
                     <section className="wk-plate">
                       <WeekSummary
+                        slug={slug}
                         week={week}
                         bookings={bookings.length}
                         bookedMinutes={placements.reduce((sum, p) => sum + (p.endMinutes - p.startMinutes), 0)}
@@ -725,11 +712,13 @@ function WeekGrid({
 /* ── Beside the grid ──────────────────────────────────────────────────── */
 
 function WeekSummary({
+  slug,
   week,
   bookings,
   bookedMinutes,
   owed,
 }: {
+  slug: string;
   week: WeekPayload;
   bookings: number;
   bookedMinutes: number;
@@ -767,11 +756,28 @@ function WeekSummary({
           to set some.
         </p>
       )}
+      {/* Somebody owed a session has no time on the grid to point at, so
+          they are named here instead — quietly, in the side panel, not as
+          a banner across the top of the page. */}
       {owed.length > 0 && (
-        <p className="wk-side-lead">
-          {owed.length === 1 ? '1 client is' : `${owed.length} clients are`} owed a session with no
-          time booked yet.
-        </p>
+        <div className="wk-owed-list">
+          <p className="wk-side-lead" style={{ marginBottom: 6 }}>
+            {owed.length === 1 ? '1 client is' : `${owed.length} clients are`} owed a session with no
+            time booked yet.
+          </p>
+          <ul>
+            {owed.map((o, i) => (
+              <li key={i}>
+                <span>
+                  {o.clientName} · {o.serviceName}
+                </span>
+                <a href={`/admin/${slug}/people?person=${encodeURIComponent(o.email)}`}>
+                  {o.remaining === 1 ? '1 left' : `${o.remaining} left`}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       <p className="wk-side-hint">Choose a booking to see it, or a day to close it, give it its own hours, or block time.</p>
     </div>

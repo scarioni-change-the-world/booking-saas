@@ -132,12 +132,10 @@ Six rules every screen follows:
    emails are written — is a fourth place in the bar; reached only through
    Flow, it could not be found. The small section name above each page
    title is gone: the bar already says where you are.
-   **Design review (Design Integrity)** — done. Ten fixes from a review
-   against honesty, transparency, respect and essentiality: a line under
-   Services' title gathers everything that needs you (services nobody can
-   book, warnings every service shares said once, sessions still to book)
-   so nobody visits four screens to find out; the bar says "Services", as
-   the page does; one term, "could book", for the step-3 number; the
+   **Design review (Design Integrity)** — done, then revised (see below).
+   Ten fixes from a review against honesty, transparency, respect and
+   essentiality: the bar says "Services", as the page does; one term,
+   "could book", for the step-3 number; the
    lightest grey no longer carries text (it was 2.8:1); a chosen row, step
    or day has a thin Mineral edge, not just a 1.1:1 tint, and bookings a
    hairline; the notice scale is the real control, saved on choosing a
@@ -157,6 +155,20 @@ Six rules every screen follows:
    opening "Change" on a still-blank field now opens pre-filled with the
    address the caller is signed in as, a suggestion to keep, change or
    clear, not something claimed as already on.
+   **What needs you, moved into each service** — done. The line under
+   Services' title (added by the review above) read as a banner pasted
+   from elsewhere — a lamp, an underline and bold on every item — and is
+   gone. Everything it said already had, or now has, a home inside the
+   thing it is about: a service nobody can book says so on its own row and
+   in its own callout when opened (unchanged); a session still owed is a
+   quiet word in that service's row (`.fc-row-owed`, Ochre text, no lamp,
+   no underline) and named, once the service is opened, on its Booked
+   step. `client_entitlements.event_type_id` is read now (it wasn't) so an
+   owed session reaches the one service it belongs to (`Lane.owed`,
+   `Lane.owedSessions`) rather than a person-level total with nowhere to
+   live. The Week's matching top banner is gone the same way: who is still
+   owed is named in the side panel's existing quiet sentence, not a
+   dashed-border strip across the page.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

@@ -4625,29 +4625,28 @@ body:has(.bk-embedded) {
   color: var(--accent-contrast);
 }
 
-.wk-owed {
+/* Who is still owed a session, named quietly in the side panel — not a
+   banner across the top of the page. One line per person, a plain grey
+   sentence and an Ochre count that links to them in People; no border,
+   no fill, no dashed edge standing out from everything around it. */
+.wk-owed-list ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wk-owed-list li {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin-bottom: 14px;
-  padding: 10px 14px;
-  border: 1px dashed var(--emphasis);
-  border-radius: var(--radius);
-  background: var(--surface);
+  justify-content: space-between;
+  gap: 10px;
   font-size: 0.85rem;
-}
-.wk-owed-label {
-  font-weight: 600;
-  color: var(--emphasis-ink);
-}
-.wk-owed-item {
   color: var(--muted);
 }
-.wk-owed-item + .wk-owed-item::before {
-  content: '·';
-  margin-right: 10px;
-  color: var(--faint);
+.wk-owed-list a {
+  color: var(--emphasis-ink);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .wk-toolbar {
@@ -5082,6 +5081,17 @@ body:has(.bk-embedded) {
 }
 .pp-search input {
   width: 100%;
+}
+/* Arriving from a figure on Overview: a plain, informational strip — not
+   a warning, so it takes the app's neutral notice, not Ochre. */
+.pp-figure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.pp-figure-label {
+  font-weight: 600;
 }
 .pp-list-wrap {
   border: 1px solid var(--soft-border);
@@ -7543,11 +7553,6 @@ body:has(.bk-embedded) {
 .admin-app .wk-range {
   font-size: 1rem;
 }
-.admin-app .wk-owed {
-  border: 0;
-  border-radius: 14px;
-  background: var(--emphasis-tint);
-}
 .admin-app .wk-layout {
   gap: 28px;
 }
@@ -7888,28 +7893,15 @@ body:has(.bk-embedded) {
 
 /* ── Design review fixes ────────────────────────────────────────────────── */
 
-/* What needs you, in one line under the title: each item an Ochre light
-   and a link to where it is put right. */
-.fc-needs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-  margin: -8px 0 24px;
-  padding: 0;
-  list-style: none;
-}
-.fc-needs li {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-}
-.fc-needs a,
-.fc-needs .btn-link {
+/* What needs you: no page-level banner any more — a dot-and-underline
+   strip of ochre links read as pasted from elsewhere. Each thing lives
+   where it already belongs instead: a service that can't be booked says
+   so on its own row and in its own callout when opened; a session still
+   owed is a quiet word in that service's own row (.fc-row-owed below) and
+   named, once the service is opened, on its Booked step. */
+.fc-row-owed {
   color: var(--emphasis-ink);
-  font-size: 0.94rem;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 500;
 }
 
 /* The lightest grey was 2.8:1 on a plate — below what small text needs.

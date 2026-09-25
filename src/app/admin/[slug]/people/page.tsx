@@ -222,9 +222,9 @@ export default function PeoplePage() {
                Overview and the rows here can be checked against each other.
                One person can give two answers, and when they have, the
                difference is said rather than left to look like an error. */
-            <div className="wk-owed pp-figure" role="status">
-              <span className="wk-owed-label">From Overview: {FIGURES[figure]}</span>
-              <span className="wk-owed-item">
+            <div className="notice notice-muted pp-figure" role="status">
+              <span className="pp-figure-label">From Overview: {FIGURES[figure]}</span>
+              <span>
                 {figure === 'returning' ? 'Answers from people you already knew' : 'New enquiries'}, last{' '}
                 {FIGURE_DAYS} days · {figureTotal === 1 ? '1 answer' : `${figureTotal} answers`}
                 {figureTotal !== shown.length && !text

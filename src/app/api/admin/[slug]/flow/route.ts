@@ -71,11 +71,37 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         scope.select('calendar_connections', 'status').maybeSingle(),
         scope.select('clients', 'id, name, email'),
         scope.select('tenant_settings').maybeSingle(),
-        scope.select('client_entitlements', 'client_id, total_sessions, used_sessions'),
+        scope.select('client_entitlements', 'client_id, event_type_id, total_sessions, used_sessions'),
       ]);
     for (const result of [bookings, nextUp, failedSync, calendar, clients, settings, owedRows]) {
       if (result.error) throw result.error;
     }
+
+    /* Who has paid for sessions they have not booked yet, one row per
+       client per service — each service's own row (StepPanel's Booked
+       step) says so, named, once it is opened; see src/lib/flow.ts. */
+    const people = new Map(
+      ((clients.data ?? []) as unknown as Array<{ id: string; name: string; email: string }>).map((c) => [c.id, c]),
+    );
+    const owedBy = new Map<string, { eventTypeId: string | null; sessions: number }>();
+    for (const e of (owedRows.data ?? []) as unknown as Array<{
+      client_id: string;
+      event_type_id: string | null;
+      total_sessions: number;
+      used_sessions: number;
+    }>) {
+      const left = Math.max(0, e.total_sessions - e.used_sessions);
+      if (left <= 0) continue;
+      const key = `${e.client_id}:${e.event_type_id ?? ''}`;
+      const existing = owedBy.get(key);
+      owedBy.set(key, { eventTypeId: e.event_type_id, sessions: (existing?.sessions ?? 0) + left });
+    }
+    const owed = [...owedBy.entries()]
+      .map(([key, v]) => {
+        const clientId = key.slice(0, key.indexOf(':'));
+        return { eventTypeId: v.eventTypeId, name: people.get(clientId)?.name ?? '', email: people.get(clientId)?.email ?? '', sessions: v.sessions };
+      })
+      .filter((o) => o.email);
 
     /* The analysis is of new enquiries only, as on Enquiries: somebody who
        already works with you answering again is not being screened. */
@@ -125,25 +151,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
          the flow, just without this one flag. */
       emailFailures: failedEmail.error ? 0 : (failedEmail.data ?? []).length,
       clientCount: (clients.data ?? []).length,
+      owed,
     };
-
-    /* Who has paid for sessions they have not booked yet, one line per
-       person: the "needs you" line at the top of the page says so. */
-    const people = new Map(
-      ((clients.data ?? []) as unknown as Array<{ id: string; name: string; email: string }>).map((c) => [c.id, c]),
-    );
-    const owedBy = new Map<string, number>();
-    for (const e of (owedRows.data ?? []) as unknown as Array<{ client_id: string; total_sessions: number; used_sessions: number }>) {
-      const left = Math.max(0, e.total_sessions - e.used_sessions);
-      if (left > 0) owedBy.set(e.client_id, (owedBy.get(e.client_id) ?? 0) + left);
-    }
-    const owed = [...owedBy.entries()]
-      .map(([id, sessions]) => ({ name: people.get(id)?.name ?? '', email: people.get(id)?.email ?? '', sessions }))
-      .filter((o) => o.email);
 
     return ok({
       ...input,
-      owed,
       timezone: tenant.timezone,
       nextUp: ((nextUp.data ?? []) as unknown as NextUpJoin[]).map((b) => ({
         id: b.id,

@@ -67,6 +67,9 @@ export interface FlowInput {
   syncFailures: number;
   emailFailures: number;
   clientCount: number;
+  /** Sessions paid for and not booked yet, one row per client per service.
+   *  eventTypeId is null for a service since deleted, which no lane claims. */
+  owed: Array<{ eventTypeId: string | null; name: string; email: string; sessions: number }>;
 }
 
 export type PartId = 'page' | 'clients' | 'questions' | 'elsewhere' | 'calendar' | 'booked' | `service:${string}`;
@@ -108,6 +111,10 @@ export interface Lane {
   questionInsights: QuestionInsight[];
   blocking: Stage[];
   loose: Stage[];
+  /** Clients still owed a session of this service — named, for the Booked
+   *  step's own notes; see owedSessions for the row's quiet total. */
+  owed: Array<{ name: string; email: string; sessions: number }>;
+  owedSessions: number;
 }
 
 export interface FlowModel {
@@ -175,6 +182,7 @@ export function buildFlow(input: FlowInput): FlowModel {
     const stages = setupStages(facts).filter((st) => st.scope === 'service');
     const mine = input.bookings.filter((b) => b.eventTypeId === s.id && b.status === 'confirmed');
     const people = countPeople(mine);
+    const owed = input.owed.filter((o) => o.eventTypeId === s.id).map((o) => ({ name: o.name, email: o.email, sessions: o.sessions }));
     return {
       id: s.id,
       part: `service:${s.id}` as PartId,
@@ -200,6 +208,8 @@ export function buildFlow(input: FlowInput): FlowModel {
       questionInsights: input.questionInsightsByService[s.id] ?? [],
       blocking: blockers(stages),
       loose: loose(stages),
+      owed,
+      owedSessions: owed.reduce((sum, o) => sum + o.sessions, 0),
     };
   });
 
@@ -519,11 +529,12 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
 
   /* 4 · Booked */
   const extra = appointmentsNote(lane);
+  const owedFlag = lane.owedSessions > 0 ? `${lane.owedSessions === 1 ? '1 session' : `${lane.owedSessions} sessions`} still to book` : null;
   const booked: FlowStep = {
     id: 'booked',
     label: 'Booked',
     short: 'Nobody yet',
-    flag: model.booked.flag,
+    flag: [model.booked.flag, owedFlag].filter(Boolean).join(' · ') || null,
     title: 'They’re booked',
     detail: 'They get a confirmation email, and their own link to change it or book again.',
     state: 'set',
@@ -533,9 +544,17 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
       sub: extra ? `${lane.booked} appointments` : undefined,
     },
     change: { label: 'Change', href: 'messages' },
-    notes: model.booked.flag
-      ? [{ tone: 'need', text: `${model.booked.flag} in the last 30 days.`, action: { label: 'See which', href: 'messages' } }]
-      : [],
+    notes: [
+      ...(model.booked.flag
+        ? [{ tone: 'need' as const, text: `${model.booked.flag} in the last 30 days.`, action: { label: 'See which', href: 'messages' } }]
+        : []),
+      /* Named, so opening this step says who — not just how many. */
+      ...lane.owed.map((o) => ({
+        tone: 'need' as const,
+        text: `${o.name || o.email} ${o.sessions === 1 ? 'has 1 session' : `has ${o.sessions} sessions`} paid for and not booked yet.`,
+        action: { label: 'See in People', href: `people?person=${encodeURIComponent(o.email)}` },
+      })),
+    ],
   };
 
   const steps = [find, questions, times, booked];
@@ -563,62 +582,4 @@ export function stepForPart(part: string | null): StepId | null {
   if (part === 'calendar') return 'times';
   if (part === 'booked') return 'booked';
   return null;
-}
-
-/** One thing that needs the business, for the line at the top of Flow. */
-export interface Need {
-  text: string;
-  /** Where it is fixed, relative to the admin: `week`, `people?person=…`. */
-  href: string | null;
-  /** Or the service to open on Flow itself. */
-  laneId: string | null;
-}
-
-/** Where each step's warning is put right. */
-const FIX_FOR: Record<StepId, string | null> = {
-  find: null,
-  questions: 'messages?m=next_steps',
-  times: 'week#calendar',
-  booked: 'messages',
-};
-
-/**
- * Everything that needs the business, gathered from every service and from
- * People, so one line answers "is anything wrong?" without visiting each
- * screen. Each thing once: a warning every service shares is said once,
- * and a week with no hours is one line, not one per service. Empty when
- * nothing needs doing.
- */
-export function needsYou(
-  model: FlowModel,
-  slug: string,
-  owed: ReadonlyArray<{ name: string; email: string; sessions: number }>,
-): Need[] {
-  const out: Need[] = [];
-  const said = new Set<string>();
-  if (model.calendar.noHours) out.push({ text: 'No hours set, so nothing can be booked', href: 'week', laneId: null });
-  for (const lane of model.lanes) {
-    const offered = lane.fromPage || lane.fromClients;
-    if (!offered || lane.blocking.length > 0) {
-      out.push({ text: `${lane.name} can’t be booked yet`, href: null, laneId: lane.id });
-      continue;
-    }
-    for (const step of serviceSteps(model, lane, slug)) {
-      if (!step.flag || said.has(step.flag)) continue;
-      said.add(step.flag);
-      const href = FIX_FOR[step.id];
-      out.push({ text: step.flag, href, laneId: href ? null : lane.id });
-    }
-  }
-  if (owed.length === 1) {
-    const o = owed[0]!;
-    out.push({
-      text: `${o.name || o.email} has ${o.sessions === 1 ? '1 session' : `${o.sessions} sessions`} to book`,
-      href: `people?person=${encodeURIComponent(o.email)}`,
-      laneId: null,
-    });
-  } else if (owed.length > 1) {
-    out.push({ text: `${owed.length} people have sessions to book`, href: 'people?show=owed', laneId: null });
-  }
-  return out;
 }

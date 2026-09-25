@@ -13,7 +13,6 @@ import {
   asksQuestions,
   buildFlow,
   laneState,
-  needsYou,
   readout,
   serviceSteps,
   stepForPart,
@@ -38,8 +37,6 @@ interface NextUp {
 interface Payload extends FlowInput {
   timezone: string;
   nextUp: NextUp[];
-  /** People with sessions paid for and not booked. */
-  owed?: Array<{ name: string; email: string; sessions: number }>;
 }
 
 
@@ -286,20 +283,6 @@ export default function FlowPage() {
         }
       />
 
-      {/* What needs you, from every service and from People, in one line —
-          so "is anything wrong?" is answered here without visiting each
-          screen. Nothing is shown when nothing needs doing. */}
-      {model && !trying && (
-        <NeedsYou
-          needs={needsYou(model, slug, data?.owed ?? [])}
-          href={a}
-          onOpen={(id) => {
-            setLaneId(id);
-            setOpenStep(null);
-          }}
-        />
-      )}
-
       {error && (
         <div className="notice notice-error" role="alert">
           {error}
@@ -336,10 +319,23 @@ export default function FlowPage() {
                             <b>{l.name}</b>
                             <small>{l.words}</small>
                           </span>
-                          {state.live && (
+                          {(state.live || l.owedSessions > 0) && (
                             <span className="fc-row-figs">
-                              {l.bookedPeople} booked
-                              {l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}
+                              {state.live && (
+                                <>
+                                  {l.bookedPeople} booked
+                                  {l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}
+                                </>
+                              )}
+                              {/* Quiet, in place — not a page-level banner: a
+                                  session someone still owes said where the
+                                  service itself already reads out its numbers. */}
+                              {l.owedSessions > 0 && (
+                                <span className="fc-row-owed">
+                                  {state.live ? ' · ' : ''}
+                                  {l.owedSessions === 1 ? '1 to book' : `${l.owedSessions} to book`}
+                                </span>
+                              )}
                             </span>
                           )}
                           <span className={`fc-state${state.live ? '' : ' is-off'}`}>
@@ -377,36 +373,6 @@ export default function FlowPage() {
         </div>
       )}
     </>
-  );
-}
-
-/* ── What needs you ─────────────────────────────────────────────────────── */
-
-function NeedsYou({
-  needs,
-  href,
-  onOpen,
-}: {
-  needs: ReturnType<typeof needsYou>;
-  href: (path: string) => string;
-  onOpen: (laneId: string) => void;
-}) {
-  if (needs.length === 0) return null;
-  return (
-    <ul className="fc-needs" aria-label="Needs you">
-      {needs.map((n) => (
-        <li key={n.text}>
-          <Lamp tone="need" />
-          {n.href ? (
-            <a href={href(n.href)}>{n.text}</a>
-          ) : (
-            <button type="button" className="btn-link" onClick={() => n.laneId && onOpen(n.laneId)}>
-              {n.text}
-            </button>
-          )}
-        </li>
-      ))}
-    </ul>
   );
 }
 

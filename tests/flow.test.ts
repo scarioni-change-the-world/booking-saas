@@ -3,7 +3,6 @@ import {
   asksQuestions,
   buildFlow,
   laneState,
-  needsYou,
   readout,
   serviceSteps,
   stepForPart,
@@ -49,6 +48,7 @@ function input(over: Partial<FlowInput>): FlowInput {
     syncFailures: 0,
     emailFailures: 0,
     clientCount: 12,
+    owed: [],
     ...over,
   };
 }
@@ -296,48 +296,44 @@ describe('stepForPart', () => {
   });
 });
 
-describe('needsYou', () => {
-  it('is empty when nothing needs doing', () => {
-    const model = buildFlow(input({}));
-    expect(needsYou(model, 'ruiz', [])).toEqual([]);
-  });
-
-  it('names a service nobody can book, and opens it on Flow', () => {
-    const model = buildFlow(
-      input({ services: [service({}), service({ id: 's2', name: 'CV review', availableToProspects: false })] }),
-    );
-    expect(needsYou(model, 'ruiz', [])).toEqual([{ text: 'CV review can’t be booked yet', href: null, laneId: 's2' }]);
-  });
-
-  it('says a shared warning once, with where it is fixed', () => {
+describe('sessions owed', () => {
+  it('reaches a lane only through its own eventTypeId, and totals them', () => {
     const model = buildFlow(
       input({
-        hasOtherPathMessage: false,
-        hasOtherPathUrl: false,
-        services: [service({ ownQuestionCount: 1 }), service({ id: 's2', name: 'Workshop', ownQuestionCount: 1 })],
+        services: [service({}), service({ id: 's2', name: 'Workshop' })],
+        owed: [
+          { eventTypeId: 's1', name: 'Lucía', email: 'lucia@x.com', sessions: 1 },
+          { eventTypeId: 's1', name: 'Bo', email: 'bo@x.com', sessions: 2 },
+          { eventTypeId: 's2', name: 'Ana', email: 'ana@x.com', sessions: 1 },
+          { eventTypeId: null, name: 'Gone', email: 'gone@x.com', sessions: 1 },
+        ],
       }),
     );
-    const needs = needsYou(model, 'ruiz', []);
-    expect(needs.filter((n) => n.text === 'Next step not written')).toEqual([
-      { text: 'Next step not written', href: 'messages?m=next_steps', laneId: null },
+    const [lane1, lane2] = model.lanes;
+    expect(lane1!.owedSessions).toBe(3);
+    expect(lane1!.owed).toEqual([
+      { name: 'Lucía', email: 'lucia@x.com', sessions: 1 },
+      { name: 'Bo', email: 'bo@x.com', sessions: 2 },
     ]);
+    expect(lane2!.owedSessions).toBe(1);
   });
 
-  it('says a week with no hours once, not once per service', () => {
-    const model = buildFlow(input({ availabilityRuleCount: 0, services: [service({}), service({ id: 's2', name: 'Workshop' })] }));
-    expect(needsYou(model, 'ruiz', []).map((n) => n.text)).toEqual(['No hours set, so nothing can be booked']);
+  it('names who is still owed on the Booked step, once its service is opened', () => {
+    const model = buildFlow(input({ owed: [{ eventTypeId: 's1', name: 'Lucía', email: 'lucia@x.com', sessions: 1 }] }));
+    const booked = serviceSteps(model, model.lanes[0]!, 'ruiz').find((s) => s.id === 'booked')!;
+    expect(booked.flag).toBe('1 session still to book');
+    expect(booked.notes).toContainEqual({
+      tone: 'need',
+      text: 'Lucía has 1 session paid for and not booked yet.',
+      action: { label: 'See in People', href: 'people?person=lucia%40x.com' },
+    });
   });
 
-  it('points to the person owed sessions, or to everyone owed', () => {
-    const model = buildFlow(input({}));
-    expect(needsYou(model, 'ruiz', [{ name: 'Lucía', email: 'lucia@x.com', sessions: 1 }])).toEqual([
-      { text: 'Lucía has 1 session to book', href: 'people?person=lucia%40x.com', laneId: null },
-    ]);
-    expect(
-      needsYou(model, 'ruiz', [
-        { name: 'Lucía', email: 'lucia@x.com', sessions: 1 },
-        { name: '', email: 'bo@x.com', sessions: 3 },
-      ]).map((n) => n.text),
-    ).toEqual(['2 people have sessions to book']);
+  it('joins the Booked step’s flag with a failed email’s, when both are true', () => {
+    const model = buildFlow(
+      input({ emailFailures: 1, owed: [{ eventTypeId: 's1', name: 'Lucía', email: 'lucia@x.com', sessions: 1 }] }),
+    );
+    const booked = serviceSteps(model, model.lanes[0]!, 'ruiz').find((s) => s.id === 'booked')!;
+    expect(booked.flag).toBe('1 email did not arrive · 1 session still to book');
   });
 });
