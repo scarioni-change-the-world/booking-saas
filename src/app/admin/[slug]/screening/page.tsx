@@ -102,11 +102,12 @@ function QuestionForm({
 
       <div className="field">
         <label htmlFor={`${idPrefix}-kind`}>Type of answer</label>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {(Object.keys(KIND_LABEL) as Kind[]).map((kind) => (
             <button
               key={kind}
               type="button"
+              style={{ whiteSpace: 'nowrap' }}
               className={form.kind === kind ? 'btn-primary' : 'btn-secondary'}
               onClick={() => setForm({ ...form, kind })}
             >

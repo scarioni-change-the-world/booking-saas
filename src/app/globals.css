@@ -7898,3 +7898,23 @@ body:has(.bk-embedded) {
 .admin-app .filter-chip.active .pp-chip-count {
   color: var(--accent);
 }
+/* Messages and the replay beside a question: plates and set-in panels,
+   like every other screen, rather than outlined boxes. */
+.admin-app .ms-journey-wrap,
+.admin-app .ms-edit,
+.admin-app .ms-side {
+  border: 0;
+  border-radius: var(--radius-plate);
+  background: var(--surface);
+  box-shadow: var(--plate-shadow);
+}
+.admin-app .ms-edit,
+.admin-app .ms-side {
+  padding: 22px 24px 24px;
+}
+.admin-app .ms-mail,
+.admin-app .rp {
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
