@@ -137,7 +137,7 @@ export function BookingList({ slug }: { slug: string }) {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 11, flexWrap: 'wrap' }}>
                   <span className="data-row-title">{b.name}</span>
                   <span className="data-row-meta svc-line">
-                    <ServiceBadge name={b.eventTypeName} color={b.eventTypeColor} size="sm" />
+                    <ServiceBadge name={b.eventTypeName} size="sm" />
                     {b.eventTypeName}
                   </span>
                   {/* This appointment is part of a programme. Said on the row

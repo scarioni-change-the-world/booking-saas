@@ -382,9 +382,9 @@ export default function WeekPage() {
               {/* Each service in its own colour, so a week of bookings says
                   what each one is before any of them is opened. Only the
                   services with something booked this week. */}
-              {[...new Map(bookings.map((b) => [b.eventTypeName, b.eventTypeColor])).entries()].map(([name, color]) => (
+              {[...new Set(bookings.map((b) => b.eventTypeName))].map((name) => (
                 <span key={name} className="wk-lg-service">
-                  <ServiceBadge name={name} color={color} size="sm" />
+                  <ServiceBadge name={name} size="sm" />
                   {name}
                 </span>
               ))}
@@ -684,7 +684,7 @@ function WeekGrid({
                     className={`wk-booking${b.pack ? ' is-programme' : ''}${selected ? ' is-selected' : ''}${
                       trouble ? ' has-trouble' : ''
                     }${painting ? ' is-ghost' : ''}`}
-                    style={{ top, height: h, ['--svc' as string]: b.eventTypeColor }}
+                    style={{ top, height: h }}
                     disabled={painting}
                     onClick={() => onSelect({ kind: 'booking', id: b.id })}
                     aria-label={`${b.name}, ${b.eventTypeName}, ${minutesToTimeLabel(p.startMinutes)}`}
@@ -877,7 +877,7 @@ function BookingPanel({
       </div>
       <p className="wk-side-lead">
         <span className="svc-line">
-          <ServiceBadge name={b.eventTypeName} color={b.eventTypeColor} size="sm" />
+          <ServiceBadge name={b.eventTypeName} size="sm" />
           <span>
             {b.eventTypeName} · {formatRange(b.startsAt, b.endsAt)}
           </span>

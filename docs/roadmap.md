@@ -113,6 +113,16 @@ Six rules every screen follows:
    hours against its open ones, a slide scale for notice. A service's flow
    now opens directly under its row, and its four steps are one ruled
    panel. The client's booking page is unchanged.
+   **Two colours** — done. Only Ochre and Mineral highlight anything in
+   the admin. Ochre: this needs you (a service nobody can book, a session
+   owed, a failure, a step not written). Mineral: this is where you are
+   (the place in the bar, the service opened, the step or booking chosen,
+   today and now on the Week, the step a test run has reached). The rest
+   is Ink, the greys and Chalk: the main action is an Ink key, "on" is an
+   Ink light, and People's routes are told by shape. Services no longer
+   carry a colour here — they are told by their two letters, always beside
+   their name — so the colour picker left a service's settings (the column
+   stays, unused).
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

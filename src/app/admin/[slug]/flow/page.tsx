@@ -159,7 +159,6 @@ export default function FlowPage() {
       <section
         id="fc-flow"
         className="fc-card fc-flow"
-        style={{ ['--svc' as string]: lane.color }}
         aria-labelledby="fc-flow-title"
       >
         <div className="fc-card-head">
@@ -228,8 +227,8 @@ export default function FlowPage() {
                     </span>
                   )}
                   {trying && walked.current === st.id && (
-                    <span className="fc-flag">
-                      <Lamp tone="need" />
+                    <span className="fc-flag is-here">
+                      <Lamp tone="here" />
                       {walked.elsewhere && st.id === 'questions' ? 'Sent elsewhere' : 'The test is here'}
                     </span>
                   )}
@@ -313,11 +312,10 @@ export default function FlowPage() {
                           className={`fc-row${isOpen ? ' is-open' : ''}`}
                           aria-expanded={isOpen}
                           aria-controls="fc-flow"
-                          style={{ ['--svc' as string]: l.color }}
                           onClick={() => chooseLane(l.id)}
                           disabled={trying && !isOpen}
                         >
-                          <ServiceBadge name={l.name} color={l.color} off={!state.live} />
+                          <ServiceBadge name={l.name} off={!state.live} />
                           <span className="fc-row-name">
                             <b>{l.name}</b>
                             <small>{l.words}</small>

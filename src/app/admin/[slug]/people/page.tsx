@@ -323,7 +323,7 @@ function PersonRow({
 function Step({ step }: { step: TraceStep }) {
   return (
     <li className={`pp-step tone-${step.tone}`}>
-      <i aria-hidden="true" style={step.color ? { background: step.color, borderColor: step.color } : undefined} />
+      <i aria-hidden="true" />
       <span>
         {step.label}
         {step.detail && <small>{step.detail}</small>}
@@ -482,6 +482,10 @@ function PersonPanel({
 
   const hadBooking = person.events.some((e) => e.kind === 'booked');
   const history = [...person.events].reverse();
+  const owedLeft = (client?.entitlements ?? []).reduce(
+    (sum, e) => sum + Math.max(0, e.totalSessions - e.usedSessions),
+    0,
+  );
 
   return (
     <div>
@@ -510,6 +514,21 @@ function PersonPanel({
           <Step key={i} step={s} />
         ))}
       </ol>
+
+      {/* What they are still owed is the one thing here that needs you:
+          said first, in Ochre, with the way to act on it. */}
+      {client && owedLeft > 0 && (
+        <p className="wk-warning">
+          <span>
+            {owedLeft === 1 ? '1 session' : `${owedLeft} sessions`} paid for and not booked yet.{' '}
+            {person.email && (
+              <button type="button" className="btn-link" disabled={busy === 'send'} onClick={() => void sendLink()}>
+                {busy === 'send' ? 'Sending…' : 'Send their link'}
+              </button>
+            )}
+          </span>
+        </p>
+      )}
 
       {error && (
         <p className="notice notice-error" role="alert">
@@ -715,10 +734,7 @@ function HistoryItem({ event, slug, timezone }: { event: PersonEvent; slug: stri
     return (
       <div className="pp-hist">
         <span className={`pp-step tone-${b.status === 'cancelled' ? 'cancelled' : 'booked'}`}>
-          <i
-            aria-hidden="true"
-            style={b.status === 'cancelled' || !b.eventTypeColor ? undefined : { background: b.eventTypeColor, borderColor: b.eventTypeColor }}
-          />
+          <i aria-hidden="true" />
         </span>
         <div>
           <b>

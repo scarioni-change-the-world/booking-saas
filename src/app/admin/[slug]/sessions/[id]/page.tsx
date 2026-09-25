@@ -11,7 +11,7 @@ import {
   toMoneyInput,
 } from '@/lib/money';
 import { LOCATION_OPTIONS } from '@/lib/service-location';
-import { SERVICE_PALETTE, serviceColour } from '@/lib/service-identity';
+import { monogram } from '@/lib/service-identity';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
@@ -156,7 +156,7 @@ export default function ServicePage() {
         }
       />
 
-      <ServiceIdentity service={service} others={payload.services} onSave={patch} />
+      <ServiceIdentity service={service} />
 
       {/* The sentence this whole page exists for. A service created from the
           Services list is offered to nobody, does not appear on the booking
@@ -598,72 +598,17 @@ function ReviewStageForm({
 }
 
 /**
- * How this service is recognised on Flow, the Week and in People: its mark
- * and a choice of six colours. Saved on the click, because the change is
- * the preview — the mark beside the swatches is already the new one.
- *
- * A colour another active service is using is still offered, only marked
- * as taken: two services may share one on purpose, and the business decides.
+ * How this service is recognised on Flow, the Week and in People: its two
+ * letters. There is no colour to choose any more — in the admin, colour is
+ * kept for what needs you and where you are — so this only shows the mark.
  */
-function ServiceIdentity({
-  service,
-  others,
-  onSave,
-}: {
-  service: SerializedEventType;
-  others: SerializedEventType[];
-  onSave: (body: Record<string, unknown>) => Promise<void>;
-}) {
-  const [saving, setSaving] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const current = serviceColour(service.color);
-  const takenBy = new Map(
-    others.filter((o) => o.id !== service.id && o.active).map((o) => [serviceColour(o.color), o.name]),
-  );
-
-  async function choose(hex: string) {
-    if (hex === current) return;
-    setSaving(hex);
-    setError(null);
-    try {
-      await onSave({ color: hex });
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSaving(null);
-    }
-  }
-
+function ServiceIdentity({ service }: { service: SerializedEventType }) {
   return (
     <div className="svc-identity">
-      <ServiceBadge name={service.name} color={saving ?? current} size="lg" />
-      <div>
-        <p className="svc-identity-label">How you&rsquo;ll spot it on your Flow, Week and People</p>
-        <div className="svc-swatches" role="radiogroup" aria-label="Colour">
-          {SERVICE_PALETTE.map((c) => {
-            const taken = takenBy.get(c.hex);
-            return (
-              <button
-                key={c.hex}
-                type="button"
-                role="radio"
-                aria-checked={(saving ?? current) === c.hex}
-                aria-label={taken ? `${c.label}, also used by ${taken}` : c.label}
-                title={taken ? `${c.label} · also ${taken}` : c.label}
-                className={`svc-swatch${taken ? ' is-taken' : ''}`}
-                style={{ background: c.hex }}
-                disabled={saving !== null}
-                onClick={() => void choose(c.hex)}
-              />
-            );
-          })}
-        </div>
-        {error && (
-          <p className="notice notice-error" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
+      <ServiceBadge name={service.name} size="lg" />
+      <p className="svc-identity-label" style={{ margin: 0 }}>
+        Shown as <b>{monogram(service.name)}</b> on your Flow, Week and People, always beside its name.
+      </p>
     </div>
   );
 }

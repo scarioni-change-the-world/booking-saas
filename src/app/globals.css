@@ -6714,6 +6714,28 @@ body:has(.bk-embedded) {
  * Scoped to .admin-app. The booking page a client sees keeps its own look.
  */
 .admin-app {
+  /* Two colours highlight, and nothing else does. Ochre: this needs you —
+     something to fix, something owed, something that failed. Mineral:
+     this is where you are — the place you are on, the service you opened,
+     the thing you chose, now. Everything else is Ink, the greys and Chalk,
+     so the status tokens are folded onto those here: "confirmed" and
+     "connected" read as Ink, and a warning or a failure reads as Ochre,
+     said in words. The client's booking page keeps its own palette. */
+  --stone: #ebe8e1;
+  --stone-border: #bfbdb5;
+  --status-live: var(--ink);
+  --status-live-tint: var(--stone);
+  --status-live-ink: var(--ink);
+  --status-attention: var(--emphasis);
+  --status-attention-tint: var(--emphasis-tint);
+  --status-attention-ink: var(--emphasis-ink);
+  --status-broken: var(--emphasis);
+  --status-broken-tint: var(--emphasis-tint);
+  --status-broken-ink: var(--emphasis-ink);
+  --status-info: var(--accent);
+  --status-info-tint: var(--accent-tint);
+  --status-info-ink: var(--accent-ink);
+  --danger: var(--emphasis-ink);
   --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 30px -24px rgba(32, 34, 33, 0.45);
   --plate-shadow-lg: 0 1px 0 #fff inset, 0 30px 40px -28px rgba(32, 34, 33, 0.45);
   --key-shadow: 0 1px 0 #fff inset, 0 6px 10px -8px rgba(32, 34, 33, 0.45);
@@ -6846,19 +6868,26 @@ body:has(.bk-embedded) {
   border-radius: 999px;
 }
 .admin-app .btn-primary {
+  background: var(--ink);
+  border-color: var(--ink);
   box-shadow: 0 10px 18px -12px rgba(32, 34, 33, 0.6);
+}
+.admin-app .btn-primary:hover:not(:disabled) {
+  background: var(--muted);
+  border-color: var(--muted);
 }
 .admin-app .btn-primary:disabled {
   box-shadow: none;
 }
 .admin-app .btn-secondary {
   border-width: 1.5px;
-  border-color: var(--accent);
+  border-color: var(--stone-border);
   background: transparent;
   color: var(--ink);
 }
 .admin-app .btn-secondary:hover:not(:disabled) {
-  background: var(--selected-mineral);
+  border-color: var(--ink);
+  background: transparent;
 }
 .admin-app .btn-secondary:disabled {
   border-color: var(--soft-border);
@@ -6893,11 +6922,11 @@ body:has(.bk-embedded) {
   font-weight: 500;
 }
 .admin-app .filter-chip:hover:not(:disabled) {
-  background: var(--selected-mineral);
+  background: var(--stone);
 }
 .admin-app .filter-chip.active,
 .admin-app .filter-chip[aria-pressed='true'] {
-  background: var(--accent);
+  background: var(--ink);
   color: var(--accent-contrast);
   font-weight: 600;
 }
@@ -6960,8 +6989,8 @@ body:has(.bk-embedded) {
   --svc: var(--accent);
   border-radius: 50%;
   background: var(--surface);
-  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.18);
-  color: var(--svc);
+  box-shadow: 0 2px 4px rgba(32, 34, 33, 0.18), inset 0 0 0 1px var(--rule);
+  color: var(--ink);
 }
 .svc-badge-ring {
   display: flex;
@@ -6969,7 +6998,7 @@ body:has(.bk-embedded) {
   justify-content: center;
   width: 74%;
   height: 74%;
-  border: 2px solid var(--svc);
+  border: 1.5px solid var(--muted);
   border-radius: 50%;
 }
 .svc-badge.is-off .svc-badge-ring {
@@ -7005,12 +7034,11 @@ body:has(.bk-embedded) {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--status-live);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-live) 18%, transparent);
+  background: var(--ink);
 }
 .lamp.is-need {
   background: var(--emphasis);
-  box-shadow: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--emphasis) 22%, transparent);
 }
 .lamp.is-off {
   background: transparent;
@@ -7035,7 +7063,7 @@ body:has(.bk-embedded) {
   stroke: var(--soft-border);
 }
 .dial-fill {
-  stroke: var(--accent);
+  stroke: var(--ink);
 }
 .dial-ticks {
   stroke: var(--ghost);
@@ -7069,7 +7097,7 @@ body:has(.bk-embedded) {
   stroke-linecap: round;
 }
 .gauge-hub {
-  fill: var(--accent);
+  fill: var(--ink);
 }
 .gauge-end {
   font-family: var(--font-body);
@@ -7090,7 +7118,7 @@ body:has(.bk-embedded) {
   box-shadow: inset 0 1px 1px rgba(32, 34, 33, 0.18);
 }
 .grille i.is-on {
-  background: var(--status-live);
+  background: var(--ink);
   box-shadow: none;
 }
 .scale {
@@ -7142,14 +7170,15 @@ body:has(.bk-embedded) {
   gap: 20px;
   padding: 18px 22px;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--svc) 12%, var(--canvas));
+  background: var(--surface);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
 }
 .admin-app .fc-row:hover {
-  background: color-mix(in srgb, var(--svc) 16%, var(--canvas));
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 22px 30px -22px rgba(32, 34, 33, 0.45);
 }
 .admin-app .fc-row.is-open {
-  background: color-mix(in srgb, var(--svc) 18%, var(--surface));
+  background: var(--surface);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 22px 30px -22px rgba(32, 34, 33, 0.45);
 }
 .admin-app .fc-row-name {
@@ -7189,7 +7218,7 @@ body:has(.bk-embedded) {
   min-width: 0;
   width: 40px;
   height: 40px;
-  border: 1.5px solid var(--accent);
+  border: 1.5px solid var(--ghost);
   border-radius: 50%;
   font-size: 0.8rem;
   text-align: center;
@@ -7246,7 +7275,7 @@ body:has(.bk-embedded) {
   box-shadow: none;
 }
 .admin-app .fc-step.is-open {
-  background: color-mix(in srgb, var(--svc) 9%, var(--surface));
+  background: var(--selected-mineral);
   box-shadow: none;
 }
 .admin-app .fc-step:focus-visible {
@@ -7452,7 +7481,20 @@ body:has(.bk-embedded) {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--emphasis);
+  background: var(--accent);
+}
+.admin-app .wk-now {
+  background: var(--accent);
+}
+.admin-app .wk-now::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .admin-app .wk-dayhead.is-selected {
   box-shadow: none;
@@ -7482,28 +7524,27 @@ body:has(.bk-embedded) {
 }
 /* A booking is a key in its service's pale colour, its name in Ink. */
 .admin-app .wk-booking {
-  --svc: var(--accent);
   padding: 4px 10px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--svc) 20%, var(--surface));
+  background: var(--stone);
   color: var(--ink);
   box-shadow: 0 6px 10px -8px rgba(32, 34, 33, 0.5);
 }
 .admin-app .wk-booking:hover {
   filter: none;
-  background: color-mix(in srgb, var(--svc) 28%, var(--surface));
+  background: #e2ded5;
 }
 .admin-app .wk-booking.is-programme {
   box-shadow: 0 6px 10px -8px rgba(32, 34, 33, 0.5);
 }
 .admin-app .wk-booking.is-selected {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 .admin-app .wk-b-mark {
   background: none;
   padding: 0;
-  color: var(--svc);
+  color: var(--faint);
 }
 .admin-app .wk-b-meta {
   opacity: 1;
@@ -7721,4 +7762,101 @@ body:has(.bk-embedded) {
   .gauge {
     max-width: 220px;
   }
+}
+
+/* People: a route told by shape, in Ink — filled is booked, a ring is
+   answered, half-filled was sent elsewhere, dashed is not booked yet, a
+   pale ring stopped. Its tags are Stone. Ochre is kept for what is owed,
+   said beside the list. */
+.admin-app .pp-step i {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+.admin-app .pp-step.tone-answered i,
+.admin-app .pp-step.tone-added i {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+.admin-app .pp-step.tone-booked i {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.admin-app .pp-step.tone-elsewhere i {
+  border-color: var(--ink);
+  background: linear-gradient(90deg, var(--ink) 50%, var(--surface) 50%);
+}
+.admin-app .pp-step.tone-owed i {
+  border-style: dashed;
+  border-color: var(--ink);
+  background: var(--surface);
+}
+.admin-app .pp-step.tone-stopped i,
+.admin-app .pp-step.tone-cancelled i,
+.admin-app .pp-step.tone-more i {
+  border-color: var(--strong-border);
+  background: var(--surface);
+}
+.admin-app .pp-mark.back,
+.admin-app .pp-mark.owes,
+.admin-app .pp-mark.again {
+  background: var(--stone);
+  color: var(--muted);
+}
+.admin-app .wk-lg-open {
+  border-color: var(--stone-border);
+}
+.admin-app .shell-back span {
+  color: var(--ink);
+}
+/* The act that cannot be undone: dark Ochre, the colour of "look first". */
+.admin-app .btn-danger {
+  background: var(--emphasis-ink);
+  border-color: var(--emphasis-ink);
+}
+/* A test run: the step it has reached is where you are, in Mineral. */
+.lamp.is-here {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.admin-app .fc-flag.is-here {
+  color: var(--accent-ink);
+}
+.admin-app .fc-step.is-here {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.admin-app .fl-try-dot {
+  background: var(--accent);
+}
+.admin-app .fl-try-head {
+  background: var(--stone);
+  color: var(--ink);
+}
+/* Ochre only where something needs you. Numbering, a route taken, a day
+   with its own hours and a second attempt are information, said in Ink
+   and Stone. */
+.admin-app .question-num,
+.admin-app .service-row-num {
+  color: var(--ink);
+}
+.admin-app .logic-card.other .logic-card-bar {
+  background: var(--ink);
+}
+.admin-app .logic-card.other .logic-chip,
+.admin-app .response-status-pill.other,
+.admin-app .reconsidered-mark,
+.admin-app .wk-exception {
+  background: var(--stone);
+  color: var(--muted);
+}
+.admin-app .ms-moment.tone-elsewhere .ms-pin {
+  border-color: var(--ink);
+  background: linear-gradient(90deg, var(--ink) 50%, var(--surface) 50%);
+}
+.admin-app .ms-chip {
+  background: var(--stone);
+  color: var(--muted);
+}
+.admin-app .wk-warning .btn-link {
+  color: inherit;
+  font-weight: 600;
 }

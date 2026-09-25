@@ -14,9 +14,12 @@ function onArc(fraction: number, radius: number, cx = 60, cy = 60) {
   };
 }
 
-export type LampTone = 'live' | 'need' | 'off';
+export type LampTone = 'live' | 'need' | 'here' | 'off';
 
-/** A small indicator light: on (teal), needs doing (ochre), or off (a ring). */
+/**
+ * A small indicator light: on (Ink), needs you (Ochre), you are here
+ * (Mineral), or off (a ring).
+ */
 export function Lamp({ tone = 'live' }: { tone?: LampTone }) {
   return <span className={`lamp is-${tone}`} aria-hidden="true" />;
 }
