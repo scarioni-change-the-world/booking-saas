@@ -146,6 +146,17 @@ Six rules every screen follows:
    the main key is told apart by a heavier edge, and a person's panel
    offers one Send link, with Copy as a link; titles are 32px with one
    line of description; and on a phone the Week opens on its list.
+   **Messages' two addresses default to the sign-up address** — done
+   (migration 0030). New-booking alerts and clients' replies used to start
+   off, silently, until someone visited Messages and typed their own
+   address in — a business's first booking could go unnoticed. Every
+   business now gets both set to the address it signed up with the moment
+   it is created (`createTenant`); migration 0030 backfills one that
+   already existed, from its earliest owner. The summary on Messages still
+   only ever says what is genuinely saved — honest, even after this — but
+   opening "Change" on a still-blank field now opens pre-filled with the
+   address the caller is signed in as, a suggestion to keep, change or
+   clear, not something claimed as already on.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

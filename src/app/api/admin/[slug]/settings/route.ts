@@ -11,15 +11,19 @@ import type { TenantSettingsRow } from '@/lib/db/types';
 export async function GET(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await ctx.params;
-    const { scope } = await requireTenantAdmin(request, slug);
+    const { scope, userEmail } = await requireTenantAdmin(request, slug);
 
     const { data, error } = await scope.select('tenant_settings').maybeSingle();
     if (error) throw error;
 
     const row = data as unknown as TenantSettingsRow | null;
-    if (!row) return ok({ settings: null });
+    /* The address the caller is signed in as — EmailAddresses offers it as
+       the value for "send alerts to" and "replies go to" whenever the
+       tenant hasn't set its own, so nobody has to retype the address they
+       signed up and are signed in with. */
+    if (!row) return ok({ settings: null, signedInEmail: userEmail });
 
-    return ok({ settings: serializeSettings(row) });
+    return ok({ settings: serializeSettings(row), signedInEmail: userEmail });
   } catch (error) {
     return handleError(error);
   }

@@ -32,6 +32,10 @@ export class AuthError extends Error {
 
 export interface AuthenticatedTenant extends ResolvedTenant {
   userId: string;
+  /** The address the caller is signed in as — already on the token, so
+   * free for anything that wants to default a field to "the address you
+   * signed up with" instead of asking for it again. */
+  userEmail: string | null;
   role: MemberRole;
 }
 
@@ -81,7 +85,7 @@ async function requireTenantMembership(
   // who they say they are.
   if (tenantIsGated(resolved.tenant)) throw new AuthError(TRIAL_ENDED_MESSAGE, 402);
 
-  return { ...resolved, userId: data.user.id, role };
+  return { ...resolved, userId: data.user.id, userEmail: data.user.email ?? null, role };
 }
 
 /**

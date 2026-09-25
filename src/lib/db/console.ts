@@ -86,7 +86,10 @@ export interface CreateTenantInput {
  *
  * tenant_settings and outcome_paths need no insert here — migration 0009's
  * and migration 0011's triggers create them the moment the tenants row
- * exists, so there is no window where a tenant exists without either.
+ * exists, so there is no window where a tenant exists without either. Their
+ * two email fields do get a second write, below: the trigger can only set
+ * them to null, and the owner's own address is not known until they are
+ * resolved a few lines later — see the note there.
  *
  * The owner is resolved through findOrInviteUser: an address that already has
  * a login is attached to the new business, and one that doesn't is invited
@@ -124,7 +127,7 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
   }
   const tenant = tenantData as TenantRow;
 
-  let owner: { userId: string };
+  let owner: { userId: string; email: string | null };
   try {
     owner = await findOrInviteUser(input.ownerEmail);
   } catch (cause) {
@@ -144,6 +147,28 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
   if (memberError) {
     await client.from('tenants').delete().eq('id', tenant.id);
     throw memberError;
+  }
+
+  /*
+   * The address a business is created with is the one thing every business
+   * that will ever use it can already be assumed to know how to type once:
+   * their own. Defaulting new-booking alerts and reply-to to it here means
+   * a business's very first visit to Messages already shows something
+   * working, not two blank fields presented as if they were a choice to be
+   * made before anything can be sent.
+   *
+   * Not fatal: the tenant and its owner exist and can already sign in, and
+   * both fields are just as reachable from Messages afterwards — so a
+   * failure here is logged and swallowed rather than unwinding a business
+   * that otherwise creates fine.
+   */
+  const ownerEmail = owner.email ?? input.ownerEmail;
+  const { error: defaultsError } = await client
+    .from('tenant_settings')
+    .update({ notification_email: ownerEmail, reply_to_email: ownerEmail })
+    .eq('tenant_id', tenant.id);
+  if (defaultsError) {
+    console.error('[console] could not default tenant_settings email addresses:', defaultsError);
   }
 
   return tenant;

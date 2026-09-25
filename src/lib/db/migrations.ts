@@ -54,6 +54,7 @@ export const EXPECTED_MIGRATIONS = [
   '0027_email_log',
   '0028_service_colours',
   '0029_service_deletion',
+  '0030_default_email_addresses',
 ] as const;
 
 /**

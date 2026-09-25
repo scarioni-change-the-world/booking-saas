@@ -12,21 +12,38 @@ interface Addresses {
  * Where the business hears about bookings, and where clients' replies go —
  * on Messages, beside the emails they apply to. Blank means "don't": no
  * alert, or replies to the address the mail was sent from.
+ *
+ * A business that has never set either keeps them off until it does — the
+ * summary below only ever says what is actually saved, never more. But
+ * opening "Change" should not hand back two empty boxes for something the
+ * system already knows: every business gets both set to the address it
+ * signed up with the moment it is created (src/lib/db/console.ts,
+ * backfilled for ones that already existed by migration 0030), so a blank
+ * field here is normally the exception, not the start. When one is still
+ * blank — the business cleared it on purpose, or the migration could not
+ * resolve an owner — it opens pre-filled with the address the caller is
+ * signed in as: a suggestion to keep, change, or clear, never claimed as
+ * already on until it is actually saved.
  */
 export function EmailAddresses({ slug, onSaved }: { slug: string; onSaved?: (a: Addresses) => void }) {
   const url = `/api/admin/${slug}/settings`;
   const [saved, setSaved] = useState<Addresses | null>(null);
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [form, setForm] = useState({ notificationEmail: '', replyToEmail: '' });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    adminFetchJson<{ settings: Addresses | null }>(url)
+    adminFetchJson<{ settings: Addresses | null; signedInEmail: string | null }>(url)
       .then((r) => {
+        setSignedInEmail(r.signedInEmail);
         if (!r.settings) return;
         setSaved(r.settings);
-        setForm({ notificationEmail: r.settings.notificationEmail ?? '', replyToEmail: r.settings.replyToEmail ?? '' });
+        setForm({
+          notificationEmail: r.settings.notificationEmail ?? r.signedInEmail ?? '',
+          replyToEmail: r.settings.replyToEmail ?? r.signedInEmail ?? '',
+        });
       })
       .catch((cause) => setError((cause as Error).message));
   }, [url]);
@@ -68,6 +85,13 @@ export function EmailAddresses({ slug, onSaved }: { slug: string; onSaved?: (a: 
     );
   }
 
+  // Whether the box on screen is still just the suggestion (nothing saved
+  // of the tenant's own yet) — the hint under it disappears the moment
+  // somebody changes or clears it, so it never claims a value is already
+  // saved when it isn't, and never nags once they've made a real choice.
+  const suggestedNotify = !saved.notificationEmail && !!signedInEmail && form.notificationEmail === signedInEmail;
+  const suggestedReply = !saved.replyToEmail && !!signedInEmail && form.replyToEmail === signedInEmail;
+
   return (
     <form className="ms-addresses-form" onSubmit={save}>
       {error && (
@@ -85,6 +109,9 @@ export function EmailAddresses({ slug, onSaved }: { slug: string; onSaved?: (a: 
             value={form.notificationEmail}
             onChange={(e) => setForm({ ...form, notificationEmail: e.target.value })}
           />
+          {suggestedNotify && (
+            <p className="field-note">Your own sign-in address — change it, or clear it to turn alerts off.</p>
+          )}
         </div>
         <div className="field">
           <label htmlFor="addr-reply">Clients’ replies go to</label>
@@ -95,6 +122,9 @@ export function EmailAddresses({ slug, onSaved }: { slug: string; onSaved?: (a: 
             value={form.replyToEmail}
             onChange={(e) => setForm({ ...form, replyToEmail: e.target.value })}
           />
+          {suggestedReply && (
+            <p className="field-note">Your own sign-in address — change it, or clear it to use the sending address.</p>
+          )}
         </div>
       </div>
       <div className="wk-actions" style={{ marginTop: 0 }}>
