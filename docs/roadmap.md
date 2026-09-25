@@ -132,6 +132,20 @@ Six rules every screen follows:
    emails are written — is a fourth place in the bar; reached only through
    Flow, it could not be found. The small section name above each page
    title is gone: the bar already says where you are.
+   **Design review (Design Integrity)** — done. Ten fixes from a review
+   against honesty, transparency, respect and essentiality: a line under
+   Services' title gathers everything that needs you (services nobody can
+   book, warnings every service shares said once, sessions still to book)
+   so nobody visits four screens to find out; the bar says "Services", as
+   the page does; one term, "could book", for the step-3 number; the
+   lightest grey no longer carries text (it was 2.8:1); a chosen row, step
+   or day has a thin Mineral edge, not just a 1.1:1 tint, and bookings a
+   hairline; the notice scale is the real control, saved on choosing a
+   stop, rather than a slider that could not slide; the Week's needle
+   gauge, which repeated its own number, is the thin bar the replay uses;
+   the main key is told apart by a heavier edge, and a person's panel
+   offers one Send link, with Copy as a link; titles are 32px with one
+   line of description; and on a phone the Week opens on its list.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

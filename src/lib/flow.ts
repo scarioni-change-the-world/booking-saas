@@ -510,7 +510,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         title: pickTitle,
         detail: `From your usual hours, ${hoursWords(model.calendar.weeklyMinutes)} a week`,
         state: 'set',
-        figure: counted ? { value: String(lane.qualified), label: 'could choose' } : null,
+        figure: counted ? { value: String(lane.qualified), label: 'could book' } : null,
         change: { label: 'Change', href: 'week' },
         notes: model.calendar.flag
           ? [{ tone: 'need', text: `${model.calendar.flag}.`, action: { label: 'Open the Week', href: 'week#calendar' } }]
@@ -563,4 +563,62 @@ export function stepForPart(part: string | null): StepId | null {
   if (part === 'calendar') return 'times';
   if (part === 'booked') return 'booked';
   return null;
+}
+
+/** One thing that needs the business, for the line at the top of Flow. */
+export interface Need {
+  text: string;
+  /** Where it is fixed, relative to the admin: `week`, `people?person=…`. */
+  href: string | null;
+  /** Or the service to open on Flow itself. */
+  laneId: string | null;
+}
+
+/** Where each step's warning is put right. */
+const FIX_FOR: Record<StepId, string | null> = {
+  find: null,
+  questions: 'messages?m=next_steps',
+  times: 'week#calendar',
+  booked: 'messages',
+};
+
+/**
+ * Everything that needs the business, gathered from every service and from
+ * People, so one line answers "is anything wrong?" without visiting each
+ * screen. Each thing once: a warning every service shares is said once,
+ * and a week with no hours is one line, not one per service. Empty when
+ * nothing needs doing.
+ */
+export function needsYou(
+  model: FlowModel,
+  slug: string,
+  owed: ReadonlyArray<{ name: string; email: string; sessions: number }>,
+): Need[] {
+  const out: Need[] = [];
+  const said = new Set<string>();
+  if (model.calendar.noHours) out.push({ text: 'No hours set, so nothing can be booked', href: 'week', laneId: null });
+  for (const lane of model.lanes) {
+    const offered = lane.fromPage || lane.fromClients;
+    if (!offered || lane.blocking.length > 0) {
+      out.push({ text: `${lane.name} can’t be booked yet`, href: null, laneId: lane.id });
+      continue;
+    }
+    for (const step of serviceSteps(model, lane, slug)) {
+      if (!step.flag || said.has(step.flag)) continue;
+      said.add(step.flag);
+      const href = FIX_FOR[step.id];
+      out.push({ text: step.flag, href, laneId: href ? null : lane.id });
+    }
+  }
+  if (owed.length === 1) {
+    const o = owed[0]!;
+    out.push({
+      text: `${o.name || o.email} has ${o.sessions === 1 ? '1 session' : `${o.sessions} sessions`} to book`,
+      href: `people?person=${encodeURIComponent(o.email)}`,
+      laneId: null,
+    });
+  } else if (owed.length > 1) {
+    out.push({ text: `${owed.length} people have sessions to book`, href: 'people?show=owed', laneId: null });
+  }
+  return out;
 }

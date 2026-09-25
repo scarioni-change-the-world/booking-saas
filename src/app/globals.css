@@ -7076,34 +7076,6 @@ body:has(.bk-embedded) {
   fill: var(--ink);
   font-variant-numeric: tabular-nums;
 }
-.gauge {
-  display: block;
-  width: 100%;
-  max-width: 292px;
-  height: auto;
-}
-.gauge-track {
-  fill: none;
-  stroke: var(--soft-border);
-  stroke-width: 3;
-}
-.gauge-ticks {
-  stroke: var(--ghost);
-  stroke-width: 1;
-}
-.gauge-needle {
-  stroke: var(--ink);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-}
-.gauge-hub {
-  fill: var(--ink);
-}
-.gauge-end {
-  font-family: var(--font-body);
-  font-size: 5px;
-  fill: var(--ghost);
-}
 .grille {
   display: grid;
   grid-template-columns: repeat(10, 11px);
@@ -7758,11 +7730,6 @@ body:has(.bk-embedded) {
   border-radius: 12px;
   border-color: var(--soft-border);
 }
-@media (max-width: 760px) {
-  .gauge {
-    max-width: 220px;
-  }
-}
 
 /* People: a route told by shape, in Ink — filled is booked, a ring is
    answered, half-filled was sent elsewhere, dashed is not booked yet, a
@@ -7917,4 +7884,143 @@ body:has(.bk-embedded) {
   border: 0;
   border-radius: 14px;
   background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+
+/* ── Design review fixes ────────────────────────────────────────────────── */
+
+/* What needs you, in one line under the title: each item an Ochre light
+   and a link to where it is put right. */
+.fc-needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: -8px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+.fc-needs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.fc-needs a,
+.fc-needs .btn-link {
+  color: var(--emphasis-ink);
+  font-size: 0.94rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The lightest grey was 2.8:1 on a plate — below what small text needs.
+   In the admin it is the same grey as other secondary text (5.3:1), and
+   marks drawn in it (rings, ticks) gain contrast with it. */
+.admin-app {
+  --ghost: #666a67;
+}
+
+/* What is chosen shows by more than a pale tint (1.1:1): a thin Mineral
+   edge all round, as a chosen message already has. */
+.admin-app .pp-row.is-selected,
+.admin-app .fc-step.is-open {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.admin-app .wk-dayhead.is-selected {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+/* A booking stands off the open hours by a hairline edge and a deeper
+   Stone, not by its shadow alone. */
+.admin-app .wk-booking {
+  background: #e2ded4;
+  box-shadow: inset 0 0 0 1px rgba(53, 58, 56, 0.22), 0 6px 10px -8px rgba(32, 34, 33, 0.5);
+}
+.admin-app .wk-booking:hover {
+  background: #d9d4c8;
+}
+.admin-app .wk-booking.is-programme {
+  box-shadow: inset 0 0 0 1px rgba(53, 58, 56, 0.22), 0 6px 10px -8px rgba(32, 34, 33, 0.5);
+}
+
+/* The main action is told from the rest by weight as well as colour: a
+   heavier Mineral edge. Everything else keeps its thin grey one. */
+.admin-app .btn-primary {
+  border-width: 2px;
+}
+
+/* Titles name the screen; they do not greet. 32px, and one line of
+   description where the screen needs one. */
+.admin-app .page-header {
+  margin-bottom: 26px;
+}
+.admin-app .page-header h1 {
+  font-size: clamp(1.7rem, 2.2vw, 2rem);
+  letter-spacing: -0.015em;
+}
+.admin-app .page-header-description {
+  margin-top: 6px;
+  max-width: 78ch;
+  font-size: 0.98rem;
+}
+/* The notice scale's stops are its controls. */
+.scale-stops button {
+  display: block;
+  min-height: 0;
+  padding: 0 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  font-weight: 400;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scale-stops button:hover:not(:disabled) {
+  color: var(--ink);
+}
+.scale-stops button.is-on {
+  color: var(--ink);
+  font-weight: 600;
+}
+.scale-stops button:disabled {
+  cursor: default;
+}
+.scale-thumb {
+  transition: top 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scale-thumb {
+    transition: none;
+  }
+}
+/* One instrument for "how much of the open time is used": a thin bar,
+   the same on the Week and in a question's replay, filled in Granite. */
+.admin-app .rp-bar i {
+  background: var(--ink);
+}
+.wk-bar {
+  margin: 12px 0 4px;
+}
+/* A booking's actions sit at its right; on a phone, under it, so the date
+   and the service get the width. */
+.bl-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .admin-row:has(> .bl-actions) {
+    flex-wrap: wrap;
+  }
+  .bl-actions {
+    flex: 1 0 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 18px;
+    padding-left: 50px;
+  }
 }

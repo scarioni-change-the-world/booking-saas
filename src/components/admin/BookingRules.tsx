@@ -73,14 +73,53 @@ export function BookingRules({ slug, onSaved }: { slug: string; onSaved?: () => 
     }
   }
 
+  /* Choosing a stop on the scale saves it straight away: the scale is the
+     control. Shown at once, put back if the save fails. */
+  async function chooseNotice(hours: number) {
+    if (!rules) return;
+    const before = rules;
+    // Only the two rules this owns: the settings row holds more than these.
+    const next: Rules = { bookingNoticeHours: hours, bookingWindowDays: rules.bookingWindowDays };
+    setRules(next);
+    setForm(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await adminFetchJson<{ settings: Rules }>(url, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(next),
+      });
+      setRules(result.settings);
+      onSaved?.();
+    } catch (cause) {
+      setRules(before);
+      setForm(before);
+      setError((cause as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!rules) return error ? <p className="notice notice-error">{error}</p> : null;
 
   return (
     <div className="bk-rules">
       {!editing ? (
         <>
-          <SlideScale stops={noticeStops(rules.bookingNoticeHours)} current={rules.bookingNoticeHours} />
-          <p className="wk-side-lead" style={{ margin: 0 }}>
+          <SlideScale
+            stops={noticeStops(rules.bookingNoticeHours)}
+            current={rules.bookingNoticeHours}
+            label="Notice people must give"
+            onChoose={(hours) => void chooseNotice(hours)}
+            disabled={saving}
+          />
+          {error && (
+            <p className="notice notice-error" role="alert">
+              {error}
+            </p>
+          )}
+          <p className="wk-side-lead" style={{ margin: 0 }} aria-live="polite">
             People can book with at least {noticeWords(rules.bookingNoticeHours)}, up to{' '}
             {rules.bookingWindowDays} days ahead.{' '}
             <button type="button" className="btn-link" onClick={() => setEditing(true)}>

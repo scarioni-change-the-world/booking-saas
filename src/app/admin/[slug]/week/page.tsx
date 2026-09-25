@@ -11,7 +11,6 @@ import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { BookingRules } from '@/components/admin/BookingRules';
 import { CalendarConnection } from '@/components/admin/CalendarConnection';
-import { Gauge } from '@/components/admin/Instruments';
 import { useServiceMark } from '@/components/admin/ServiceMarks';
 import {
   emailBadge,
@@ -95,6 +94,14 @@ export default function WeekPage() {
   /* Seeded once from the address, like the other screens: an old link to
      Bookings arrives here with ?view=list and lands on the list. */
   const [view, setView] = useState<'week' | 'list'>(search.get('view') === 'list' ? 'list' : 'week');
+  /* On a phone the grid shows three days of seven and scrolls sideways,
+     while the list answers "what's next?" at once — so a phone opens on
+     the list, unless a link asked for a particular view or week. Once, on
+     arrival: switching back to Week afterwards stays switched. */
+  useEffect(() => {
+    if (search.get('view') || search.get('from')) return;
+    if (window.matchMedia('(max-width: 760px)').matches) setView('list');
+  }, []);
   /* Google sends people back here after connecting. Success needs no note —
      the connection's own badge says so, and a note could contradict it —
      but a failure would otherwise leave no trace. */
@@ -743,15 +750,12 @@ function WeekSummary({
   return (
     <div>
       <p className="wk-side-eyebrow">This week</p>
-      {/* A needle across the open hours: how full the week is, at a glance.
-          Bookings outside the usual hours can carry it past the end. */}
+      {/* How full the week is: the same thin bar a question's replay uses.
+          Bookings outside the usual hours can fill it; it stops at full. */}
       {openMinutes > 0 && (
-        <Gauge
-          value={tenth(Math.min(bookedMinutes, openMinutes))}
-          max={hours}
-          unit="h"
-          label={`${booked} of ${hours} open hours booked`}
-        />
+        <div className="rp-bar wk-bar" role="img" aria-label={`${booked} of ${hours} open hours booked`}>
+          <i style={{ width: `${Math.min(100, (bookedMinutes / openMinutes) * 100)}%` }} />
+        </div>
       )}
       <p className="wk-reading">
         {booked} h <span>booked of {hours} h open</span>

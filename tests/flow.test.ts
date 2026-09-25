@@ -3,6 +3,7 @@ import {
   asksQuestions,
   buildFlow,
   laneState,
+  needsYou,
   readout,
   serviceSteps,
   stepForPart,
@@ -208,7 +209,7 @@ describe('serviceSteps', () => {
     );
     expect(step(list, 'find').figure).toEqual({ value: '28', label: 'chose it' });
     expect(step(list, 'questions').figure).toEqual({ value: '24 of 28', label: 'finished' });
-    expect(step(list, 'times')).toMatchObject({ title: 'They choose 3 times', figure: { value: '11', label: 'could choose' } });
+    expect(step(list, 'times')).toMatchObject({ title: 'They choose 3 times', figure: { value: '11', label: 'could book' } });
     expect(step(list, 'booked').figure).toEqual({ value: '1', label: 'person', sub: '3 appointments' });
   });
 
@@ -292,5 +293,51 @@ describe('stepForPart', () => {
       'booked',
       null,
     ]);
+  });
+});
+
+describe('needsYou', () => {
+  it('is empty when nothing needs doing', () => {
+    const model = buildFlow(input({}));
+    expect(needsYou(model, 'ruiz', [])).toEqual([]);
+  });
+
+  it('names a service nobody can book, and opens it on Flow', () => {
+    const model = buildFlow(
+      input({ services: [service({}), service({ id: 's2', name: 'CV review', availableToProspects: false })] }),
+    );
+    expect(needsYou(model, 'ruiz', [])).toEqual([{ text: 'CV review can’t be booked yet', href: null, laneId: 's2' }]);
+  });
+
+  it('says a shared warning once, with where it is fixed', () => {
+    const model = buildFlow(
+      input({
+        hasOtherPathMessage: false,
+        hasOtherPathUrl: false,
+        services: [service({ ownQuestionCount: 1 }), service({ id: 's2', name: 'Workshop', ownQuestionCount: 1 })],
+      }),
+    );
+    const needs = needsYou(model, 'ruiz', []);
+    expect(needs.filter((n) => n.text === 'Next step not written')).toEqual([
+      { text: 'Next step not written', href: 'messages?m=next_steps', laneId: null },
+    ]);
+  });
+
+  it('says a week with no hours once, not once per service', () => {
+    const model = buildFlow(input({ availabilityRuleCount: 0, services: [service({}), service({ id: 's2', name: 'Workshop' })] }));
+    expect(needsYou(model, 'ruiz', []).map((n) => n.text)).toEqual(['No hours set, so nothing can be booked']);
+  });
+
+  it('points to the person owed sessions, or to everyone owed', () => {
+    const model = buildFlow(input({}));
+    expect(needsYou(model, 'ruiz', [{ name: 'Lucía', email: 'lucia@x.com', sessions: 1 }])).toEqual([
+      { text: 'Lucía has 1 session to book', href: 'people?person=lucia%40x.com', laneId: null },
+    ]);
+    expect(
+      needsYou(model, 'ruiz', [
+        { name: 'Lucía', email: 'lucia@x.com', sessions: 1 },
+        { name: '', email: 'bo@x.com', sessions: 3 },
+      ]).map((n) => n.text),
+    ).toEqual(['2 people have sessions to book']);
   });
 });

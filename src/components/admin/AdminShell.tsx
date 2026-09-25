@@ -10,8 +10,11 @@ import { ServiceMarksProvider } from "@/components/admin/ServiceMarks";
  *
  * The sidebar listed eight screens, and every one of them answered one of
  * three questions: how does somebody reach me, when am I available, and who
- * has been through. Each question has one place now — Flow, Week, People —
- * and what is left is housekeeping, in Account. See docs/roadmap.md.
+ * has been through. Each question has one place now — Services (the Flow
+ * screen), Week, People — and what is left is housekeeping, in Account.
+ * See docs/roadmap.md. The first is labelled "Services", not "Flow": it is
+ * what somebody looking for their services clicks, and its page is titled
+ * "Your services", so the bar and the page say the same word.
  *
  * Messages — every email a client gets, and the words on the page — is a
  * place of its own too: reached only through Flow, it was the screen people
@@ -21,13 +24,13 @@ import { ServiceMarksProvider } from "@/components/admin/ServiceMarks";
  * the desktop does rather than a menu to open first. Account and signing
  * out sit at the right, and under a menu button on a phone.
  *
- * The screens Flow grew out of — Services, a service's own settings,
- * Questions — are still pages, reached from the part of the flow they
- * belong to. While on one, Flow stays the lit place and a way back to it
- * sits above the page, so nobody is somewhere the bar does not explain.
+ * A service's own settings and Questions are still pages of their own,
+ * reached from the part of a service's flow they belong to. While on one,
+ * Services stays the lit place and a way back to it sits above the page,
+ * so nobody is somewhere the bar does not explain.
  */
 const PLACES = [
-  { href: "flow", label: "Flow" },
+  { href: "flow", label: "Services" },
   { href: "week", label: "Week" },
   { href: "people", label: "People" },
   { href: "messages", label: "Messages" },
@@ -146,7 +149,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
             the first version, in small grey type, was missed. */}
           {inFlowPart && (
             <a className="shell-back" href={`/admin/${slug}/flow`}>
-              <span aria-hidden="true">←</span> Back to Flow
+              <span aria-hidden="true">←</span> Back to Services
             </a>
           )}
           {children}

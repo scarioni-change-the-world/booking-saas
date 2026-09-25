@@ -204,7 +204,7 @@ export default function ServicePage() {
           <p className="service-retire-note">
             {service.active
               ? 'No new appointments can be made. Appointments already booked stay, and those clients can still move or cancel them. You can resume it at any time.'
-              : 'No new appointments can be made. Appointments already booked stay. To delete it for good, go to Flow, under Paused.'}
+              : 'No new appointments can be made. Appointments already booked stay. To delete it for good, go to Services, under Paused.'}
           </p>
         </div>
         <button
@@ -607,7 +607,7 @@ function ServiceIdentity({ service }: { service: SerializedEventType }) {
     <div className="svc-identity">
       <ServiceBadge name={service.name} size="lg" />
       <p className="svc-identity-label" style={{ margin: 0 }}>
-        Shown as <b>{mark(service.name)}</b> on your Flow, Week and People, always beside its name.
+        Shown as <b>{mark(service.name)}</b> on Services, the Week and People, always beside its name.
       </p>
     </div>
   );

@@ -150,7 +150,7 @@ export default function PeoplePage() {
     <>
       <PageHeader
         title="Everyone, with the route they took"
-        description="One row per person — whether they answered your questions, booked, or you added them yourself. The last year, most recent first."
+        description="Everyone who answered, booked or was added by you in the last year, most recent first."
         actions={
           !adding ? (
             <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
@@ -541,12 +541,17 @@ function PersonPanel({
         {client ? (
           <>
             <code className="pp-link">{link}</code>
+            {/* One key, and Copy as a quiet link beside it. While they owe
+                sessions, the Ochre line above already carries "Send their
+                link", so it is not offered twice. */}
             <div className="wk-actions" style={{ marginTop: 10 }}>
-              <button type="button" className="btn-secondary" disabled={busy === 'send'} onClick={() => void sendLink()}>
-                {busy === 'send' ? 'Sending…' : 'Send link'}
-              </button>
-              <button type="button" className="btn-secondary" onClick={() => void copyLink()}>
-                {copied ? 'Copied' : 'Copy'}
+              {owedLeft === 0 && (
+                <button type="button" className="btn-secondary" disabled={busy === 'send'} onClick={() => void sendLink()}>
+                  {busy === 'send' ? 'Sending…' : 'Send link'}
+                </button>
+              )}
+              <button type="button" className="btn-link" onClick={() => void copyLink()}>
+                {copied ? 'Copied' : 'Copy the link'}
               </button>
             </div>
             <p className="wk-side-hint">

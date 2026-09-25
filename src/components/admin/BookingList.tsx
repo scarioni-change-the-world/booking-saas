@@ -270,7 +270,7 @@ export function BookingList({ slug }: { slug: string }) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+              <div className="bl-actions">
                 {b.isClient ? (
                   <span style={{ fontSize: '0.8rem', color: 'var(--faint)' }}>Has their own link</span>
                 ) : (

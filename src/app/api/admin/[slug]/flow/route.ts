@@ -51,7 +51,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     const nowIso = new Date(now).toISOString();
     const sinceIso = new Date(now - THIRTY_DAYS_MS).toISOString();
 
-    const [facts, funnel, responses, bookings, nextUp, failedSync, failedEmail, calendar, clients, settings] =
+    const [facts, funnel, responses, bookings, nextUp, failedSync, failedEmail, calendar, clients, settings, owedRows] =
       await Promise.all([
         loadSetupFacts(scope),
         loadFunnelStats(scope, sinceIso),
@@ -69,10 +69,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         scope.select('bookings', 'id').eq('sync_status', 'failed'),
         scope.select('email_sends', 'id').eq('status', 'failed').gte('created_at', sinceIso),
         scope.select('calendar_connections', 'status').maybeSingle(),
-        scope.select('clients', 'id'),
+        scope.select('clients', 'id, name, email'),
         scope.select('tenant_settings').maybeSingle(),
+        scope.select('client_entitlements', 'client_id, total_sessions, used_sessions'),
       ]);
-    for (const result of [bookings, nextUp, failedSync, calendar, clients, settings]) {
+    for (const result of [bookings, nextUp, failedSync, calendar, clients, settings, owedRows]) {
       if (result.error) throw result.error;
     }
 
@@ -126,8 +127,23 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       clientCount: (clients.data ?? []).length,
     };
 
+    /* Who has paid for sessions they have not booked yet, one line per
+       person: the "needs you" line at the top of the page says so. */
+    const people = new Map(
+      ((clients.data ?? []) as unknown as Array<{ id: string; name: string; email: string }>).map((c) => [c.id, c]),
+    );
+    const owedBy = new Map<string, number>();
+    for (const e of (owedRows.data ?? []) as unknown as Array<{ client_id: string; total_sessions: number; used_sessions: number }>) {
+      const left = Math.max(0, e.total_sessions - e.used_sessions);
+      if (left > 0) owedBy.set(e.client_id, (owedBy.get(e.client_id) ?? 0) + left);
+    }
+    const owed = [...owedBy.entries()]
+      .map(([id, sessions]) => ({ name: people.get(id)?.name ?? '', email: people.get(id)?.email ?? '', sessions }))
+      .filter((o) => o.email);
+
     return ok({
       ...input,
+      owed,
       timezone: tenant.timezone,
       nextUp: ((nextUp.data ?? []) as unknown as NextUpJoin[]).map((b) => ({
         id: b.id,

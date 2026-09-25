@@ -135,7 +135,7 @@ export default function MessagesPage() {
     <>
       <PageHeader
         title="What people are told, and when"
-        description="Every message you send, at the moment in someone's journey that sends it. Choose one to change its wording and see it as they will. Counts are the last 30 days."
+        description="Every email people get, at the moment it is sent. Choose one to change it. Counts are the last 30 days."
       />
 
       {error && (

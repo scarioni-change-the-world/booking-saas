@@ -1,7 +1,7 @@
 /**
  * The few instruments the app reads out with, after Braun's: a lamp that
- * says a state, a dial that shows a share, a gauge with a needle, and a
- * grille of dots, one for each person. Each is drawn from a number and a
+ * says a state, a dial that shows a share, a grille of dots, one for each
+ * person, and a slide scale that sets a value. Each is drawn from a number and a
  * sentence; the drawing is never the only place the number is said.
  */
 
@@ -17,7 +17,7 @@ function onArc(fraction: number, radius: number, cx = 60, cy = 60) {
 export type LampTone = 'live' | 'need' | 'here' | 'off';
 
 /**
- * A small indicator light: on (Ink), needs you (Ochre), you are here
+ * A small indicator light: on (Granite), needs you (Ochre), you are here
  * (Mineral), or off (a ring).
  */
 export function Lamp({ tone = 'live' }: { tone?: LampTone }) {
@@ -43,26 +43,6 @@ export function Dial({ part, whole, label }: { part: number; whole: number; labe
   );
 }
 
-/** A needle across a scale from nothing to `max` — the week's booked hours. */
-export function Gauge({ value, max, unit, label }: { value: number; max: number; unit: string; label: string }) {
-  const tip = onArc(max > 0 ? value / max : 0, 42);
-  const ticks = [0, 1, 2, 3, 4, 5, 6].map((i) => [onArc(i / 6, 46), onArc(i / 6, 40)] as const);
-  return (
-    <svg className="gauge" viewBox="0 0 120 68" role="img" aria-label={label}>
-      <path d="M10 60 A50 50 0 0 1 110 60" className="gauge-track" />
-      <path d={ticks.map(([a, b]) => `M${a.x} ${a.y} L${b.x} ${b.y}`).join(' ')} className="gauge-ticks" />
-      <line x1="60" y1="60" x2={tip.x} y2={tip.y} className="gauge-needle" />
-      <circle cx="60" cy="60" r="3.2" className="gauge-hub" />
-      <text x="10" y="67" className="gauge-end">
-        0
-      </text>
-      <text x="110" y="67" textAnchor="end" className="gauge-end">
-        {max} {unit}
-      </text>
-    </svg>
-  );
-}
-
 /**
  * One dot for each person, lit for the ones who got there. Drawn only
  * while the dots can still be counted by eye; past that it is noise.
@@ -81,24 +61,53 @@ export function Grille({ lit, of, label }: { lit: number; of: number; label: str
 }
 
 /**
- * A setting read off a slide scale: its stops down the side, the slider
- * resting on the one in use. A read-out, not a control — the sentence
- * beside it says the same, and changing it is its own form. The stops
- * must include the current value.
+ * A setting on a slide scale: its stops down the side, the slider resting
+ * on the one in use. It is the control, not a picture of one — choosing a
+ * stop (or moving with the arrow keys) sets it — so it never promises a
+ * slide it cannot do. The stops must include the current value.
  */
-export function SlideScale({ stops, current }: { stops: Array<{ value: number; label: string }>; current: number }) {
+export function SlideScale({
+  stops,
+  current,
+  label,
+  onChoose,
+  disabled = false,
+}: {
+  stops: Array<{ value: number; label: string }>;
+  current: number;
+  label: string;
+  onChoose: (value: number) => void;
+  disabled?: boolean;
+}) {
   const at = stops.findIndex((s) => s.value === current);
-  const all = stops;
+
+  function onKeyDown(event: React.KeyboardEvent) {
+    const step = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const next = stops[Math.min(stops.length - 1, Math.max(0, at + step))];
+    if (next && next.value !== current) onChoose(next.value);
+  }
+
   return (
-    <span className="scale" aria-hidden="true" style={{ ['--stops' as string]: all.length, ['--at' as string]: at }}>
-      <span className="scale-track">
+    <span className="scale" style={{ ['--stops' as string]: stops.length, ['--at' as string]: at }}>
+      <span className="scale-track" aria-hidden="true">
         <span className="scale-thumb" />
       </span>
-      <span className="scale-stops">
-        {all.map((s, i) => (
-          <span key={s.value} className={i === at ? 'is-on' : undefined}>
+      <span className="scale-stops" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+        {stops.map((s, i) => (
+          <button
+            key={s.value}
+            type="button"
+            role="radio"
+            aria-checked={i === at}
+            tabIndex={i === at ? 0 : -1}
+            className={i === at ? 'is-on' : undefined}
+            disabled={disabled}
+            onClick={() => s.value !== current && onChoose(s.value)}
+          >
             {s.label}
-          </span>
+          </button>
         ))}
       </span>
     </span>
