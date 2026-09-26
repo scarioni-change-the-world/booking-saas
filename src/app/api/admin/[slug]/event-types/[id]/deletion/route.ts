@@ -1,6 +1,6 @@
 import { fail, handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
-import { deletionBlockers, deletionKeeps, neverBooked } from '@/lib/service-deletion';
+import { deletionBlockers, deletionKeeps } from '@/lib/service-deletion';
 import { loadDeletionFacts, loadLiveService } from '@/lib/service-deletion-server';
 
 /**
@@ -20,7 +20,6 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       ...facts,
       blockers: deletionBlockers(facts, tenant.timezone),
       keeps: deletionKeeps(facts),
-      neverBooked: neverBooked(facts),
     });
   } catch (error) {
     return handleError(error);

@@ -11,7 +11,7 @@ import { isPaletteColour } from '@/lib/service-identity';
 import { requireTenantAdmin } from '@/lib/auth';
 import { DateTime } from 'luxon';
 import { listTenantMembers } from '@/lib/db/console';
-import { deletionBlockers, deletionKeeps, LIMIT_REACHED, nameConfirmed, needsNameTyped, neverBooked, withinServiceLimit } from '@/lib/service-deletion';
+import { deletionBlockers, deletionKeeps, LIMIT_REACHED, nameConfirmed, withinServiceLimit } from '@/lib/service-deletion';
 import { countActiveServices, loadDeletionFacts, loadLiveService } from '@/lib/service-deletion-server';
 import { sendServiceDeletedEmail } from '@/lib/service-deletion-email';
 import { serializeEventType } from '@/lib/admin-serializers';
@@ -126,14 +126,12 @@ export async function PATCH(
 /**
  * Delete a service for good.
  *
- * A service never booked, with no paid sessions held for it, goes at once,
- * paused or not, with no name to type: nothing is lost. Any other must be
- * paused and empty — nothing still coming up, no paid sessions still to
- * book — and its name typed back; whoever deleted it gets an email saying
- * so. Nobody is cancelled or emailed either way: there is nobody left to
- * tell. The row stays, marked deleted, so its past appointments keep the
- * name they were booked under; its own questions, which are settings rather
- * than history, go. See src/lib/service-deletion.ts.
+ * Only a paused service that is empty — nothing still coming up, no paid
+ * sessions still to book — and only with its name typed back. Nobody is
+ * cancelled or emailed: there is nobody left to tell. The row stays, marked
+ * deleted, so its past appointments keep the name they were booked under;
+ * its own questions, which are settings rather than history, go. Whoever
+ * deleted it gets an email saying so.
  */
 export async function DELETE(request: Request, ctx: { params: Promise<{ slug: string; id: string }> }) {
   try {
@@ -144,11 +142,11 @@ export async function DELETE(request: Request, ctx: { params: Promise<{ slug: st
 
     const service = await loadLiveService(scope, id);
     if (!service) return fail('Not found', 404);
-
-    const facts = await loadDeletionFacts(scope, service);
-    if (needsNameTyped(facts) && !nameConfirmed(typed, service.name)) {
+    if (!nameConfirmed(typed, service.name)) {
       return fail(`Type “${service.name}” to delete it.`, 400);
     }
+
+    const facts = await loadDeletionFacts(scope, service);
     const blockers = deletionBlockers(facts, tenant.timezone);
     if (blockers.length > 0) return fail(`It can’t be deleted yet. ${blockers.join(' ')}`, 409);
 
@@ -174,7 +172,7 @@ export async function DELETE(request: Request, ctx: { params: Promise<{ slug: st
     const questions = await scope.delete('qualification_questions').eq('event_type_id', id);
     if (questions.error) throw questions.error;
 
-    const email = by && !neverBooked(facts)
+    const email = by
       ? await sendServiceDeletedEmail({
           to: by,
           serviceName: service.name,

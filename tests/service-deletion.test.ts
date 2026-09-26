@@ -3,8 +3,6 @@ import {
   deletionBlockers,
   deletionKeeps,
   nameConfirmed,
-  needsNameTyped,
-  neverBooked,
   withinServiceLimit,
   type DeletionFacts,
 } from '@/lib/service-deletion';
@@ -24,12 +22,8 @@ describe('deletionBlockers', () => {
     expect(deletionBlockers(empty, 'Europe/Madrid')).toEqual([]);
   });
 
-  it('lets a service that was never booked go at once, without a pause', () => {
-    expect(deletionBlockers({ ...empty, active: true }, 'Europe/Madrid')).toEqual([]);
-  });
-
-  it('asks for a pause first once it has any history', () => {
-    expect(deletionBlockers({ ...empty, active: true, past: 1 }, 'Europe/Madrid')).toEqual([
+  it('asks for a pause first', () => {
+    expect(deletionBlockers({ ...empty, active: true }, 'Europe/Madrid')).toEqual([
       'It is still taking appointments. Pause it first.',
     ]);
   });
@@ -53,17 +47,6 @@ describe('deletionKeeps', () => {
       '12 past appointments stay in your history under its name, and those clients keep their history with you.',
     );
     expect(deletionKeeps(empty)).toBe('It has never been booked, so nothing else changes.');
-  });
-});
-
-describe('neverBooked and needsNameTyped', () => {
-  it('asks for the name only when there is history to lose', () => {
-    expect(neverBooked(empty)).toBe(true);
-    expect(needsNameTyped(empty)).toBe(false);
-    for (const over of [{ past: 1 }, { upcoming: 1 }, { owedSessions: 2, owedClients: 1 }]) {
-      expect(neverBooked({ ...empty, ...over })).toBe(false);
-      expect(needsNameTyped({ ...empty, ...over })).toBe(true);
-    }
   });
 });
 

@@ -9,13 +9,9 @@ import { DateTime } from 'luxon';
  * client with sessions paid for can still book them. It is what somebody
  * retiring a service wants at once.
  *
- * Deleting is for good. A service that has never been booked, and that
- * nobody holds paid sessions for, can be deleted at once, straight from
- * where it is shown, with one question: nothing is lost, and a service made
- * by mistake should not have to sit paused in the account for ever. Any
- * other service must be paused and empty first — nothing still coming up,
- * and no sessions somebody has paid for and not yet booked — and its name
- * typed back. The deletion never cancels anyone; the appointments clear when
+ * Deleting is for good. Only a paused service that is empty can be deleted:
+ * nothing still coming up, and no sessions somebody has paid for and not yet
+ * booked. The deletion never cancels anyone; the appointments clear when
  * they take place or when they are cancelled, one person at a time. Past
  * appointments are kept under the service's name (migration 0029), so no
  * client loses their history or their standing.
@@ -47,23 +43,13 @@ export interface DeletionFacts {
   past: number;
 }
 
-/** No appointment ever, coming or past, and no paid sessions held for it. */
-export function neverBooked(facts: DeletionFacts): boolean {
-  return facts.past === 0 && facts.upcoming === 0 && facts.owedSessions === 0;
-}
-
-/** Whether deleting asks for the name typed back. Only when there is history to lose. */
-export function needsNameTyped(facts: DeletionFacts): boolean {
-  return !neverBooked(facts);
-}
-
 /**
  * Why this service cannot be deleted yet, in words, with what clears each
  * reason. Empty when it can.
  */
 export function deletionBlockers(facts: DeletionFacts, timezone: string): string[] {
   const reasons: string[] = [];
-  if (facts.active && !neverBooked(facts)) {
+  if (facts.active) {
     reasons.push('It is still taking appointments. Pause it first.');
   }
   if (facts.upcoming > 0) {

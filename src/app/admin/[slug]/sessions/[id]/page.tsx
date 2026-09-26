@@ -13,6 +13,7 @@ import {
 import { LOCATION_OPTIONS } from '@/lib/service-location';
 import { useServiceMark } from '@/components/admin/ServiceMarks';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
+import { DeleteService } from '@/components/admin/DeleteService';
 import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
@@ -58,6 +59,7 @@ export default function ServicePage() {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<StageId | null>(null);
   const [retiring, setRetiring] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -193,9 +195,10 @@ export default function ServicePage() {
         ))}
       </ol>
 
-      {/* Pausing lives here as well as on Flow, at the foot of the service
-          it pauses. Deleting for good is on Flow, under Paused, where it
-          can say what is still booked (src/lib/service-deletion.ts). */}
+      {/* Pausing and deleting live at the foot of the service they end, as
+          well as on Services. Deleting asks what the rules ask everywhere
+          (src/lib/service-deletion.ts): paused first, nothing still coming
+          up or owed, and the name typed back. */}
       <div className="service-retire">
         <div>
           <p className="service-retire-label">
@@ -204,7 +207,7 @@ export default function ServicePage() {
           <p className="service-retire-note">
             {service.active
               ? 'No new appointments can be made. Appointments already booked stay, and those clients can still move or cancel them. You can resume it at any time.'
-              : 'No new appointments can be made. Appointments already booked stay. To delete it for good, go to Services, under Paused.'}
+              : 'No new appointments can be made. Appointments already booked stay. You can resume it, or delete it for good below.'}
           </p>
         </div>
         <button
@@ -223,6 +226,33 @@ export default function ServicePage() {
           {retiring ? 'Saving…' : service.active ? 'Pause' : 'Resume'}
         </button>
       </div>
+
+      <div className="service-retire service-delete">
+        <div>
+          <p className="service-retire-label">Delete this service</p>
+          <p className="service-retire-note">
+            For good: it can never be resumed, and its settings and its own questions go. Pause it first; it can
+            go once nothing is still coming up and nobody still has paid sessions to book. Past appointments
+            stay in your history under its name.
+          </p>
+        </div>
+        {!deleting && (
+          <button type="button" className="btn-secondary" onClick={() => setDeleting(true)}>
+            Delete…
+          </button>
+        )}
+      </div>
+      {deleting && (
+        <DeleteService
+          slug={slug}
+          id={service.id}
+          name={service.name}
+          onCancel={() => setDeleting(false)}
+          onDeleted={(note) => {
+            window.location.href = `/admin/${slug}/flow?deleted=${encodeURIComponent(note)}`;
+          }}
+        />
+      )}
     </>
   );
 }

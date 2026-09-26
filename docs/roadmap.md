@@ -200,15 +200,15 @@ Six rules every screen follows:
    way when shown. Framed in the business's own website there is no bar.
    Fixed on the way: a business's colour never reached its tints, which
    were worked out once from Mineral.
-   **Deleting a service made by mistake; Service settings in Ochre** —
-   done. A service never booked (nothing past, nothing coming, no paid
-   sessions held) can be deleted at once from its own panel, paused or
-   not, with one question and no name to type and no email: nothing is
-   lost, and pausing it only left clutter. Anything with history keeps the
-   old rule — paused, empty, name typed back. The "Service settings" key is
-   Ochre while that page is still waiting for something (a price, a place,
-   a description, who it is offered to), with the reason as its title
-   (`settingsNeeds` in flow.ts).
+   **Service settings in solid Ochre; Delete where it can be found** —
+   done. The "Service settings" key is solid Ochre while that page is
+   still waiting for something (a price, a place, a description, who it is
+   offered to), deepened a touch so its words read (4.7:1), with the reason
+   as its title (`settingsNeeds` in flow.ts). Deleting keeps its rules —
+   paused first, nothing coming up or owed, name typed back — but is now
+   also at the foot of the service's own settings page, under Pause, not
+   only under Paused on Services (`components/admin/DeleteService.tsx`,
+   shared by both). Services says what was deleted when it comes back.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

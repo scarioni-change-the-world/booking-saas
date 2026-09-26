@@ -24,7 +24,8 @@ import {
   type StepId,
 } from '@/lib/flow';
 import { partForPhase, type TestMessage } from '@/lib/test-run';
-import { LIMIT_REACHED, nameConfirmed, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
+import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
+import { DeleteService } from '@/components/admin/DeleteService';
 
 interface NextUp {
   id: string;
@@ -65,6 +66,13 @@ const START: Walked = { steps: new Set(['find']), current: 'find', elsewhere: fa
 export default function FlowPage() {
   const { slug } = useParams<{ slug: string }>();
   const search = useSearchParams();
+  /* A deletion from a service's own settings page comes back here with a
+     note. Said once: kept in state, then taken off the address so a
+     refresh does not say it again. */
+  const [deletedNote] = useState(() => search.get('deleted'));
+  useEffect(() => {
+    if (deletedNote) window.history.replaceState(null, '', window.location.pathname);
+  }, [deletedNote]);
 
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -297,6 +305,12 @@ export default function FlowPage() {
         }
       />
 
+      {deletedNote && (
+        <p className="notice notice-muted" role="status">
+          {deletedNote}
+        </p>
+      )}
+
       {error && (
         <div className="notice notice-error" role="alert">
           {error}
@@ -404,23 +418,11 @@ async function setActive(slug: string, id: string, active: boolean) {
  * Pausing: no new appointments can be made. Allowed at any time — whoever
  * already booked keeps their appointment and can still move or cancel it
  * (see src/lib/service-deletion.ts). Asked once, in place.
- *
- * A service that has never been booked can also be deleted from here, at
- * once: one made by mistake should not have to be paused and left in the
- * account. Offered only once the check says so.
  */
 function PauseService({ slug, lane, onPaused }: { slug: string; lane: Lane; onPaused: () => void }) {
   const [asking, setAsking] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deletable, setDeletable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    adminFetchJson<DeletionCheck>(`/api/admin/${slug}/event-types/${lane.id}/deletion`)
-      .then((check) => setDeletable(check.neverBooked && check.blockers.length === 0))
-      .catch(() => setDeletable(false));
-  }, [slug, lane.id]);
 
   async function pause() {
     setSaving(true);
@@ -456,25 +458,10 @@ function PauseService({ slug, lane, onPaused }: { slug: string; lane: Lane; onPa
             </p>
           )}
         </>
-      ) : deleting ? (
-        <DeleteService
-          slug={slug}
-          id={lane.id}
-          name={lane.name}
-          onCancel={() => setDeleting(false)}
-          onDeleted={onPaused}
-        />
       ) : (
-        <span className="fc-archive-links">
-          <button type="button" className="btn-link" onClick={() => setAsking(true)}>
-            Pause this service
-          </button>
-          {deletable && (
-            <button type="button" className="btn-link" onClick={() => setDeleting(true)}>
-              Delete this service
-            </button>
-          )}
-        </span>
+        <button type="button" className="btn-link" onClick={() => setAsking(true)}>
+          Pause this service
+        </button>
       )}
     </div>
   );
@@ -564,175 +551,6 @@ function PausedServices({
         ))}
       </ul>
       {full && <p className="fc-hint">{LIMIT_REACHED}</p>}
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-interface DeletionCheck {
-  upcoming: number;
-  owedSessions: number;
-  past: number;
-  blockers: string[];
-  keeps: string;
-  neverBooked: boolean;
-}
-
-/**
- * Deleting for good. A service with any history is asked about twice:
- * first what it means — or why it cannot happen yet — then its name, typed
- * back. One never booked is asked once: nothing is lost. The route checks
- * every one of these again before it deletes anything.
- */
-function DeleteService({
-  slug,
-  id,
-  name,
-  onCancel,
-  onDeleted,
-}: {
-  slug: string;
-  id: string;
-  name: string;
-  onCancel: () => void;
-  onDeleted: (note: string) => void;
-}) {
-  const [check, setCheck] = useState<DeletionCheck | null>(null);
-  const [stage, setStage] = useState<'explain' | 'type'>('explain');
-  const [typed, setTyped] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    adminFetchJson<DeletionCheck>(`/api/admin/${slug}/event-types/${id}/deletion`)
-      .then(setCheck)
-      .catch((cause) => setError((cause as Error).message));
-  }, [slug, id]);
-
-  async function remove() {
-    setSaving(true);
-    setError(null);
-    try {
-      const result = await adminFetchJson<{ emailedTo: string | null; email: string }>(
-        `/api/admin/${slug}/event-types/${id}`,
-        {
-          method: 'DELETE',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ confirmName: typed }),
-        },
-      );
-      onDeleted(
-        result.email === 'sent' && result.emailedTo
-          ? `${name} was deleted. A confirmation is on its way to ${result.emailedTo}.`
-          : `${name} was deleted.`,
-      );
-    } catch (cause) {
-      setError((cause as Error).message);
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fc-delete" role="region" aria-label={`Delete ${name}`}>
-      {!check && !error && <p className="fc-hint">Checking what is still booked…</p>}
-
-      {check && check.blockers.length > 0 && (
-        <>
-          <p>
-            <b>{name} can’t be deleted yet.</b>
-          </p>
-          <ul className="fc-delete-reasons">
-            {check.blockers.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-          <div className="fl-actions">
-            {check.upcoming > 0 && (
-              <a className="btn-secondary" href={`/admin/${slug}/week?view=list`}>
-                See them on the Week
-              </a>
-            )}
-            {check.owedSessions > 0 && (
-              <a className="btn-secondary" href={`/admin/${slug}/people?show=owed`}>
-                See who in People
-              </a>
-            )}
-            <button type="button" className="btn-link" onClick={onCancel}>
-              Close
-            </button>
-          </div>
-        </>
-      )}
-
-      {check && check.blockers.length === 0 && check.neverBooked && (
-        <>
-          <p>
-            <b>Delete {name}?</b> It has never been booked, so nothing else changes: it disappears from your
-            services and your booking page, with its settings and its own questions. It can’t be undone.
-          </p>
-          <div className="fl-actions">
-            <button type="button" className="btn-danger" onClick={() => void remove()} disabled={saving}>
-              {saving ? 'Deleting…' : 'Delete it'}
-            </button>
-            <button type="button" className="btn-link" onClick={onCancel} disabled={saving}>
-              Keep it
-            </button>
-          </div>
-        </>
-      )}
-
-      {check && check.blockers.length === 0 && !check.neverBooked && stage === 'explain' && (
-        <>
-          <p>
-            <b>Delete {name} for good?</b> It can’t be undone: it can never be resumed, and its settings and its
-            own questions are removed. {check.keeps} Nobody is cancelled or emailed. You’ll get an email confirming
-            it.
-          </p>
-          <div className="fl-actions">
-            <button type="button" className="btn-secondary" onClick={() => setStage('type')}>
-              Continue
-            </button>
-            <button type="button" className="btn-link" onClick={onCancel}>
-              Keep it
-            </button>
-          </div>
-        </>
-      )}
-
-      {check && check.blockers.length === 0 && !check.neverBooked && stage === 'type' && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (nameConfirmed(typed, name)) void remove();
-          }}
-        >
-          <div className="field">
-            <label htmlFor={`fc-delete-${id}`}>
-              To confirm, type the service’s name: <b>{name}</b>
-            </label>
-            <input
-              id={`fc-delete-${id}`}
-              type="text"
-              autoComplete="off"
-              value={typed}
-              onChange={(e) => setTyped(e.target.value)}
-            />
-          </div>
-          <div className="fl-actions">
-            <button type="submit" className="btn-danger" disabled={saving || !nameConfirmed(typed, name)}>
-              {saving ? 'Deleting…' : 'Delete for good'}
-            </button>
-            <button type="button" className="btn-link" onClick={onCancel} disabled={saving}>
-              Keep it
-            </button>
-          </div>
-        </form>
-      )}
-
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
