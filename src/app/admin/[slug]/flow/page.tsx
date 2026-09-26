@@ -15,6 +15,7 @@ import {
   laneState,
   readout,
   serviceSteps,
+  settingsNeeds,
   stepForPart,
   type FlowInput,
   type FlowModel,
@@ -181,9 +182,22 @@ export default function FlowPage() {
                 <button type="button" className="btn-secondary" onClick={startTrying}>
                   Test as a client
                 </button>
-                <a className="btn-secondary" href={a(`sessions/${lane.id}`)}>
-                  Service settings
-                </a>
+                {/* Ochre while the settings are still waiting for something —
+                    a price, a place, a description, who it is offered to —
+                    and the reason is said to anyone who asks. */}
+                {(() => {
+                  const needs = settingsNeeds(lane).map((st) => st.note).join(' ');
+                  return (
+                    <a
+                      className={`btn-secondary${needs ? ' is-need' : ''}`}
+                      href={a(`sessions/${lane.id}`)}
+                      title={needs || undefined}
+                    >
+                      Service settings
+                      {needs && <span className="sr-only"> — {needs}</span>}
+                    </a>
+                  );
+                })()}
               </>
             )}
           </div>
@@ -390,11 +404,23 @@ async function setActive(slug: string, id: string, active: boolean) {
  * Pausing: no new appointments can be made. Allowed at any time — whoever
  * already booked keeps their appointment and can still move or cancel it
  * (see src/lib/service-deletion.ts). Asked once, in place.
+ *
+ * A service that has never been booked can also be deleted from here, at
+ * once: one made by mistake should not have to be paused and left in the
+ * account. Offered only once the check says so.
  */
 function PauseService({ slug, lane, onPaused }: { slug: string; lane: Lane; onPaused: () => void }) {
   const [asking, setAsking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletable, setDeletable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    adminFetchJson<DeletionCheck>(`/api/admin/${slug}/event-types/${lane.id}/deletion`)
+      .then((check) => setDeletable(check.neverBooked && check.blockers.length === 0))
+      .catch(() => setDeletable(false));
+  }, [slug, lane.id]);
 
   async function pause() {
     setSaving(true);
@@ -430,10 +456,25 @@ function PauseService({ slug, lane, onPaused }: { slug: string; lane: Lane; onPa
             </p>
           )}
         </>
+      ) : deleting ? (
+        <DeleteService
+          slug={slug}
+          id={lane.id}
+          name={lane.name}
+          onCancel={() => setDeleting(false)}
+          onDeleted={onPaused}
+        />
       ) : (
-        <button type="button" className="btn-link" onClick={() => setAsking(true)}>
-          Pause this service
-        </button>
+        <span className="fc-archive-links">
+          <button type="button" className="btn-link" onClick={() => setAsking(true)}>
+            Pause this service
+          </button>
+          {deletable && (
+            <button type="button" className="btn-link" onClick={() => setDeleting(true)}>
+              Delete this service
+            </button>
+          )}
+        </span>
       )}
     </div>
   );
@@ -538,12 +579,14 @@ interface DeletionCheck {
   past: number;
   blockers: string[];
   keeps: string;
+  neverBooked: boolean;
 }
 
 /**
- * Deleting for good, asked twice: first what it means — or why it cannot
- * happen yet — then the service's name, typed back. The route checks every
- * one of these again before it deletes anything.
+ * Deleting for good. A service with any history is asked about twice:
+ * first what it means — or why it cannot happen yet — then its name, typed
+ * back. One never booked is asked once: nothing is lost. The route checks
+ * every one of these again before it deletes anything.
  */
 function DeleteService({
   slug,
@@ -625,7 +668,24 @@ function DeleteService({
         </>
       )}
 
-      {check && check.blockers.length === 0 && stage === 'explain' && (
+      {check && check.blockers.length === 0 && check.neverBooked && (
+        <>
+          <p>
+            <b>Delete {name}?</b> It has never been booked, so nothing else changes: it disappears from your
+            services and your booking page, with its settings and its own questions. It can’t be undone.
+          </p>
+          <div className="fl-actions">
+            <button type="button" className="btn-danger" onClick={() => void remove()} disabled={saving}>
+              {saving ? 'Deleting…' : 'Delete it'}
+            </button>
+            <button type="button" className="btn-link" onClick={onCancel} disabled={saving}>
+              Keep it
+            </button>
+          </div>
+        </>
+      )}
+
+      {check && check.blockers.length === 0 && !check.neverBooked && stage === 'explain' && (
         <>
           <p>
             <b>Delete {name} for good?</b> It can’t be undone: it can never be resumed, and its settings and its
@@ -643,7 +703,7 @@ function DeleteService({
         </>
       )}
 
-      {check && check.blockers.length === 0 && stage === 'type' && (
+      {check && check.blockers.length === 0 && !check.neverBooked && stage === 'type' && (
         <form
           onSubmit={(e) => {
             e.preventDefault();

@@ -5,6 +5,7 @@ import {
   laneState,
   readout,
   serviceSteps,
+  settingsNeeds,
   stepForPart,
   type FlowInput,
   type FlowService,
@@ -293,6 +294,27 @@ describe('stepForPart', () => {
       'booked',
       null,
     ]);
+  });
+});
+
+describe('settingsNeeds', () => {
+  it('is empty for a service whose settings are all decided', () => {
+    expect(settingsNeeds(buildFlow(input({})).lanes[0]!)).toEqual([]);
+  });
+
+  it('names what the settings page is still waiting for, stopping bookings first', () => {
+    const lane = buildFlow(
+      input({ services: [service({ priceMinor: null, availableToProspects: false, availableToExistingClients: false })] }),
+    ).lanes[0]!;
+    expect(settingsNeeds(lane).map((st) => st.id)).toEqual(['review', 'rules']);
+    expect(settingsNeeds(lane)[1]!.note).toMatch(/No price/);
+  });
+
+  it('leaves out what is decided elsewhere — questions, hours, messages', () => {
+    const lane = buildFlow(
+      input({ services: [service({})], globalQuestionCount: 0, availabilityRuleCount: 0, hasOtherPathMessage: false, hasOtherPathUrl: false }),
+    ).lanes[0]!;
+    expect(settingsNeeds(lane)).toEqual([]);
   });
 });
 

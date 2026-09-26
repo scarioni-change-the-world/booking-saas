@@ -8959,3 +8959,23 @@ body:has(.bk-embedded) {
     border-radius: 20px;
   }
 }
+
+/* The key to a service's settings, while they are still waiting for
+   something: Ochre, because it needs you, and nothing else about it
+   changes. The reason is its title and, for a screen reader, its words. */
+.admin-app .btn-secondary.is-need {
+  border-color: var(--emphasis);
+  color: var(--emphasis-ink);
+}
+.admin-app .btn-secondary.is-need:hover:not(:disabled) {
+  border-color: var(--emphasis-ink);
+  background: var(--emphasis-tint);
+}
+/* Pause and, for a service never booked, Delete: two quiet words side by side. */
+.fc-archive-links {
+  display: inline-flex;
+  gap: 18px;
+}
+.fc-archive:has(> .fc-delete) {
+  display: block;
+}

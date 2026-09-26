@@ -314,6 +314,18 @@ export interface LaneState {
   live: boolean;
 }
 
+/** The setup stages decided on a service's own settings page. */
+const SETTINGS_STAGES = new Set(['service', 'rules', 'review']);
+
+/**
+ * What the service's settings page is still waiting for — a description, a
+ * price, a place, who it is offered to — stopping bookings first. Non-empty
+ * means the key that opens that page needs you, and says why.
+ */
+export function settingsNeeds(lane: Lane): Stage[] {
+  return [...lane.blocking, ...lane.loose].filter((st) => !st.done && SETTINGS_STAGES.has(st.id));
+}
+
 /** Whether people can book this service now, in two or three words. */
 export function laneState(model: FlowModel, lane: Lane): LaneState {
   if (!lane.fromPage && !lane.fromClients) return { label: 'Not offered yet', live: false };
