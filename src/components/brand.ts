@@ -1,23 +1,21 @@
+import { brandAccent } from '@/lib/brand-colour';
+
 /**
- * Tenant identity helpers, shared by every surface a client sees
- * (BookingFlow, ManageBooking) — never intro's own identity.
+ * Tenant identity helpers, shared by every surface a client sees — never
+ * intro's own identity.
  */
 
-/** Two-letter initials for a tenant with no logo: "Amelia Rivera" → "AR". */
-export function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
-  return letters.join('') || '?';
-}
-
 /**
- * CSS variable override for a tenant's chosen accent, or undefined to leave
- * the default in place.
+ * CSS variable override for a tenant's own colour, or undefined to leave
+ * Mineral in place.
  *
- * This is the only branding value that ever crosses into --accent. Status
- * colour (--status-live and friends) is fixed in globals.css and is never
- * touched here — see the note at the top of that file.
+ * The business's colour takes Mineral's one job on a client's screen —
+ * where you are, and the main key — and nothing else. It is checked here
+ * (brand-colour.ts) rather than trusted, so a colour saved before the rule
+ * existed, or one that could be mistaken for Ochre, falls back to Mineral.
+ * Status colours are fixed in globals.css and never touched here.
  */
-export function accentStyle(accentColor?: string): React.CSSProperties | undefined {
-  return accentColor ? ({ '--accent': accentColor } as React.CSSProperties) : undefined;
+export function accentStyle(accentColor?: string | null): React.CSSProperties | undefined {
+  const hex = brandAccent(accentColor);
+  return hex ? ({ '--accent': hex } as React.CSSProperties) : undefined;
 }

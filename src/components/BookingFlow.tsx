@@ -5,14 +5,16 @@ import { BookingExperience } from './booking/BookingExperience';
 import { ServiceSummary } from './booking/ServiceSummary';
 import { useBookingJourney } from './booking/useBookingJourney';
 import { useHostHeight } from './booking/useHostHeight';
+import { ClientShell } from './booking/ClientShell';
 import { accentStyle } from './brand';
 
 /**
  * The booking experience, in whichever of its two forms applies.
  *
  * One journey, two shells. The shells differ in what surrounds the booking,
- * never in the booking itself: standalone puts it on a page of its own, with
- * the business's identity beside it and a discreet credit at the foot;
+ * never in the booking itself: standalone puts it on a page of its own
+ * (ClientShell), under the business's nameplate with a discreet credit at
+ * the foot;
  * embedded strips all of that away and lets the host page's own background,
  * width and margins show through, so it reads as part of that site rather
  * than as a second website trapped inside it.
@@ -122,44 +124,46 @@ export default function BookingFlow({ slug, mode, test }: Props) {
     );
   }
 
+  const panel = (
+    <div className="bk-panel">
+      {testBanner}
+      <BookingExperience journey={journey} />
+    </div>
+  );
+
   return (
-    <div className="bk bk-standalone" style={accent}>
-      <main className="bk-page">
+    <ClientShell
+      business={journey.config ? { name: journey.config.name, branding: journey.config.branding } : null}
+      /* The door for somebody who has been here before.
+       *
+       * Everything on this page assumes a stranger: the questions exist to
+       * find out who somebody is, and they are exactly the wrong thing to
+       * put in front of a client of three years who wants to book again.
+       * Their own link skips all of it — but it arrived by email once, and
+       * a year later they are on this page because it is the one they can
+       * find.
+       *
+       * Only while they are still at the start. Offering "have you been
+       * here before?" to somebody halfway through choosing a time is an
+       * invitation to abandon what they are doing. */
+      aside={
+        (journey.phase === 'service' || journey.phase === 'email') && journey.config ? (
+          <>
+            Worked with {journey.config.name} before? <a href={`/t/${slug}/client`}>Get your booking link</a>
+          </>
+        ) : undefined
+      }
+    >
+      {/* Two columns once there is a service to describe; before that, the
+          one plate on its own rather than beside an empty column. */}
+      {journey.eventType ? (
         <div className="bk-columns">
           <aside className="bk-aside-col">{summary}</aside>
-          <div className="bk-panel">
-            {testBanner}
-            <BookingExperience journey={journey} />
-          </div>
+          {panel}
         </div>
-
-        {/* The door for somebody who has been here before.
-         *
-         * Everything above this line assumes a stranger: the questions
-         * exist to find out who somebody is, and they are exactly the wrong
-         * thing to put in front of a client of three years who wants to
-         * book again. Their own link skips all of it — but it arrived by
-         * email once, and a year later they are on this page because it is
-         * the one they can find.
-         *
-         * Only while they are still at the start. Offering "have you been
-         * here before?" to somebody halfway through choosing a time is an
-         * invitation to abandon what they are doing, and on the
-         * confirmation screen it would be nonsense. */}
-        {(journey.phase === 'service' || journey.phase === 'email') && (
-          <p className="bk-returning">
-            Worked with {journey.config?.name ?? 'us'} before?{' '}
-            <a href={`/t/${slug}/client`}>Get your booking link</a> and skip the questions.
-          </p>
-        )}
-
-        {/* The only place intro speaks on this page, and it speaks quietly.
-            Lowercase always; the wordmark treatment is reserved for here and
-            never lent to the business's own name above. */}
-        <p className="bk-credit">
-          Powered by <span className="bk-wordmark">intro</span>
-        </p>
-      </main>
-    </div>
+      ) : (
+        <div className="bk-solo">{panel}</div>
+      )}
+    </ClientShell>
   );
 }

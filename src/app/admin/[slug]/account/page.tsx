@@ -5,9 +5,11 @@ import { useParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { BookingPageCard, type Branding } from '@/components/admin/BookingPageCard';
 
 interface Account {
   business: { name: string; slug: string; timezone: string; createdAt: string };
+  branding: Branding;
   currency: string;
   plan: { plan: 'trial' | 'starter' | 'pro' | 'cancelled'; trialEndsAt: string | null; freeAccess: boolean };
   me: { email: string | null; role: 'owner' | 'admin' | 'member' };
@@ -39,8 +41,8 @@ const ROLE: Record<Account['me']['role'], string> = { owner: 'Owner', admin: 'Ad
  * it now lives where it takes effect — notice, booking window and Google
  * Calendar on the Week; the page's embed code on Flow; email addresses on
  * Messages — and this keeps what is truly about the account: the business's
- * name and time zone, what it charges in, who is signed in, the team and
- * the plan. Things set once and rarely touched.
+ * name and time zone, how its booking page looks, what it charges in, who is
+ * signed in, the team and the plan. Things set once and rarely touched.
  */
 export default function AccountPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -79,6 +81,12 @@ export default function AccountPage() {
         <div className="acct">
           <div className="acct-main">
             <BusinessCard slug={slug} account={account} onSaved={load} />
+            <BookingPageCard
+              slug={slug}
+              businessName={account.business.name}
+              saved={account.branding}
+              onSaved={load}
+            />
             <CurrencyCard slug={slug} current={account.currency} onSaved={load} />
 
             <section className="card acct-card">

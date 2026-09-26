@@ -12,6 +12,8 @@ import {
   type CalendarEvent,
 } from './booking/calendar-actions';
 import { groupSlots } from './booking/slots';
+import { ClientShell } from './booking/ClientShell';
+import type { NameplateBranding } from './booking/Nameplate';
 import type { DaySlots } from './types';
 
 /* How many times a period shows before "Show N more". Matches the public
@@ -165,6 +167,7 @@ export default function ClientBooking({ slug, token }: Props) {
      see src/lib/client-thread.ts. */
   const [history, setHistory] = useState<HistoryBooking[]>([]);
   const [business, setBusiness] = useState('');
+  const [branding, setBranding] = useState<NameplateBranding & { accentColor?: string | null }>({});
   const [since, setSince] = useState<string | null>(null);
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [singleTypes, setSingleTypes] = useState<SingleType[]>([]);
@@ -198,6 +201,7 @@ export default function ClientBooking({ slug, token }: Props) {
         const result = await getJson<{
           client: { name: string; since?: string };
           business?: string;
+          branding?: NameplateBranding & { accentColor?: string | null };
           history?: HistoryBooking[];
           entitlements: Entitlement[];
           singleEventTypes: SingleType[];
@@ -209,6 +213,7 @@ export default function ClientBooking({ slug, token }: Props) {
         setClientName(result.client.name);
         setHistory(result.history ?? []);
         setBusiness(result.business ?? '');
+        setBranding(result.branding ?? {});
         setSince(result.client.since ?? null);
         const withBalance = result.entitlements.filter((e) => e.remaining > 0);
         setEntitlements(withBalance);
@@ -445,18 +450,13 @@ export default function ClientBooking({ slug, token }: Props) {
      client who booked once through the questionnaire and again through
      their own link saw two different products. */
   const shell = (children: ReactNode) => (
-    <div className="bk bk-standalone">
-      <main className="bk-page">
-        <div className="bk-solo">
-          <div className="bk-panel">
-            <div className="bk-steps">{children}</div>
-          </div>
+    <ClientShell business={business ? { name: business, branding } : null}>
+      <div className="bk-solo">
+        <div className="bk-panel">
+          <div className="bk-steps">{children}</div>
         </div>
-        <p className="bk-credit">
-          Powered by <span className="bk-wordmark">intro</span>
-        </p>
-      </main>
-    </div>
+      </div>
+    </ClientShell>
   );
 
   if (step === 'loading') {

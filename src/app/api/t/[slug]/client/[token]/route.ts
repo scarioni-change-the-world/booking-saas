@@ -102,6 +102,7 @@ export async function GET(
     return ok({
       client: { name: client.name, email: client.email, since: client.created_at },
       business: tenant.name,
+      branding: tenant.branding ?? {},
       history,
       currency:
         (settings.data as unknown as { currency?: string } | null)?.currency ?? DEFAULT_CURRENCY,

@@ -3,20 +3,19 @@
 import { articleFor } from './journey';
 import { formatMoney } from '@/lib/money';
 import { describeLocation } from '@/lib/service-location';
-import { initials } from '../brand';
 import type { PublicConfig, PublicEventType } from '../types';
 
 /**
- * Who you are booking with, and what.
+ * What you are booking.
  *
- * The one part of the screen that does not change as the journey moves. That
- * is its whole job: a client four steps into a form should never have to
- * scroll back to check whose calendar they are on. It answers the first two
- * of the four questions a stranger has in the first five seconds — who, and
- * what — and, once a time is chosen, the third.
+ * The one part of the screen that does not change as the journey moves: a
+ * client four steps into a form should never have to scroll back to check
+ * what they are booking. Its facts are read the way the admin reads a
+ * figure — a small label, then the value — and once a time is chosen it
+ * appears underneath, on a stone panel.
  *
- * The business is the identity here. intro appears once, small, at the foot
- * of the standalone shell, and nowhere near this.
+ * Who it is with is the nameplate in the bar above (ClientShell), or, framed
+ * in the business's own website, that website.
  */
 
 export function ServiceSummary({
@@ -34,63 +33,53 @@ export function ServiceSummary({
   formatInstantDay: (iso: string) => string;
   formatTimeRange: (iso: string, durationMinutes: number) => string;
 }) {
-  if (!config) return null;
+  if (!config || !eventType) return null;
 
-  const currency = config.currency;
-  const location = eventType
-    ? describeLocation(eventType.locationKind, eventType.locationDetail)
-    : null;
+  const location = describeLocation(eventType.locationKind, eventType.locationDetail);
 
   return (
     <div className="bk-summary">
-      <div className="bk-identity">
-        <div className="bk-avatar">
-          {config.branding.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
-            <img src={config.branding.logoUrl} alt="" />
-          ) : (
-            initials(config.name)
+      <div className="bk-service">
+        <h2 className="bk-service-name">{eventType.name}</h2>
+        {eventType.description && <p className="bk-service-note">{eventType.description}</p>}
+        <dl className="bk-facts">
+          <div>
+            <dt>Length</dt>
+            <dd>{eventType.durationMinutes} minutes</dd>
+          </div>
+          {location && (
+            <div>
+              <dt>Where</dt>
+              <dd>{location}</dd>
+            </div>
           )}
-        </div>
-        {/* A plain name in the body face. Deliberately not the wordmark
-            treatment — the business's name imitating intro's logo would be
-            this product wearing its customer's identity. */}
-        <p className="bk-business">{config.name}</p>
+          {/* Nothing at all when no price is set. An unset price is not
+              free, and "€0.00" would say it was. */}
+          {eventType.priceMinor !== null && (
+            <div>
+              <dt>Price</dt>
+              <dd className="bk-price">
+                {formatMoney(eventType.priceMinor, config.currency)}
+                {eventType.bookingMode === 'pack' ? ' per session' : ''}
+              </dd>
+            </div>
+          )}
+          {eventType.bookingMode === 'pack' && eventType.packSize && (
+            <div>
+              <dt>Package</dt>
+              <dd>
+                Part of {articleFor(eventType.packSize)} {eventType.packSize}-session package
+              </dd>
+            </div>
+          )}
+        </dl>
       </div>
 
-      {eventType && (
-        <div className="bk-service">
-          <h2 className="bk-service-name">{eventType.name}</h2>
-          {eventType.description && (
-            <p className="bk-service-note">{eventType.description}</p>
-          )}
-          <ul className="bk-facts">
-            <li>{eventType.durationMinutes} minutes</li>
-            {location && <li>{location}</li>}
-            {/* Nothing at all when no price is set. An unset price is not
-                free, and "€0.00" would say it was. */}
-            {eventType.priceMinor !== null && (
-              <li className="bk-price">
-                {formatMoney(eventType.priceMinor, currency)}
-                {eventType.bookingMode === 'pack' ? ' per session' : ''}
-              </li>
-            )}
-            {eventType.bookingMode === 'pack' && eventType.packSize && (
-              <li>
-                Part of {articleFor(eventType.packSize)} {eventType.packSize}-session package
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
-
-      {slot && eventType && (
+      {slot && (
         <div className="bk-chosen">
           <p className="bk-chosen-label">Your time</p>
           <p className="bk-chosen-when">{formatInstantDay(slot)}</p>
-          <p className="bk-chosen-time">
-            {formatTimeRange(slot, eventType.durationMinutes)}
-          </p>
+          <p className="bk-chosen-time">{formatTimeRange(slot, eventType.durationMinutes)}</p>
           <p className="bk-chosen-zone">{viewerZone}</p>
         </div>
       )}

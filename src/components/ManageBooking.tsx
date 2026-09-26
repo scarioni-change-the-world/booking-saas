@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { accentStyle, initials } from './brand';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { ClientShell } from './booking/ClientShell';
 import { DateNavigator } from './booking/DateNavigator';
 import { groupSlots } from './booking/slots';
 import type { DaySlots } from './types';
@@ -36,7 +36,7 @@ interface Payload {
   tenant: {
     name: string;
     timezone: string;
-    branding: { logoUrl?: string; accentColor?: string; buttonColor?: string };
+    branding: { logoUrl?: string; accentColor?: string; nameBesideLogo?: boolean; buttonColor?: string };
   };
 }
 
@@ -137,19 +137,14 @@ export default function ManageBooking({ token }: { token: string }) {
      from a confirmation email, so for many clients it is the second thing
      they ever see of the business — arriving at a different-looking product
      is the moment a booking page stops feeling like one. */
-  const shell = (children: ReactNode, accent?: CSSProperties) => (
-    <div className="bk bk-standalone" style={accent}>
-      <main className="bk-page">
-        <div className="bk-solo">
-          <div className="bk-panel">
-            <div className="bk-steps">{children}</div>
-          </div>
+  const shell = (children: ReactNode) => (
+    <ClientShell business={payload ? { name: payload.tenant.name, branding: payload.tenant.branding } : null}>
+      <div className="bk-solo">
+        <div className="bk-panel">
+          <div className="bk-steps">{children}</div>
         </div>
-        <p className="bk-credit">
-          Powered by <span className="bk-wordmark">intro</span>
-        </p>
-      </main>
-    </div>
+      </div>
+    </ClientShell>
   );
 
   if (error && !payload) {
@@ -168,7 +163,7 @@ export default function ManageBooking({ token }: { token: string }) {
     );
   }
 
-  const { booking, tenant, pack } = payload;
+  const { booking, pack } = payload;
 
   // The existing booking's own span is its duration — a reschedule keeps the
   // same session length, so there is no need to fetch the event type again
@@ -186,18 +181,6 @@ export default function ManageBooking({ token }: { token: string }) {
 
   return shell(
     <>
-      <div className="bk-identity">
-        <div className="bk-avatar">
-          {tenant.branding.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
-            <img src={tenant.branding.logoUrl} alt="" />
-          ) : (
-            initials(tenant.name)
-          )}
-        </div>
-        <p className="bk-business">{tenant.name}</p>
-      </div>
-
       {error && (
         <p className="bk-error" role="alert">
           {error}
@@ -411,6 +394,5 @@ export default function ManageBooking({ token }: { token: string }) {
         </form>
       )}
     </>,
-    accentStyle(tenant.branding.accentColor),
   );
 }

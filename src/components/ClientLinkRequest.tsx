@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { accentStyle, initials } from './brand';
+import { ClientShell } from './booking/ClientShell';
 import { useAutoResize } from './useAutoResize';
 import type { PublicConfig } from './types';
 
@@ -70,61 +70,58 @@ export default function ClientLinkRequest({ slug }: Props) {
   }
 
   return (
-    <main className="widget" style={accentStyle(config?.branding.accentColor)}>
-      {config && (
-        <div className="brand-row">
-          <div className="brand-mark">
-            {config.branding.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary remote host
-              <img src={config.branding.logoUrl} alt="" />
-            ) : (
-              initials(config.name)
-            )}
-          </div>
-          <span className="brand-name">{config.name}</span>
+    <ClientShell business={config ? { name: config.name, branding: config.branding } : null}>
+      <div className="bk-solo">
+        <div className="bk-panel">
+          {sent ? (
+            <section>
+              <h1 className="bk-heading">Check your inbox</h1>
+              <p className="bk-lede">{sent}</p>
+              <p className="bk-after">
+                <a className="bk-textlink" href={`/t/${slug}`}>
+                  Back to booking
+                </a>
+              </p>
+            </section>
+          ) : (
+            <form className="bk-form" onSubmit={submit}>
+              <h1 className="bk-heading">Find your booking link</h1>
+              <p className="bk-lede">
+                If you&apos;ve booked with {config?.name ?? 'us'} before, your own link lets you book again
+                without answering the questions. Enter your email and we&apos;ll send it over.
+              </p>
+
+              {error && (
+                <p className="bk-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <div className="field">
+                <label htmlFor="client-email">Email</label>
+                <input
+                  id="client-email"
+                  type="email"
+                  required
+                  autoFocus
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="btn-primary btn-full" disabled={busy}>
+                {busy ? 'Sending…' : 'Send my link'}
+              </button>
+              <p className="bk-after">
+                <a className="bk-textlink" href={`/t/${slug}`}>
+                  First time? Book from the start
+                </a>
+              </p>
+            </form>
+          )}
         </div>
-      )}
-
-      {error && (
-        <div className="notice notice-error" role="alert">
-          {error}
-        </div>
-      )}
-
-      {sent ? (
-        <>
-          <h2>Check your inbox</h2>
-          <p className="notice notice-muted">{sent}</p>
-        </>
-      ) : (
-        <form onSubmit={submit}>
-          <h2>Find your booking link</h2>
-          <p className="lede">
-            If you&apos;ve booked with us before, your own link lets you book again without
-            answering the questions. Enter your email and we&apos;ll send it over.
-          </p>
-
-          <div className="field">
-            <label htmlFor="client-email">
-              Email<span className="required">*</span>
-            </label>
-            <input
-              id="client-email"
-              type="email"
-              required
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <button type="submit" className="btn-primary btn-full" disabled={busy}>
-            {busy ? 'Sending…' : 'Send my link'}
-          </button>
-        </form>
-      )}
-
-      <p className="footer-credit">Powered by intro</p>
-    </main>
+      </div>
+    </ClientShell>
   );
 }

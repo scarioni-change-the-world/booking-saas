@@ -50,6 +50,9 @@ export type EmailTemplateKind =
 export interface TenantBranding {
   logoUrl?: string;
   accentColor?: string;
+  /** Show the business name beside the logo. Off by default: most logos
+   * already carry the name. With no logo the name always shows. */
+  nameBesideLogo?: boolean;
   buttonColor?: string;
 }
 

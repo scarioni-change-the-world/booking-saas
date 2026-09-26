@@ -179,6 +179,27 @@ Six rules every screen follows:
    Ochre part of its small flow, which is otherwise Granite. The sign-in
    screens keep their photograph. Their eyebrow is Graphite, their key is
    the Mineral outline, and the only Ochre left is a failed sign-in.
+   **The client's side in the same system, with the business's brand** —
+   done (migration 0031). The booking page, a booking's own link, a
+   client's own link and "get your booking link" now share one page
+   (`ClientShell`): flat Warm Chalk, not the stone texture, and a bar across
+   the top with the business's nameplate — its logo, or its name when it
+   has none — with the returning-client door on the right. The steps stand
+   on a plate. What is being booked is read off like the admin's figures
+   (Length, Where, Price), and a chosen time sits under it on stone. The
+   Ochre progress bar is now one lamp per step. Answers, days and times are
+   keys, with the chosen one edged. Booked is a stone panel, not teal.
+   Ochre is only what needs fixing, and the focus ring is Mineral
+   everywhere, admin included. Account → Your booking page sets a logo
+   (PNG, JPG or WebP up to 1 MB, checked by its bytes, kept in a `logos`
+   bucket only the server writes to; no SVG, which can carry script),
+   whether the name shows beside it, and a colour. The colour takes
+   Mineral's job on client pages (where you are, and the main key). It is
+   refused when it is close to Ochre or under 4.5:1 on white
+   (`brand-colour.ts`), and a colour saved before now is checked the same
+   way when shown. Framed in the business's own website there is no bar.
+   Fixed on the way: a business's colour never reached its tints, which
+   were worked out once from Mineral.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

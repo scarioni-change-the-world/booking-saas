@@ -28,6 +28,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         timezone: tenant.timezone,
         createdAt: tenant.created_at,
       },
+      branding: {
+        logoUrl: tenant.branding?.logoUrl ?? null,
+        accentColor: tenant.branding?.accentColor ?? null,
+        nameBesideLogo: tenant.branding?.nameBesideLogo ?? false,
+      },
       currency: (settings.data as unknown as TenantSettingsRow | null)?.currency ?? DEFAULT_CURRENCY,
       plan: { plan: tenant.plan, trialEndsAt: tenant.trial_ends_at, freeAccess: tenant.free_access },
       me: { email: team.find((m) => m.userId === userId)?.email ?? null, role },

@@ -280,40 +280,6 @@ a:visited {
   gap: 11px;
   margin-bottom: 20px;
 }
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background: var(--side);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-heading);
-  font-size: 14px;
-  color: var(--accent-ink);
-  overflow: hidden;
-  flex: 0 0 auto;
-}
-.brand-mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.brand-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.footer-credit {
-  margin-top: auto;
-  padding-top: 24px;
-  text-align: center;
-  font-size: 10.5px;
-  color: var(--faint);
-  opacity: 0.7;
-}
-
 /* ---------------------------------------------------------------------- */
 /* Forms                                                                    */
 /* ---------------------------------------------------------------------- */
@@ -387,22 +353,18 @@ textarea {
   color: inherit;
   background: var(--surface);
 }
-/* The marketing site's focus ring: Muted Ochre, 3px, held 4px clear of the
-   element. Deliberately the loudest thing on the page when it appears.
- *
- * Ochre rather than Mineral matters for a reason beyond matching. --accent
- * is the one token a tenant may override, so a focus ring drawn in it could
- * end up as whatever colour a business picked for their booking page —
- * including one that vanishes against their own background. --emphasis is
- * never tenant-owned, so this ring looks the same, and stays visible, on
- * every tenant's page. */
+/* The focus ring: 3px, held 4px clear of the element, in the colour that
+   means "where you are" — Mineral, or a business's own colour on its client
+   pages. It used to be Ochre, which is kept for what needs fixing. A
+   business's colour is checked before it can be used (brand-colour.ts): at
+   least 4.5:1 on Soft White, so the ring stays visible on every page. */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 button:focus-visible,
 summary:focus-visible,
 a:focus-visible {
-  outline: 3px solid var(--emphasis);
+  outline: 3px solid var(--accent);
   outline-offset: 4px;
 }
 textarea {
@@ -2815,7 +2777,7 @@ button.text-action {
   margin-inline: auto;
 }
 
-/* The identity column stays put while the steps change beside it — that is
+/* The service column stays put while the steps change beside it — that is
    its whole job, so it sticks rather than scrolling away on a long slot
    list. */
 .bk-aside-col {
@@ -2852,9 +2814,9 @@ body:has(.bk-embedded) {
 .bk-embedded .bk-panel {
   max-width: none;
 }
-/* Framed, the identity is a header inside the panel rather than a column
-   beside it — an iframe is rarely wide enough for two, and the business's
-   name still has to be the first thing read. */
+/* Framed, what is being booked is a header inside the panel rather than a
+   column beside it — an iframe is rarely wide enough for two. Who it is
+   with needs no saying: the page around it is the business's own. */
 .bk-embedded .bk-summary {
   display: flex;
   flex-wrap: wrap;
@@ -2910,41 +2872,7 @@ body:has(.bk-embedded) {
   max-width: 680px;
 }
 
-/* ── The identity column ────────────────────────────────────────────── */
-
-.bk-identity {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-}
-.bk-avatar {
-  width: 46px;
-  height: 46px;
-  flex: 0 0 auto;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--side);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--accent-ink);
-}
-.bk-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-/* The body face, at a normal weight. A business name set like the intro
-   wordmark would be this product wearing its customer's identity. */
-.bk-business {
-  margin: 0;
-  font-size: 1.02rem;
-  font-weight: 600;
-}
+/* ── What you are booking ───────────────────────────────────────────── */
 
 .bk-service {
   margin-top: 26px;
@@ -2970,9 +2898,6 @@ body:has(.bk-embedded) {
   list-style: none;
   font-size: 0.88rem;
   color: var(--faint);
-}
-.bk-facts li + li {
-  margin-top: 4px;
 }
 /* The second thing anyone looks for after "how long", so it reads as a
    fact rather than as fine print. Ink, not Graphite. */
@@ -3015,13 +2940,6 @@ body:has(.bk-embedded) {
 .bk-progress {
   margin-bottom: 28px;
 }
-.bk-progress-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
-}
 .bk-back {
   border: 0;
   background: transparent;
@@ -3041,23 +2959,6 @@ body:has(.bk-embedded) {
   color: var(--faint);
   text-align: right;
 }
-.bk-progress-count {
-  color: var(--ghost);
-}
-.bk-rule {
-  height: 2px;
-  background: var(--rule);
-  border-radius: 2px;
-  overflow: hidden;
-}
-/* Ochre, and the only place it appears in the journey — the guide's scarce
-   expressive note, spent on the one thing that marks forward movement. */
-.bk-rule-fill {
-  height: 100%;
-  background: var(--emphasis);
-  transition: width 0.3s ease;
-}
-
 /* ── Shared step furniture ──────────────────────────────────────────── */
 
 .bk-heading {
@@ -3279,7 +3180,7 @@ body:has(.bk-embedded) {
 /* The ring belongs to the row, not to the dot inside it — the row is what
    the eye and the pointer both treat as the control. */
 .bk-option:focus-within {
-  outline: 3px solid var(--emphasis);
+  outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
 .bk-option input:focus-visible {
@@ -3692,7 +3593,6 @@ body:has(.bk-embedded) {
 /* A progress rule that slides and buttons that fade are decoration. Anyone
    who has asked for less of it gets none. */
 @media (prefers-reduced-motion: reduce) {
-  .bk-rule-fill,
   .bk-service-option,
   .bk-option,
   .bk-date,
@@ -4268,21 +4168,6 @@ body:has(.bk-embedded) {
     width: 100%;
     text-align: left;
   }
-}
-
-/* The way in for somebody who has been here before.
-   Under the panel, not inside it: the panel is the journey a stranger is
-   on, and a line offering to skip it belongs beside that journey rather
-   than in it. Quiet — most people reading this page really are new. */
-.bk-returning {
-  margin: 20px 0 0;
-  text-align: center;
-  font-size: 0.86rem;
-  line-height: 1.5;
-  color: var(--faint);
-}
-.bk-returning a {
-  color: var(--accent-ink);
 }
 
 /* ── Setting a service up ───────────────────────────────────────────────
@@ -4907,7 +4792,7 @@ body:has(.bk-embedded) {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 .wk-cell:focus-visible {
-  outline: 2px solid var(--emphasis);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -5143,7 +5028,7 @@ body:has(.bk-embedded) {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 .pp-row:focus-visible {
-  outline: 2px solid var(--emphasis);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 @media (max-width: 680px) {
@@ -5469,7 +5354,7 @@ body:has(.bk-embedded) {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 .ms-card:focus-visible {
-  outline: 2px solid var(--emphasis);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .ms-card b {
@@ -8100,4 +7985,977 @@ body:has(.bk-embedded) {
 .console .actions .btn-primary,
 .console .actions .btn-secondary {
   flex: 0 0 auto;
+}
+
+/* ══ The client side, in the Braun system ═══════════════════════════════
+ *
+ * Every page a client sees — the booking page, a booking's own link, a
+ * client's own link, "get your booking link" — built the way the admin is:
+ * flat Warm Chalk, a Soft White plate that sits on it by its shadow, round
+ * keys, lamps for where you are. The business's nameplate heads the page
+ * (ClientShell) and its own colour, when it has one, takes Mineral's one
+ * job: where you are, and the main key. Ochre is what needs fixing, and
+ * nothing else. Status colours fold onto those two, as in the admin.
+ */
+.bk {
+  --ink: #353a38;
+  --ghost: #666a67;
+  --stone: #ebe8e1;
+  --stone-border: #bfbdb5;
+  --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 30px -24px rgba(32, 34, 33, 0.45);
+  --key-shadow: 0 1px 0 #fff inset, 0 6px 10px -8px rgba(32, 34, 33, 0.45);
+  --well: inset 0 2px 3px rgba(32, 34, 33, 0.15);
+  --radius-plate: 20px;
+  /* Derived again here, not only on :root: a custom property is worked out
+     where it is declared, so tints declared on :root never saw a business's
+     colour set on this element. */
+  --accent-tint: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --accent-ink: color-mix(in srgb, var(--accent) 72%, black);
+  --status-live: var(--ink);
+  --status-live-tint: var(--stone);
+  --status-live-ink: var(--ink);
+  --status-attention: var(--emphasis);
+  --status-attention-tint: var(--emphasis-tint);
+  --status-attention-ink: var(--emphasis-ink);
+  --status-broken: var(--emphasis);
+  --status-broken-tint: var(--emphasis-tint);
+  --status-broken-ink: var(--emphasis-ink);
+  color: var(--ink);
+}
+
+/* ── The page and its nameplate ── */
+.bk.bk-standalone {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: var(--canvas);
+}
+.bk-masthead {
+  min-height: 76px;
+  box-sizing: border-box;
+  padding: 12px 64px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  border-bottom: 1px solid var(--soft-border);
+}
+.bk-masthead-aside {
+  margin-left: auto;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.bk-masthead-aside a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.bk-nameplate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.bk-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 240px;
+  object-fit: contain;
+}
+.bk-nameplate-name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.bk.bk-standalone .bk-page {
+  flex: 1 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1248px;
+  margin: 0 auto;
+  padding: 48px 64px 0;
+}
+.bk .bk-columns {
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 64px;
+}
+.bk .bk-aside-col {
+  top: 32px;
+  padding-top: 8px;
+}
+.bk .bk-solo {
+  max-width: 680px;
+}
+.bk .bk-panel {
+  max-width: none;
+  padding: 32px 40px 40px;
+  border: 0;
+  border-radius: var(--radius-plate);
+  background: var(--surface);
+  box-shadow: var(--plate-shadow);
+}
+.bk .bk-credit {
+  margin: 0;
+  padding: 32px 24px;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+
+/* ── What you are booking: figures read off like the admin's ── */
+.bk .bk-service {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.bk .bk-service-name {
+  font-size: 2rem;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+.bk .bk-service-note {
+  margin-top: 14px;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.bk .bk-facts {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--soft-border);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.bk .bk-facts > div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+}
+.bk .bk-facts dt,
+.bk .bk-chosen-label,
+.bk .bk-review dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.bk .bk-facts dd {
+  margin: 0;
+}
+.bk .bk-price {
+  font-weight: 600;
+}
+.bk .bk-chosen {
+  margin-top: 24px;
+  padding: 20px 22px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--stone);
+}
+.bk .bk-chosen-label {
+  margin: 0 0 6px;
+}
+.bk .bk-chosen-when {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.bk .bk-chosen-time {
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ── Where you are: a lamp per step ── */
+.bk .bk-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px 24px;
+  margin: 0 0 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--stone);
+}
+.bk .bk-progress:not(:has(.bk-lamps, .bk-back)) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.bk-lamps {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bk-lamp-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.bk-lamp {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.5px solid var(--faint);
+}
+.bk-lamp-step.is-done {
+  color: var(--muted);
+}
+.bk-lamp-step.is-done .bk-lamp,
+.bk-lamp.is-done {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.bk-lamp-step.is-here {
+  color: var(--ink);
+  font-weight: 600;
+}
+.bk-lamp-step.is-here .bk-lamp,
+.bk-lamp.is-here {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* Said in words for a screen reader everywhere; shown on a phone, where
+   the lamps lose their names. */
+.bk .bk-progress-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.bk .bk-back {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--stone);
+  color: var(--muted);
+}
+.bk .bk-back:hover {
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--stone-border);
+}
+
+/* ── Words, fields and what went wrong ── */
+.bk .bk-heading {
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.bk input[type='text'],
+.bk input[type='email'],
+.bk input[type='tel'],
+.bk input[type='number'],
+.bk textarea,
+.bk select {
+  min-height: 52px;
+  border: 1.5px solid var(--soft-border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.bk textarea {
+  min-height: 104px;
+}
+.bk input:focus-visible,
+.bk textarea:focus-visible,
+.bk select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.bk input[aria-invalid='true'] {
+  border-color: var(--emphasis);
+}
+.bk .bk-error,
+.bk .bk-test {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+.bk .bk-error::before,
+.bk .bk-test::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--emphasis);
+  transform: translateY(1px);
+}
+.bk .bk-textlink {
+  color: var(--muted);
+}
+.bk .bk-textlink:hover {
+  color: var(--ink);
+}
+
+/* ── Keys: round-ended; the main one an outline in the business's colour ── */
+.bk .btn-primary {
+  min-height: 52px;
+  padding: 0 32px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: none;
+}
+.bk .btn-primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+.bk .btn-primary:disabled {
+  border-color: var(--stone-border);
+  background: transparent;
+  color: var(--faint);
+  opacity: 1;
+}
+.bk .btn-secondary {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1.5px solid var(--stone-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+}
+.bk .btn-secondary:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: transparent;
+}
+.bk .btn-full {
+  width: auto;
+}
+.bk .bk-resource-link,
+.bk .bk-resource-link:hover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+.bk .bk-resource {
+  border: 0;
+  border-radius: 14px;
+  background: var(--stone);
+}
+
+/* ── Choices: each one a key; the chosen one edged in the business's colour ── */
+.bk .bk-service-option,
+.bk .bk-option,
+.bk .bk-date,
+.bk .bk-slot {
+  border: 0;
+  background: var(--surface);
+  box-shadow: var(--key-shadow), 0 0 0 1px var(--stone);
+}
+.bk .bk-service-option:hover:not(:disabled),
+.bk .bk-option:hover,
+.bk .bk-date:hover:not(:disabled),
+.bk .bk-slot:hover:not(:disabled) {
+  background: var(--surface);
+  box-shadow: var(--key-shadow), 0 0 0 1px var(--stone-border);
+}
+.bk .bk-option.is-selected,
+.bk .bk-date.is-active,
+.bk .bk-slot.is-selected {
+  background: var(--accent-tint);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.bk .bk-service-option {
+  padding: 18px 22px;
+  border-radius: 16px;
+}
+.bk .bk-service-option:hover:not(:disabled) .bk-service-option-go {
+  color: var(--accent);
+}
+/* display and margin restated: .bk-form label (display: block) outranked
+   the row's own flex, which put the radio flush against its words. */
+.bk .bk-option {
+  display: flex;
+  margin: 0;
+  min-height: 52px;
+  padding: 13px 18px;
+  border-radius: 14px;
+}
+/* The keyboard ring only when the keyboard put it there; a click already
+   shows its answer by the edge. */
+.bk .bk-option:focus-within {
+  outline: none;
+}
+.bk .bk-option:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.bk .bk-option.is-selected {
+  font-weight: 600;
+}
+.bk .bk-question-num {
+  background: var(--stone);
+  color: var(--ink);
+}
+.bk .bk-arrow {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--key-shadow), 0 0 0 1px var(--stone);
+}
+.bk .bk-arrow:hover:not(:disabled) {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.bk .bk-dates-range {
+  color: var(--ink);
+  font-weight: 600;
+}
+.bk .bk-date-row {
+  gap: 10px;
+}
+.bk .bk-date {
+  min-height: 64px;
+  border-radius: 16px;
+}
+.bk .bk-date-dow {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--faint);
+  opacity: 1;
+}
+.bk .bk-date.is-active .bk-date-dow {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.bk .bk-date.is-empty {
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.45;
+}
+/* Wide enough for a 12-hour range ("10:30 AM – 11:00 AM") on one line; a
+   phone gets one column rather than two-line pills. */
+.bk .bk-slots {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+.bk .bk-slot {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+}
+.bk .bk-slot.is-selected {
+  font-weight: 600;
+}
+.bk .bk-slot:disabled,
+.bk .bk-slot:disabled:hover {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ── Review and booked ── */
+.bk .bk-review {
+  border-top-color: var(--stone);
+}
+.bk .bk-review-row {
+  border-bottom-color: var(--stone);
+}
+.bk .bk-review dt {
+  padding-top: 3px;
+}
+/* Booked is a fact, not a colour: a stone panel with the time large, the
+   same way the chosen time sat beside the steps. */
+.bk .bk-confirmed {
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: var(--stone);
+  color: var(--ink);
+}
+.bk .bk-confirmed-when {
+  font-size: 1rem;
+  font-weight: 600;
+  opacity: 1;
+}
+.bk .bk-confirmed-time {
+  font-size: 1.9rem;
+}
+.bk .bk-confirmed-what,
+.bk .bk-confirmed-where {
+  color: var(--muted);
+  opacity: 1;
+}
+.bk .bk-confirmed-zone,
+.bk .bk-confirmed-first {
+  color: var(--faint);
+  opacity: 1;
+}
+.bk .bk-join {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 26px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.bk .bk-join:hover {
+  background: var(--accent-tint);
+}
+.bk .bk-programme-link,
+.bk .bk-cancelled,
+.bk .bk-programme {
+  border: 0;
+  border-radius: 14px;
+  background: var(--stone);
+}
+.bk .bk-add {
+  border-top-color: var(--stone);
+}
+
+/* ── A programme as a thread: Granite done, the next one lit, owed in Ochre ── */
+.bk .bk-thread li::before {
+  background: var(--ink);
+}
+.bk .bk-thread li::after {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.bk .bk-thread li.is-next::after,
+.bk .bk-thread li.is-booked::after {
+  background: var(--surface);
+}
+.bk .bk-thread li.is-next::after {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.bk .bk-thread li.is-owed::after {
+  border-style: dashed;
+  border-color: var(--emphasis);
+  background: var(--surface);
+}
+.bk .bk-thread li.is-owed::before,
+.bk .bk-thread li:has(+ li.is-owed)::before {
+  background: var(--soft-border);
+}
+.bk .bk-thread-act {
+  padding: 8px 18px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent);
+}
+.bk .bk-thread-act:hover {
+  background: var(--accent-tint);
+}
+.bk .bk-thread-act.is-quiet {
+  border: 1.5px solid var(--stone-border);
+  color: var(--ink);
+}
+.bk .bk-session-dot {
+  border-color: var(--ink);
+}
+.bk .bk-session-dot.is-used {
+  background: var(--ink);
+}
+.bk .bk-session-dot.is-picking {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.bk .bk-pack-bar {
+  margin: 26px -40px -40px;
+  padding: 18px 40px 24px;
+  border-top-color: var(--stone);
+  border-radius: 0 0 var(--radius-plate) var(--radius-plate);
+}
+.bk .bk-pack-n {
+  background: var(--stone);
+  color: var(--ink);
+}
+.bk .bk-pack-confirmed,
+.bk .bk-pack-confirmed li {
+  border-color: var(--stone);
+}
+
+/* ── Framed in the business's own website: no nameplate, no page; the
+   plate carries a hairline so it holds on any background. ── */
+.bk.bk-embedded .bk-panel {
+  padding: 28px 32px 32px;
+  box-shadow: 0 0 0 1px var(--stone), var(--plate-shadow);
+}
+.bk.bk-embedded .bk-service-name {
+  font-size: 1.1rem;
+  letter-spacing: 0;
+}
+.bk.bk-embedded .bk-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.bk.bk-embedded .bk-facts > div {
+  display: block;
+}
+.bk.bk-embedded .bk-facts dt {
+  display: none;
+}
+.bk.bk-embedded .bk-chosen {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+.bk.bk-embedded .bk-chosen-when,
+.bk.bk-embedded .bk-chosen-time {
+  display: inline;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.bk.bk-embedded .bk-chosen-when::after {
+  content: ' · ';
+}
+.bk.bk-embedded .bk-pack-bar {
+  margin: 26px -32px -32px;
+  padding: 18px 32px 22px;
+}
+
+/* ── Narrow ── */
+@media (max-width: 880px) {
+  .bk-masthead {
+    min-height: 60px;
+    padding: 10px 20px;
+  }
+  .bk-logo {
+    height: 32px;
+  }
+  .bk-nameplate-name {
+    font-size: 1.15rem;
+  }
+  .bk.bk-standalone .bk-page {
+    padding: 20px 16px 0;
+  }
+  .bk .bk-columns {
+    display: block;
+  }
+  .bk .bk-aside-col {
+    position: static;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+  .bk .bk-panel,
+  .bk.bk-embedded .bk-panel {
+    padding: 22px 18px 24px;
+  }
+  .bk .bk-service-name {
+    font-size: 1.4rem;
+  }
+  .bk .bk-facts {
+    gap: 6px;
+    margin-top: 14px;
+    padding-top: 12px;
+    font-size: 0.9rem;
+  }
+  .bk .bk-facts > div {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .bk .bk-chosen {
+    margin-top: 14px;
+    padding: 14px 16px;
+  }
+  .bk .bk-chosen-when {
+    font-size: 1.2rem;
+  }
+  .bk .bk-heading {
+    font-size: 1.4rem;
+  }
+  .bk .bk-pack-bar,
+  .bk.bk-embedded .bk-pack-bar {
+    margin: 22px -18px -24px;
+    padding: 16px 18px 20px;
+  }
+}
+@media (max-width: 640px) {
+  .bk-masthead-aside {
+    flex-basis: 100%;
+    margin-left: 0;
+    font-size: 0.82rem;
+  }
+  .bk-lamps {
+    gap: 8px;
+  }
+  .bk-lamp-label {
+    display: none;
+  }
+  .bk .bk-lamps {
+    flex: 0 0 auto;
+  }
+  .bk .bk-lamps + .bk-progress-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .bk .btn-full {
+    width: 100%;
+  }
+  .bk .bk-date-row {
+    gap: 5px;
+  }
+}
+
+/* ── Account → Your booking page ── */
+.bp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 1180px) {
+  .bp {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.bp-label {
+  display: block;
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.bp-fieldset {
+  min-width: 0;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+}
+.bp-logo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+}
+.bp-logo-well {
+  width: 180px;
+  height: 64px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--soft-border);
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.bp-logo-well img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.bp-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--stone);
+  box-shadow: var(--well);
+}
+.bp-switch label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.bp-switch label.is-on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 3px 6px -2px rgba(32, 34, 33, 0.35);
+}
+.bp-switch input,
+.bp-swatch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.bp-switch label:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.bp-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.bp-swatch {
+  position: relative;
+  cursor: pointer;
+}
+.bp-swatch > span[aria-hidden='true'] {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--soft-border);
+}
+.bp-swatch input:checked + span {
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--ink);
+}
+.bp-swatch input:focus-visible + span {
+  outline: 3px solid var(--accent);
+  outline-offset: 5px;
+}
+.bp-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 4px;
+  padding-left: 14px;
+  border-left: 1px solid var(--soft-border);
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.bp-custom input {
+  width: 110px;
+  min-height: 44px;
+}
+.bp-readout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.bp-readout.is-need {
+  color: var(--emphasis-ink);
+}
+.bp-open {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.bp-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bp-preview {
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--canvas);
+  box-shadow: inset 0 0 0 1px var(--stone);
+}
+.bp-preview-bar {
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--soft-border);
+}
+.bp-preview .bk-logo {
+  height: 26px;
+  max-width: 150px;
+}
+.bp-preview .bk-nameplate {
+  gap: 8px;
+}
+.bp-preview .bk-nameplate-name {
+  font-size: 0.95rem;
+}
+.bp-preview-plate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px;
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 16px 22px -18px rgba(32, 34, 33, 0.45);
+  font-size: 0.9rem;
+}
+.bp-preview .bk-lamps {
+  gap: 6px;
+}
+.bp-preview-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bp-preview-slots span {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  box-shadow: 0 0 0 1px var(--stone);
+}
+.bp-preview-slots .is-on {
+  background: var(--accent-tint);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  font-weight: 600;
+}
+.bp-preview-key {
+  align-self: flex-start;
+  padding: 6px 16px;
+  border: 1.5px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .bp-switch {
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+  }
 }

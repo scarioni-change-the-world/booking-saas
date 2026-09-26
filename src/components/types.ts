@@ -31,7 +31,7 @@ export interface PublicConfig {
   timezone: string;
   /** ISO 4217, for rendering every price on the page. */
   currency: string;
-  branding: { logoUrl?: string; accentColor?: string; buttonColor?: string };
+  branding: { logoUrl?: string; accentColor?: string; nameBesideLogo?: boolean; buttonColor?: string };
   otherPath: {
     message: string;
     redirectUrl: string | null;
