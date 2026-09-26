@@ -169,6 +169,16 @@ Six rules every screen follows:
    live. The Week's matching top banner is gone the same way: who is still
    owed is named in the side panel's existing quiet sentence, not a
    dashed-border strip across the page.
+   **Console and sign-in in the two colours** — done. Both sat outside
+   `.admin-app`, so they still used the older palette: teal, amber and red
+   status pills, a Mineral edge on every healthy business, an Ochre eyebrow
+   on sign-in. Now they are inside it and use its keys, plates, fields and
+   lamps. The Console uses the admin's bar and page. Every business is a
+   plate, and its state is a lamp and a word (suspended is a ring, like a
+   paused service). What stops its bookings is a few Ochre words and the
+   Ochre part of its small flow, which is otherwise Granite. The sign-in
+   screens keep their photograph. Their eyebrow is Graphite, their key is
+   the Mineral outline, and the only Ochre left is a failed sign-in.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

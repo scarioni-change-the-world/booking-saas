@@ -48,14 +48,14 @@ export default function ConsoleLoginPage() {
 
   return (
     /* Same textured ground as the tenant sign-in — see globals.css. */
-    <div className="signin-ground">
+    <div className="admin-app signin-ground">
       <main className="widget" style={{ paddingTop: 88 }}>
         <div className="brand-row" style={{ justifyContent: 'center' }}>
           <span className="admin-brand" style={{ fontSize: 28 }}>
-            intro <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
+            intro <span className="console-mark">console</span>
           </span>
         </div>
-        <p className="eyebrow" style={{ textAlign: 'center', marginBottom: 26 }}>
+        <p className="admin-eyebrow" style={{ textAlign: 'center', marginBottom: 26 }}>
           Staff access
         </p>
 

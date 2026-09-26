@@ -639,9 +639,9 @@ a.btn-secondary {
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(32, 34, 33, 0.78) 0%,
-    rgba(32, 34, 33, 0.48) 42%,
-    rgba(32, 34, 33, 0.24) 100%
+    rgba(53, 58, 56, 0.8) 0%,
+    rgba(53, 58, 56, 0.5) 42%,
+    rgba(53, 58, 56, 0.26) 100%
   );
 }
 .signin-scene__words {
@@ -678,11 +678,11 @@ a.btn-secondary {
   color: var(--ink);
   margin-bottom: 34px;
 }
-/* Ochre, not Mineral. This is the page's single expressive detail — the
-   guide's 2-5% — and everything else functional stays Mineral. */
+/* Graphite, as every eyebrow in the admin is: Ochre is kept for what needs
+   you, and on this screen that is only a sign-in that failed. */
 .signin-eyebrow {
   margin: 0 0 10px;
-  color: var(--emphasis);
+  color: var(--faint);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -786,7 +786,7 @@ a.btn-secondary {
   font-size: 0.88rem;
 }
 .signin-aside a {
-  color: var(--accent);
+  color: var(--muted);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1222,7 +1222,6 @@ a.btn-secondary {
 /* ---------------------------------------------------------------------- */
 
 .admin-app {
-  display: flex;
   min-height: 100vh;
 }
 
@@ -1282,6 +1281,7 @@ a.btn-secondary {
    under a menu button when the width runs out. Where you are is said the
    way the old nav said it — a pale tint and weight, not a filled block. */
 .admin-app.shell {
+  display: flex;
   flex-direction: column;
 }
 .shell-bar {
@@ -8015,4 +8015,89 @@ body:has(.bk-embedded) {
     gap: 6px 18px;
     padding-left: 50px;
   }
+}
+
+/* ── Console and sign-in, in the same two colours ───────────────────────
+   Both sit inside .admin-app now, so their keys, fields, plates, notices
+   and lamps are the admin's own. What is left is only what they have and
+   the admin does not. */
+
+/* .admin-app sets a plain ground; the console's sign-in keeps its stone. */
+.admin-app.signin-ground {
+  background-color: var(--canvas);
+  background-image: var(--limestone);
+  background-size: auto, 760px auto;
+}
+.console-mark {
+  margin-left: 2px;
+  font-size: 0.6em;
+  letter-spacing: 0;
+  color: var(--faint);
+}
+.console-role {
+  text-transform: capitalize;
+}
+/* No places to switch between, so Sign out stays in the bar on a phone
+   rather than behind a menu with nothing else in it. */
+@media (max-width: 860px) {
+  .console .shell-account {
+    display: flex;
+  }
+}
+
+/* Every business a plate. What stops or thins its bookings is said in a
+   few Ochre words, as a service's step says it — not by a coloured edge. */
+.admin-app .biz-card {
+  padding: 20px 22px;
+  border: 0;
+  border-radius: var(--radius-plate);
+  box-shadow: var(--plate-shadow);
+}
+.admin-app .biz-card.is-watch .biz-card-sentence,
+.admin-app .biz-card.is-stopped .biz-card-sentence {
+  color: var(--emphasis-ink);
+  font-weight: 500;
+}
+.admin-app .biz-card-head {
+  align-items: center;
+}
+
+/* A business's small flow, in Granite: a part that works is filled, a
+   quiet one is a ring. Ochre only on the part that needs you — thin
+   (dashed) or stopping bookings (hollow). Past a break the line is a
+   grey gap, not more Ochre. */
+.admin-app .mf-part + .mf-part::before {
+  background: var(--ink);
+}
+.admin-app .mf-part.is-cut::before {
+  background: repeating-linear-gradient(90deg, var(--stone-border) 0 5px, transparent 5px 10px);
+}
+.admin-app .mf-part i {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.admin-app .mf-part.is-quiet i {
+  background: var(--surface);
+}
+.admin-app .mf-part.is-thin i {
+  border-style: dashed;
+  border-color: var(--emphasis);
+  background: var(--surface);
+}
+.admin-app .mf-part.is-broken i {
+  border-color: var(--emphasis);
+  background: var(--surface);
+}
+.admin-app .mf-part.is-broken span {
+  color: var(--emphasis-ink);
+}
+/* One business is a form to read down, so it keeps a reading width; the
+   list of businesses takes the whole page. Keys keep their own size, as
+   they do in the admin, rather than the booking page's full-width ones. */
+.console-detail {
+  max-width: 880px;
+}
+.console .actions .btn-primary,
+.console .actions .btn-secondary {
+  flex: 0 0 auto;
 }

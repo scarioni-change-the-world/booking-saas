@@ -83,52 +83,49 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
 
   if (check.state === 'misconfigured') {
     return (
-      <main className="widget" style={{ paddingTop: 60 }}>
-        <h1>Not configured</h1>
-        <p className="notice notice-error" role="alert">
-          {check.detail}
-        </p>
-        <p className="tz">
-          On Vercel, the <code>NEXT_PUBLIC_</code> variables are baked into the
-          build, so adding them is not enough on its own — redeploy afterwards
-          so a new build picks them up. <a href="/api/health">/api/health</a>{' '}
-          reports which parts are configured.
-        </p>
-      </main>
+      <div className="admin-app">
+        <main className="widget" style={{ paddingTop: 60 }}>
+          <h1>Not configured</h1>
+          <p className="notice notice-error" role="alert">
+            {check.detail}
+          </p>
+          <p className="tz">
+            On Vercel, the <code>NEXT_PUBLIC_</code> variables are baked into the
+            build, so adding them is not enough on its own — redeploy afterwards
+            so a new build picks them up. <a href="/api/health">/api/health</a>{' '}
+            reports which parts are configured.
+          </p>
+        </main>
+      </div>
     );
   }
 
   if (check.state === 'checking' || check.state === 'denied') {
     return (
-      <main className="widget" style={{ paddingTop: 60 }}>
-        <p className="status">Checking access…</p>
-      </main>
+      <div className="admin-app">
+        <main className="widget" style={{ paddingTop: 60 }}>
+          <p className="status">Checking access…</p>
+        </main>
+      </div>
     );
   }
 
+  /* The admin's own bar and page, so the console reads as the same
+     product in the same two colours — only the places differ. */
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 20px 60px' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 28,
-        }}
-      >
-        <span className="admin-brand" style={{ fontSize: 22 }}>
-          intro <span style={{ color: 'var(--muted)', fontSize: '0.6em' }}>console</span>
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: '0.82rem', color: 'var(--faint)', textTransform: 'capitalize' }}>
-            {check.role}
-          </span>
-          <button type="button" className="btn-link" onClick={signOut}>
+    <div className="admin-app shell console">
+      <header className="shell-bar">
+        <a href="/console" className="admin-brand">
+          intro <span className="console-mark">console</span>
+        </a>
+        <div className="shell-account">
+          <span className="shell-tenant console-role">{check.role}</span>
+          <button type="button" className="btn-link shell-link" onClick={signOut}>
             Sign out
           </button>
         </div>
       </header>
-      {children}
+      <main className="admin-main">{children}</main>
     </div>
   );
 }

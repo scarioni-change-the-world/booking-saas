@@ -4,7 +4,7 @@ import type { MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
  * A business's flow, five parts long, for the Console.
  *
  * The same shapes the business sees on its own Flow: a filled dot that
- * works, a dashed one that is thin, a hollow red one that stops bookings,
+ * works, a dashed one that is thin, a hollow Ochre one that stops bookings,
  * and a line cut from the first break onwards. Every dot carries its words
  * for a screen reader and on hover, so nothing rests on colour.
  */

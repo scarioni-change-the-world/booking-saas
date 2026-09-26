@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { MiniFlow } from '@/components/console/MiniFlow';
+import { Lamp } from '@/components/admin/Instruments';
 import type { Finding, MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
 
 interface Tenant {
@@ -236,7 +237,7 @@ export default function ConsoleTenantPage() {
   }
 
   return (
-    <>
+    <div className="console-detail">
       <a href="/console" className="btn-link" style={{ padding: 0, fontSize: '0.85rem' }}>
         ← All businesses
       </a>
@@ -285,15 +286,8 @@ export default function ConsoleTenantPage() {
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="admin-card-title">Status</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-              <span
-                className="notice"
-                style={{
-                  padding: '4px 11px',
-                  margin: 0,
-                  background: tenant.status === 'active' ? 'var(--status-live-tint)' : 'var(--status-attention-tint)',
-                  color: tenant.status === 'active' ? 'var(--status-live-ink)' : 'var(--status-attention-ink)',
-                }}
-              >
+              <span className="fc-state">
+                <Lamp tone={tenant.status === 'active' ? 'live' : 'off'} />
                 {tenant.status === 'active' ? 'Active' : tenant.status === 'suspended' ? 'Suspended' : 'Deleted'}
               </span>
               <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
@@ -382,15 +376,8 @@ export default function ConsoleTenantPage() {
                 Free access
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span
-                  className="notice"
-                  style={{
-                    padding: '4px 11px',
-                    margin: 0,
-                    background: tenant.freeAccess ? 'var(--status-live-tint)' : 'var(--status-attention-tint)',
-                    color: tenant.freeAccess ? 'var(--status-live-ink)' : 'var(--status-attention-ink)',
-                  }}
-                >
+                <span className="fc-state">
+                  <Lamp tone={tenant.freeAccess ? 'live' : 'off'} />
                   {tenant.freeAccess ? 'On — never gated' : 'Off'}
                 </span>
                 <button
@@ -531,6 +518,6 @@ export default function ConsoleTenantPage() {
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }

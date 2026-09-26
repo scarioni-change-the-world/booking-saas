@@ -28,7 +28,7 @@ export const SUPPORT_EMAIL = 'hello.intro.booking@gmail.com';
 
 export function SignInLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="signin-split">
+    <div className="admin-app signin-split">
       <main className="signin-panel">
         <div className="signin-column">
           {/* A span, not an h1: each page's own heading says what it is for.

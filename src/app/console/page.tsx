@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { MiniFlow } from '@/components/console/MiniFlow';
+import { Lamp } from '@/components/admin/Instruments';
 import type { MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
 
 interface Finding {
@@ -35,10 +36,10 @@ interface Tenant {
   createdAt: string;
 }
 
-const STATUS_TONE: Record<Tenant['status'], { label: string; bg: string; fg: string }> = {
-  active: { label: 'Active', bg: 'var(--status-live-tint)', fg: 'var(--status-live-ink)' },
-  suspended: { label: 'Suspended', bg: 'var(--status-attention-tint)', fg: 'var(--status-attention-ink)' },
-  deleted: { label: 'Deleted', bg: 'var(--status-broken-tint)', fg: 'var(--status-broken)' },
+const STATUS_LABEL: Record<Tenant['status'], string> = {
+  active: 'Active',
+  suspended: 'Suspended',
+  deleted: 'Deleted',
 };
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -299,14 +300,15 @@ function Businesses({ tenants, health }: { tenants: Tenant[]; health: HealthPayl
         {ordered.map((t) => {
           const h = byId.get(t.id);
           const stopped = h?.findings.some((f) => f.severity === 'stopped');
-          const tone = STATUS_TONE[t.status];
           return (
             <article key={t.id} className={`biz-card${stopped ? ' is-stopped' : h && h.findings.length > 0 ? ' is-watch' : ''}`}>
               <div className="biz-card-head">
                 <a href={`/console/${t.id}`}>{t.name}</a>
+                {/* Paused by us, not broken: a ring, like a paused service. */}
                 {t.status !== 'active' && (
-                  <span className="notice" style={{ padding: '2px 9px', margin: 0, background: tone.bg, color: tone.fg }}>
-                    {tone.label}
+                  <span className="fc-state">
+                    <Lamp tone="off" />
+                    {STATUS_LABEL[t.status]}
                   </span>
                 )}
               </div>
