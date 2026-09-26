@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SignInLayout } from '@/components/SignInLayout';
 
 /**
@@ -23,6 +23,14 @@ export default function ForgotPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Staff arrive from the console's sign-in; "back" should return them there.
+  // Read after mounting, as this page is prerendered without the query.
+  const [backTo, setBackTo] = useState('/admin/login');
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('from') === 'console') {
+      setBackTo('/console/login');
+    }
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -63,7 +71,7 @@ export default function ForgotPasswordPage() {
           address you signed up with.
         </p>
         <p className="signin-aside">
-          <a href="/admin/login">Back to sign in</a>
+          <a href={backTo}>Back to sign in</a>
         </p>
       </SignInLayout>
     );
@@ -103,7 +111,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p className="signin-aside">
-        <a href="/admin/login">Back to sign in</a>
+        <a href={backTo}>Back to sign in</a>
       </p>
     </SignInLayout>
   );

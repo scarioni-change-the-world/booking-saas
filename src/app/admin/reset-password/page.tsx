@@ -121,10 +121,18 @@ export default function ResetPasswordPage() {
       };
 
       const first = response.ok ? body.tenants?.[0] : undefined;
+      if (first) {
+        window.location.href = `/admin/${first.slug}/flow`;
+        return;
+      }
+      // No business, but maybe company staff: one reset link serves both.
+      const staff = await fetch('/api/console/me', {
+        headers: { authorization: `Bearer ${token}` },
+      });
       // The password change stuck either way, so never report this as a
       // failure to change it. Sign-in is where an unlinked account gets the
       // explanation it needs.
-      window.location.href = first ? `/admin/${first.slug}/flow` : '/admin/login';
+      window.location.href = staff.ok ? '/console' : '/admin/login';
     } catch (cause) {
       setError((cause as Error).message);
       setBusy(false);

@@ -92,6 +92,12 @@ export default function ConsoleLoginPage() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        {/* The same reset as a business owner's; the reset page brings
+            staff back to the console afterwards. */}
+        <p className="signin-aside">
+          <a href="/admin/forgot-password?from=console">Forgot your password?</a>
+        </p>
       </main>
     </div>
   );
