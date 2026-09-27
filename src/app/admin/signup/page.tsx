@@ -127,7 +127,7 @@ export default function SignupPage() {
         <h1 className="signin-heading">Check your inbox.</h1>
         <p className="signin-lede">
           We’ve sent a link to <b>{sentTo}</b>. Open it to confirm your address and {businessName.trim()} is
-          ready. It works once, for 24 hours.
+          ready. It works once, for an hour.
         </p>
         <p className="signin-aside">
           Nothing arrived after a few minutes? Check spam, or{' '}

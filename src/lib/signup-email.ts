@@ -48,7 +48,7 @@ export function sendSignupConfirmEmail(
         'Welcome to intro.\n\n' +
         'Open the link below to confirm this is your address. Your account for {business} is ready the moment you ' +
         'do, with 7 days free and nothing to pay until you decide to stay.\n\n' +
-        'The link works once, for 24 hours. If you did not sign up, ignore this email and nothing is created.',
+        'The link works once, for an hour — sign up again for a fresh one. If you did not sign up, ignore this email and nothing is created.',
     },
     { business: businessName },
     { label: 'Confirm and open intro', url: link },
