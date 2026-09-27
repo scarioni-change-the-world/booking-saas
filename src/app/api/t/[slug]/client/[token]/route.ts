@@ -5,6 +5,7 @@ import type { TenantScope } from '@/lib/db';
 import type { BookingRow } from '@/lib/db/types';
 import type { HistoryBooking } from '@/lib/client-thread';
 import { exactPattern } from '@/lib/like';
+import { publicPayNow } from '@/lib/client-payments';
 
 const HISTORY_LIMIT = 100;
 
@@ -89,7 +90,7 @@ export async function GET(
     const client = await resolveClientByToken(scope, token);
     if (!client) return fail('Not found', 404);
 
-    const [entitlements, clientEventTypes, settings, history] = await Promise.all([
+    const [entitlements, clientEventTypes, settings, history, payNow] = await Promise.all([
       listClientEntitlements(scope, client.id),
       listEventTypes(scope, 'client'),
       // For a programme's published price. A tenant always has this row
@@ -97,10 +98,15 @@ export async function GET(
       // rather than crashing the page if one is ever missing.
       scope.select('tenant_settings').maybeSingle(),
       clientHistory(scope, client.id, client.email),
+      publicPayNow(tenant, scope),
     ]);
 
     return ok({
-      client: { name: client.name, email: client.email, since: client.created_at },
+      client: {
+        name: client.name,
+        email: client.email,
+        since: client.created_at,
+      },
       business: tenant.name,
       branding: tenant.branding ?? {},
       history,
@@ -109,7 +115,12 @@ export async function GET(
       entitlements,
       singleEventTypes: clientEventTypes
         .filter((t) => t.booking_mode === 'single')
-        .map((t) => ({ id: t.id, name: t.name, durationMinutes: t.duration_minutes })),
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          durationMinutes: t.duration_minutes,
+          payNow: payNow(t),
+        })),
       packEventTypes: clientEventTypes
         .filter((t) => t.booking_mode === 'pack' && t.pack_size)
         .map((t) => ({
@@ -118,6 +129,7 @@ export async function GET(
           durationMinutes: t.duration_minutes,
           packSize: t.pack_size!,
           priceMinor: t.price_minor,
+          payNow: payNow(t),
         })),
     });
   } catch (error) {

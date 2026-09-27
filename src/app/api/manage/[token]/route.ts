@@ -13,6 +13,7 @@ import {
   packStanding,
   rescheduleBooking,
 } from '@/lib/booking-service';
+import { bookingPayment, refundOnCancel } from '@/lib/client-payments';
 import { resolveBookingByToken } from '@/lib/db';
 import type { EventTypeRow } from '@/lib/db/types';
 
@@ -49,6 +50,8 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
        their manage tokens. Those are credentials, and one shared link
        should not hand somebody the ability to cancel the other two. */
     const pack = booking.pack_id ? await packStanding(scope, booking) : null;
+    // Best effort: a payment that cannot be read must not hide the booking.
+    const payment = await bookingPayment(scope, booking).catch(() => null);
 
     return ok({
       booking: {
@@ -63,7 +66,12 @@ export async function GET(_request: Request, ctx: { params: Promise<{ token: str
         eventTypeName: eventType?.name ?? null,
       },
       pack,
-      tenant: { name: tenant.name, timezone: tenant.timezone, branding: tenant.branding },
+      payment,
+      tenant: {
+        name: tenant.name,
+        timezone: tenant.timezone,
+        branding: tenant.branding,
+      },
     });
   } catch (error) {
     return handleError(error);
@@ -84,8 +92,16 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
       // The cancellation email goes out from inside cancelBooking itself
       // (src/lib/booking-email.ts) — the same function the admin-side
       // cancel route calls, so both paths notify the client identically.
-      await cancelBooking(tenant, scope, booking, optionalString(body, 'reason', { maxLength: 2000 }));
-      return ok({ status: 'cancelled' });
+      await cancelBooking(
+        tenant,
+        scope,
+        booking,
+        optionalString(body, 'reason', { maxLength: 2000 }),
+      );
+      // Paid online: refunded when cancelled before the business's notice
+      // (src/lib/payments.ts), and the screen says which it was.
+      const refund = await refundOnCancel(scope, booking, 'client');
+      return ok({ status: 'cancelled', refund });
     }
 
     if (action === 'reschedule') {
@@ -97,7 +113,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
         booking,
         requireString(body, 'startsAt', { maxLength: 40 }),
       );
-      return ok({ status: 'confirmed', startsAt: moved.starts_at, endsAt: moved.ends_at });
+      return ok({
+        status: 'confirmed',
+        startsAt: moved.starts_at,
+        endsAt: moved.ends_at,
+      });
     }
 
     if (action === 'book-replacement') {

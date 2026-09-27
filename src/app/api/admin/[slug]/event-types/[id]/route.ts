@@ -15,7 +15,13 @@ import { deletionBlockers, deletionKeeps, LIMIT_REACHED, nameConfirmed, withinSe
 import { countActiveServices, loadDeletionFacts, loadLiveService } from '@/lib/service-deletion-server';
 import { sendServiceDeletedEmail } from '@/lib/service-deletion-email';
 import { serializeEventType } from '@/lib/admin-serializers';
-import { parseBookingModeForUpdate, parseLocation, parsePrice } from '@/lib/admin-event-types';
+import {
+  parseBookingModeForUpdate,
+  parseLocation,
+  parsePaymentSetting,
+  parsePrice,
+} from '@/lib/admin-event-types';
+import { paymentSettingProblem } from '@/lib/payments';
 import type { EventTypeRow } from '@/lib/db/types';
 
 /**
@@ -40,7 +46,7 @@ export async function PATCH(
 ) {
   try {
     const { slug, id } = await ctx.params;
-    const { scope } = await requireTenantAdmin(request, slug);
+    const { tenant, scope } = await requireTenantAdmin(request, slug);
     const body = await readJson(request);
 
     /* A deleted service is gone for good: nothing about it can change. */
@@ -52,11 +58,16 @@ export async function PATCH(
     const name = optionalString(body, 'name', { maxLength: 200 });
     if (name !== undefined) patch.name = name;
 
-    const description = optionalString(body, 'description', { maxLength: 2000 });
+    const description = optionalString(body, 'description', {
+      maxLength: 2000,
+    });
     if (description !== undefined) patch.description = description;
 
     if (body.durationMinutes !== undefined) {
-      patch.duration_minutes = requireInt(body, 'durationMinutes', { min: 5, max: 1440 });
+      patch.duration_minutes = requireInt(body, 'durationMinutes', {
+        min: 5,
+        max: 1440,
+      });
     }
     if (body.bufferBeforeMinutes !== undefined) {
       patch.buffer_before_minutes = requireInt(body, 'bufferBeforeMinutes', {
@@ -65,7 +76,10 @@ export async function PATCH(
       });
     }
     if (body.bufferAfterMinutes !== undefined) {
-      patch.buffer_after_minutes = requireInt(body, 'bufferAfterMinutes', { min: 0, max: 720 });
+      patch.buffer_after_minutes = requireInt(body, 'bufferAfterMinutes', {
+        min: 0,
+        max: 720,
+      });
     }
 
     const availableToProspects = optionalBoolean(body, 'availableToProspects');
@@ -108,11 +122,38 @@ export async function PATCH(
       patch.pack_size = bookingModeUpdate.packSize;
     }
 
-    const { data, error } = await scope
-      .update('event_types', patch)
-      .eq('id', id)
-      .select();
-    if (error) throw error;
+    /* How clients pay for it. Checked against the service as it will be
+       once this patch is saved, so a price and its deposit can change
+       together. */
+    const payment = parsePaymentSetting(body);
+    if (payment.paymentMode !== undefined) patch.payment_mode = payment.paymentMode;
+    if (payment.depositMinor !== undefined) patch.deposit_minor = payment.depositMinor;
+    if (payment.paymentMode !== undefined || payment.depositMinor !== undefined) {
+      const mode = patch.payment_mode ?? existing.payment_mode ?? 'none';
+      if (mode !== 'none' && !tenant.stripe_charges_enabled) {
+        return fail('Connect Stripe on the Account page first, so clients can pay you.', 409);
+      }
+      const problem = paymentSettingProblem({
+        paymentMode: mode,
+        priceMinor: patch.price_minor !== undefined ? patch.price_minor : existing.price_minor,
+        depositMinor:
+          patch.deposit_minor !== undefined
+            ? patch.deposit_minor
+            : (existing.deposit_minor ?? null),
+        bookingMode: patch.booking_mode ?? existing.booking_mode,
+        packSize: patch.pack_size !== undefined ? patch.pack_size : existing.pack_size,
+      });
+      if (problem) return fail(problem, 400);
+      if (mode !== 'deposit') patch.deposit_minor = null;
+    }
+
+    const { data, error } = await scope.update('event_types', patch).eq('id', id).select();
+    if (error) {
+      if (/payment_mode|deposit_minor/.test(error.message)) {
+        return fail('Taking payments needs database migration 0032 first.', 503);
+      }
+      throw error;
+    }
 
     const rows = data as unknown as EventTypeRow[];
     if (rows.length === 0) return fail('Not found', 404);

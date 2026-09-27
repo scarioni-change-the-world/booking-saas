@@ -27,9 +27,11 @@ import type {
   ClientRow,
   DateOverrideRow,
   EventTypeRow,
+  PaymentRow,
   TenantRow,
   TenantSettingsRow,
 } from './db/types';
+import { heldBusy } from './payments';
 import { generateManageToken } from './tokens';
 
 export type Audience = 'prospect' | 'client';
@@ -118,7 +120,10 @@ export async function buildSlotQuery(
   eventTypeId: string,
   fromDate: string,
   toDate: string,
-  { paused = 'refuse' }: { paused?: 'refuse' | 'allow' } = {},
+  {
+    paused = 'refuse',
+    ignoreHold,
+  }: { paused?: 'refuse' | 'allow'; ignoreHold?: string | null } = {},
 ): Promise<SlotQuery> {
   const [settings, eventType] = await Promise.all([
     loadSettings(scope),
@@ -190,6 +195,7 @@ export async function buildSlotQuery(
   const busy: BusyInterval[] = [
     ...bookings.map((b) => ({ start: b.starts_at, end: b.ends_at })),
     ...blocks.map((b) => ({ start: b.starts_at, end: b.ends_at })),
+    ...(await heldTimes(scope, ignoreHold ?? null)),
     ...calendarBusy,
   ];
 
@@ -209,6 +215,32 @@ export async function buildSlotQuery(
     bookingWindowDays: settings.booking_window_days,
     now: DateTime.now(),
   };
+}
+
+/**
+ * Times held for somebody on the payment page (migration 0032), busy for
+ * everybody else until paid or expired — except the hold being completed,
+ * which must not block its own booking. A database without the payments
+ * table yet simply has no holds.
+ */
+async function heldTimes(scope: TenantScope, ignoreHold: string | null): Promise<BusyInterval[]> {
+  const { data, error } = await scope
+    .select('payments', 'id, status, expires_at, slot_ranges')
+    .eq('status', 'open')
+    .gt('expires_at', new Date().toISOString());
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return [];
+    throw error;
+  }
+  const rows = (data ?? []) as unknown as Array<
+    Pick<PaymentRow, 'id' | 'status' | 'expires_at' | 'slot_ranges'>
+  >;
+  return heldBusy(
+    rows,
+    new Date(),
+    ignoreHold ?? undefined,
+    rows.map((r) => r.id),
+  );
 }
 
 export async function getAvailability(
@@ -238,6 +270,9 @@ export interface CreateBookingInput {
    * something to key off. Left unset (null) for a prospect, who has no
    * clients row at all. */
   clientId?: string | null;
+  /** The payment that bought it, when it was paid online — its own hold is
+   *  then not counted against it (migration 0032). */
+  paymentId?: string | null;
 }
 
 /**
@@ -266,6 +301,7 @@ export async function createBooking(
     input.eventTypeId,
     DateTime.fromISO(input.startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
     DateTime.fromISO(input.startsAt).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
+    { ignoreHold: input.paymentId ?? null },
   );
 
   if (!isSlotBookable(query, input.startsAt)) {
@@ -305,6 +341,7 @@ export async function createBooking(
     qualification_response_id: input.qualificationResponseId ?? null,
     client_id: input.clientId ?? client?.id ?? null,
     sync_status: 'pending',
+    ...(input.paymentId ? { payment_id: input.paymentId } : {}),
   });
 
   if (error) {
@@ -457,6 +494,39 @@ export interface CreatedPack {
   clientToken: string | null;
 }
 
+/**
+ * Refuse unless every one of these times can be booked right now. One
+ * availability query per distinct day rather than per time: a ten-session
+ * programme usually spans ten days, but two sessions on one day would
+ * otherwise cost two identical round trips. Also run before a client is
+ * sent to pay, so nobody pays for a time that has already gone.
+ */
+export async function assertTimesBookable(
+  tenant: TenantRow,
+  scope: TenantScope,
+  eventTypeId: string,
+  times: readonly string[],
+  ignoreHold: string | null = null,
+): Promise<void> {
+  const dayOf = (iso: string) =>
+    DateTime.fromISO(iso).setZone(tenant.timezone).toFormat('yyyy-MM-dd');
+  for (const day of [...new Set(times.map(dayOf))].sort()) {
+    const query = await buildSlotQuery(tenant, scope, eventTypeId, day, day, {
+      ignoreHold,
+    });
+    for (const iso of times) {
+      if (dayOf(iso) === day && !isSlotBookable(query, iso)) {
+        throw new BookingError(
+          times.length > 1
+            ? 'One of those times is no longer available'
+            : 'That time is no longer available',
+          409,
+        );
+      }
+    }
+  }
+}
+
 export async function createBookingPack(
   tenant: TenantRow,
   scope: TenantScope,
@@ -476,27 +546,7 @@ export async function createBookingPack(
     );
   }
 
-  // One availability query per distinct day rather than per slot: a
-  // ten-session programme usually spans ten days, but two sessions on one
-  // day would otherwise cost two identical round trips.
-  const days = [
-    ...new Set(
-      slots.map((iso) =>
-        DateTime.fromISO(iso).setZone(tenant.timezone).toFormat('yyyy-MM-dd'),
-      ),
-    ),
-  ].sort();
-
-  for (const day of days) {
-    const query = await buildSlotQuery(tenant, scope, input.eventTypeId, day, day);
-    for (const iso of slots) {
-      const onThisDay =
-        DateTime.fromISO(iso).setZone(tenant.timezone).toFormat('yyyy-MM-dd') === day;
-      if (onThisDay && !isSlotBookable(query, iso)) {
-        throw new BookingError('One of those times is no longer available', 409);
-      }
-    }
-  }
+  await assertTimesBookable(tenant, scope, input.eventTypeId, slots, input.paymentId ?? null);
 
   /* Buying a programme makes somebody a client, so the client record and
      the session balance are created here rather than left to an admin to
@@ -556,6 +606,7 @@ export async function createBookingPack(
       // Copied, not referenced: what the client bought must not change when
       // the business later edits the service. See migration 0025.
       pack_size: eventType.pack_size,
+      ...(input.paymentId ? { payment_id: input.paymentId } : {}),
     };
   });
 
@@ -625,7 +676,11 @@ export interface PackStanding {
   /** How many the client is still owed — 0 when the programme is whole. */
   remaining: number;
   /** Every appointment in the programme, earliest first. */
-  appointments: Array<{ startsAt: string; endsAt: string; status: BookingRow['status'] }>;
+  appointments: Array<{
+    startsAt: string;
+    endsAt: string;
+    status: BookingRow['status'];
+  }>;
 }
 
 /**
@@ -721,7 +776,9 @@ export async function bookPackReplacement(
     throw new BookingError('Every appointment in this programme is already booked', 409);
   }
 
-  const eventType = await loadEventType(scope, sibling.event_type_id, { paused: 'allow' });
+  const eventType = await loadEventType(scope, sibling.event_type_id, {
+    paused: 'allow',
+  });
   const query = await buildSlotQuery(
     tenant,
     scope,
@@ -944,7 +1001,9 @@ export async function rescheduleBooking(
     throw new BookingError('That booking was cancelled', 409);
   }
 
-  const eventType = await loadEventType(scope, booking.event_type_id, { paused: 'allow' });
+  const eventType = await loadEventType(scope, booking.event_type_id, {
+    paused: 'allow',
+  });
   const localDate = DateTime.fromISO(newStartIso).setZone(tenant.timezone).toFormat('yyyy-MM-dd');
 
   const query = await buildSlotQuery(tenant, scope, booking.event_type_id, localDate, localDate, { paused: 'allow' });
@@ -963,7 +1022,10 @@ export async function rescheduleBooking(
   const endsAt = startsAt.plus({ minutes: eventType.duration_minutes });
 
   const { error } = await scope
-    .update('bookings', { starts_at: startsAt.toISO()!, ends_at: endsAt.toISO()! })
+    .update('bookings', {
+      starts_at: startsAt.toISO()!,
+      ends_at: endsAt.toISO()!,
+    })
     .eq('id', booking.id);
 
   if (error) {
@@ -971,7 +1033,11 @@ export async function rescheduleBooking(
     throw error;
   }
 
-  let moved: BookingRow = { ...booking, starts_at: startsAt.toISO()!, ends_at: endsAt.toISO()! };
+  let moved: BookingRow = {
+    ...booking,
+    starts_at: startsAt.toISO()!,
+    ends_at: endsAt.toISO()!,
+  };
 
   if (booking.calendar_event_id) {
     try {
@@ -1045,7 +1111,9 @@ export async function listClientEntitlements(
   if (error) throw error;
 
   const rows = (data ?? []) as unknown as Array<
-    ClientEntitlementRow & { event_types: { name: string; duration_minutes: number } | null }
+    ClientEntitlementRow & {
+      event_types: { name: string; duration_minutes: number } | null;
+    }
   >;
 
   return rows.map((r) => ({
@@ -1176,7 +1244,9 @@ export async function createEntitlementBookings(
     throw new BookingError('That package does not belong to this client', 403);
   }
 
-  const eventType = await loadEventType(scope, entitlement.event_type_id, { paused: 'allow' });
+  const eventType = await loadEventType(scope, entitlement.event_type_id, {
+    paused: 'allow',
+  });
 
   const results: EntitlementBookingResult[] = [];
   let used = entitlement.used_sessions;
@@ -1243,7 +1313,11 @@ export async function createEntitlementBookings(
     // Missing from here previously — a redeemed package session never sent
     // a confirmation at all, unlike every other kind of booking.
     const emailStatus = await sendBookingConfirmedEmail(tenant, scope, synced);
-    results.push({ startsAt, status: 'booked', booking: { ...synced, email_status: emailStatus } });
+    results.push({
+      startsAt,
+      status: 'booked',
+      booking: { ...synced, email_status: emailStatus },
+    });
   }
 
   return { results, remaining: entitlement.total_sessions - used };

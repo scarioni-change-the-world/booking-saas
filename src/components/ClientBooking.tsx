@@ -32,10 +32,19 @@ interface Entitlement {
   remaining: number;
 }
 
+/** Paid on Stripe when booked, or null — see src/lib/client-payments.ts. */
+type PayNow = {
+  kind: 'full' | 'deposit';
+  amountMinor: number;
+  totalMinor: number;
+  refundHours: number;
+} | null;
+
 interface SingleType {
   id: string;
   name: string;
   durationMinutes: number;
+  payNow?: PayNow;
 }
 
 /** A programme this client can buy — not one they already hold. */
@@ -45,6 +54,7 @@ interface PackType {
   durationMinutes: number;
   packSize: number;
   priceMinor: number | null;
+  payNow?: PayNow;
 }
 
 /** One thing this client can pick from — either a package to redeem from or
@@ -357,10 +367,18 @@ export default function ClientBooking({ slug, token }: Props) {
     setStep('booking');
     setError(null);
     try {
-      const result = await postJson<{ bookings: BatchResult['booking'][] }>(
-        `${base}/client/${encodeURIComponent(token)}/programmes`,
-        { eventTypeId: option.id, slots: selected },
-      );
+      const result = await postJson<{
+        bookings: BatchResult['booking'][];
+        checkoutUrl?: string;
+      }>(`${base}/client/${encodeURIComponent(token)}/programmes`, {
+        eventTypeId: option.id,
+        slots: selected,
+      });
+      // Paid when booked: the times are held while they pay on Stripe.
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       /* Shaped into the same results the redemption path produces, so the
          confirmation screen has one thing to render rather than two. The
          server books all of them or none, so every one of these is
@@ -388,10 +406,13 @@ export default function ClientBooking({ slug, token }: Props) {
     setStep('booking');
     setError(null);
     try {
-      const result = await postJson<{ results: BatchResult[]; remaining: number }>(
-        `${base}/client/${encodeURIComponent(token)}/bookings`,
-        { entitlementId: option.id, startTimes: selected },
-      );
+      const result = await postJson<{
+        results: BatchResult[];
+        remaining: number;
+      }>(`${base}/client/${encodeURIComponent(token)}/bookings`, {
+        entitlementId: option.id,
+        startTimes: selected,
+      });
       setResults(result.results);
       setRemaining(result.remaining);
       setStep('done');
@@ -409,10 +430,17 @@ export default function ClientBooking({ slug, token }: Props) {
     setStep('booking-single');
     setError(null);
     try {
-      const result = await postJson<{ booking: SingleBooking }>(
-        `${base}/client/${encodeURIComponent(token)}/single-session`,
-        { eventTypeId: option.id, startsAt: singleSlot },
-      );
+      const result = await postJson<{
+        booking: SingleBooking;
+        checkoutUrl?: string;
+      }>(`${base}/client/${encodeURIComponent(token)}/single-session`, {
+        eventTypeId: option.id,
+        startsAt: singleSlot,
+      });
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       setConfirmed(result.booking);
       setStep('done-single');
     } catch (cause) {
@@ -426,7 +454,10 @@ export default function ClientBooking({ slug, token }: Props) {
 
   const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   const dowFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+  const timeFormat = new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00:00`));
   const formatTimeRange = (iso: string, durationMinutes: number) => {
     const start = new Date(iso);
@@ -637,11 +668,14 @@ export default function ClientBooking({ slug, token }: Props) {
               disabled={selected.length !== option.packSize || busy}
               onClick={submitProgramme}
             >
-              {selected.length === option.packSize
-                ? `Book all ${option.packSize}`
-                : `Choose ${option.packSize - selected.length} more`}
+              {selected.length !== option.packSize
+                ? `Choose ${option.packSize - selected.length} more`
+                : option.payNow
+                  ? `Continue to payment · ${formatMoney(option.payNow.amountMinor, currency)}`
+                  : `Book all ${option.packSize}`}
             </button>
           </div>
+          {option.payNow && <PayNote payNow={option.payNow} programme currency={currency} />}
 
           {multipleOptions && (
             <p className="bk-after">
@@ -953,8 +987,13 @@ export default function ClientBooking({ slug, token }: Props) {
             disabled={!singleSlot || busy}
             onClick={submitSingle}
           >
-            {singleSlot ? 'Confirm booking' : 'Pick a time'}
+            {!singleSlot
+              ? 'Pick a time'
+              : option.payNow
+                ? `Continue to payment · ${formatMoney(option.payNow.amountMinor, currency)}`
+                : 'Confirm booking'}
           </button>
+          {option.payNow && <PayNote payNow={option.payNow} currency={currency} />}
 
           {multipleOptions && (
             <p className="bk-after">
@@ -1135,7 +1174,10 @@ function ClientThread({
     new Date().toISOString(),
   );
   const monthYear = (iso: string) =>
-    new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(iso));
+    new Intl.DateTimeFormat(undefined, {
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(iso));
 
   return (
     <div className="bk-programme">
@@ -1193,5 +1235,30 @@ function ClientThread({
         })}
       </ol>
     </div>
+  );
+}
+
+/** What paying online means, said before the button takes them to Stripe. */
+function PayNote({
+  payNow,
+  programme = false,
+  currency,
+}: {
+  payNow: NonNullable<PayNow>;
+  programme?: boolean;
+  currency: string;
+}) {
+  const rest = payNow.totalMinor - payNow.amountMinor;
+  return (
+    <p className="bk-privacy" style={{ marginTop: 12 }}>
+      {payNow.kind === 'deposit'
+        ? `A deposit, paid now; the other ${formatMoney(rest, currency)} is paid directly. `
+        : ''}
+      You pay on Stripe’s secure page, and the {programme ? 'times are' : 'time is'} yours once it
+      goes through.{' '}
+      {programme
+        ? 'Programme sessions can be moved, not refunded.'
+        : `Cancel at least ${payNow.refundHours >= 48 && payNow.refundHours % 24 === 0 ? `${payNow.refundHours / 24} days` : `${payNow.refundHours} hours`} before and it is refunded automatically.`}
+    </p>
   );
 }

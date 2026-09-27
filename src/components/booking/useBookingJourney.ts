@@ -16,7 +16,10 @@ import { TEST_HEADER, type TestMessage } from '@/lib/test-run';
 async function testHeaders(): Promise<Record<string, string>> {
   const { data } = await supabaseBrowser().auth.getSession();
   const token = data.session?.access_token;
-  return { [TEST_HEADER]: '1', ...(token ? { authorization: `Bearer ${token}` } : {}) };
+  return {
+    [TEST_HEADER]: '1',
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
+  };
 }
 
 /**
@@ -79,6 +82,20 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* Stripe's payment page will not open inside a frame. On a page embedded
+     in the business's own site, the review step offers a link that leaves
+     the frame instead of navigating it. */
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  /* Back from Stripe with the browser's back button: the page is restored
+     as it was left, mid-redirect, so free the button again. */
+  useEffect(() => {
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) setBusy(false);
+    };
+    window.addEventListener('pageshow', restored);
+    return () => window.removeEventListener('pageshow', restored);
+  }, []);
 
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
@@ -113,7 +130,11 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
      would say where somebody is in a booking to whoever asked. */
   useEffect(() => {
     if (!test || typeof window === 'undefined' || window.parent === window) return;
-    const message: TestMessage = { type: 'intro:test', phase, eventTypeId: eventType?.id ?? null };
+    const message: TestMessage = {
+      type: 'intro:test',
+      phase,
+      eventTypeId: eventType?.id ?? null,
+    };
     window.parent.postMessage(message, window.location.origin);
   }, [test, phase, eventType]);
 
@@ -189,7 +210,10 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
       setBusy(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ eventTypeId: chosen.id, audience: 'prospect' });
+        const params = new URLSearchParams({
+          eventTypeId: chosen.id,
+          audience: 'prospect',
+        });
         if (responseId) params.set('responseId', responseId);
         const result = await api.get<{ days: DaySlots[] }>(
           `${base}/availability?${params.toString()}`,
@@ -284,24 +308,35 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
 
     setBusy(true);
     setError(null);
+    let leaving = false;
     try {
       const result = await api.post<{
         booking: Confirmed;
         bookings: Confirmed[];
         programmeLink: string | null;
-      }>(
-        `${base}/bookings`,
-        {
-          eventTypeId: eventType.id,
-          // One or the other, never both — the route reads which was sent to
-          // decide what is being booked.
-          ...(isPack ? { slots: packSlots } : { startsAt: slot }),
-          name,
-          email,
-          notes,
-          responseId,
-        },
-      );
+        checkoutUrl?: string;
+      }>(`${base}/bookings`, {
+        eventTypeId: eventType.id,
+        // One or the other, never both — the route reads which was sent to
+        // decide what is being booked.
+        ...(isPack ? { slots: packSlots } : { startsAt: slot }),
+        name,
+        email,
+        notes,
+        responseId,
+      });
+      /* Paid when booked: the time is held and the rest happens on Stripe's
+         page, then /paid. Busy stays on so the button cannot be pressed twice
+         while the browser leaves. */
+      if (result.checkoutUrl) {
+        if (window.self !== window.top) {
+          setCheckoutUrl(result.checkoutUrl);
+          return;
+        }
+        leaving = true;
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       setConfirmed(result.booking);
       setConfirmedPack(result.bookings ?? [result.booking]);
       setProgrammeLink(result.programmeLink ?? null);
@@ -320,7 +355,7 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
         setPhase('time');
       }
     } finally {
-      setBusy(false);
+      if (!leaving) setBusy(false);
     }
   }
 
@@ -462,6 +497,7 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
     setNotes,
     submitDetails,
     confirmBooking,
+    checkoutUrl,
     confirmed,
     confirmedPack,
     programmeLink,

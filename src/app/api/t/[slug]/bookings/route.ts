@@ -9,7 +9,8 @@ import {
   requireTenant,
   fail,
 } from '@/lib/api';
-import { createBooking, createBookingPack } from '@/lib/booking-service';
+import { createBooking, createBookingPack, loadEventType } from '@/lib/booking-service';
+import { onlinePaymentFor, startCheckout } from '@/lib/client-payments';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
 import { BookingError } from '@/lib/booking-service';
@@ -54,7 +55,15 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
         meetingUrl: null,
         confirmationEmailSent: false,
       }));
-      return ok({ booking: shaped[0]!, bookings: shaped, programmeLink: null, test: true }, 201);
+      return ok(
+        {
+          booking: shaped[0]!,
+          bookings: shaped,
+          programmeLink: null,
+          test: true,
+        },
+        201,
+      );
     }
 
     // Before the qualification check below, not after: a caller throwing
@@ -106,6 +115,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
        ten slots for a single-appointment service is refused there rather
        than quietly booking ten separate appointments. */
     const packSlots = requireSlotsIfPresent(body);
+
+    /* A service paid when booked: nothing is written yet. The times are
+       held and the client goes to Stripe; the booking is made when the
+       money arrives (src/lib/client-payments.ts). */
+    const eventType = await loadEventType(scope, eventTypeId);
+    if (onlinePaymentFor(tenant, eventType)) {
+      const { url } = await startCheckout(tenant, scope, eventType, {
+        ...common,
+        ...(packSlots
+          ? { slots: packSlots }
+          : { startsAt: requireString(body, 'startsAt', { maxLength: 40 }) }),
+        from: 'page',
+      });
+      return ok({ checkoutUrl: url });
+    }
 
     const created = packSlots
       ? await createBookingPack(tenant, scope, { ...common, slots: packSlots })

@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import {
   DEFAULT_CURRENCY,
+  formatMoney,
+  parseMoney,
   parseOptionalMoney,
   priceRefusal,
   toMoneyInput,
@@ -17,6 +19,7 @@ import { DeleteService } from '@/components/admin/DeleteService';
 import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
+import { amountDue, paymentSettingProblem, type PaymentMode } from '@/lib/payments';
 
 interface SetupPayload {
   services: Array<SerializedEventType & { ownQuestionCount: number }>;
@@ -24,6 +27,7 @@ interface SetupPayload {
   availabilityRuleCount: number;
   hasOtherPathMessage: boolean;
   hasOtherPathUrl: boolean;
+  takesPayments?: boolean;
 }
 
 const PACK_PRESETS = [5, 8, 10];
@@ -186,7 +190,13 @@ export default function ServicePage() {
               <ServiceStageForm service={service} onSave={patch} />
             )}
             {stage.id === 'rules' && (
-              <RulesStageForm service={service} currency={currency} onSave={patch} />
+              <RulesStageForm
+                service={service}
+                currency={currency}
+                takesPayments={!!payload.takesPayments}
+                slug={slug}
+                onSave={patch}
+              />
             )}
             {stage.id === 'review' && (
               <ReviewStageForm service={service} onSave={patch} />
@@ -375,10 +385,14 @@ function ServiceStageForm({
 function RulesStageForm({
   service,
   currency,
+  takesPayments,
+  slug,
   onSave,
 }: {
   service: SerializedEventType;
   currency: string;
+  takesPayments: boolean;
+  slug: string;
   onSave: Saver;
 }) {
   const [duration, setDuration] = useState(String(service.durationMinutes));
@@ -389,9 +403,26 @@ function RulesStageForm({
   const [locationDetail, setLocationDetail] = useState(service.locationDetail ?? '');
   const [bookingMode, setBookingMode] = useState<BookingMode>(service.bookingMode);
   const [packSize, setPackSize] = useState(String(service.packSize ?? 10));
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>(service.paymentMode);
+  const [deposit, setDeposit] = useState(toMoneyInput(service.depositMinor, currency));
   const [priceError, setPriceError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /* What a client would be asked to pay, as the form stands now. */
+  const parsedPrice = parseOptionalMoney(price, currency);
+  const priceNow = parsedPrice.ok ? parsedPrice.minor : null;
+  const depositNow = deposit.trim() ? parseMoney(deposit, currency) : null;
+  const payable = {
+    priceMinor: priceNow,
+    paymentMode,
+    depositMinor: depositNow,
+    bookingMode,
+    packSize: bookingMode === 'pack' ? Number(packSize) || null : null,
+  };
+  const due = amountDue(payable);
+  const noPrice = priceNow === null || priceNow <= 0;
 
   return (
     <form
@@ -407,6 +438,18 @@ function RulesStageForm({
           return;
         }
         setPriceError(null);
+        if (takesPayments) {
+          if (paymentMode === 'deposit' && deposit.trim() && depositNow === null) {
+            setPaymentError(priceRefusal(deposit, currency));
+            return;
+          }
+          const problem = paymentSettingProblem(payable);
+          if (problem) {
+            setPaymentError(problem);
+            return;
+          }
+        }
+        setPaymentError(null);
         setBusy(true);
         setError(null);
         try {
@@ -417,6 +460,14 @@ function RulesStageForm({
             locationDetail: locationDetail || null,
             bookingMode,
             packSize: bookingMode === 'pack' ? Number(packSize) : null,
+            // Only sent while Stripe is connected: without it the setting
+            // cannot change, and what is stored stays as it was.
+            ...(takesPayments
+              ? {
+                  paymentMode,
+                  depositMinor: paymentMode === 'deposit' ? depositNow : null,
+                }
+              : {}),
           });
         } catch (cause) {
           setError((cause as Error).message);
@@ -541,6 +592,92 @@ function RulesStageForm({
           </div>
         </div>
       )}
+
+      <div className="field">
+        <label>Paid when booking</label>
+        {takesPayments ? (
+          <>
+            <p className="field-description">
+              Clients pay on Stripe’s secure page before the time is theirs. The money goes to your
+              Stripe account.
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                marginTop: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              {(
+                [
+                  ['none', 'Not online'],
+                  ['full', 'Pay in full'],
+                  ['deposit', 'Deposit'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={paymentMode === value ? 'btn-primary' : 'btn-secondary'}
+                  aria-pressed={paymentMode === value}
+                  disabled={value !== 'none' && noPrice}
+                  onClick={() => {
+                    setPaymentMode(value);
+                    setPaymentError(null);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {paymentMode === 'deposit' && (
+              <div style={{ marginTop: 10, maxWidth: 220 }}>
+                <label
+                  htmlFor="setup-deposit"
+                  className="field-description"
+                  style={{ display: 'block' }}
+                >
+                  Deposit ({currency})
+                </label>
+                <input
+                  id="setup-deposit"
+                  type="text"
+                  inputMode="decimal"
+                  value={deposit}
+                  onChange={(e) => {
+                    setDeposit(e.target.value);
+                    setPaymentError(null);
+                  }}
+                />
+              </div>
+            )}
+            {paymentError ? (
+              <p className="field-error" role="alert">
+                {paymentError}
+              </p>
+            ) : noPrice && paymentMode === 'none' ? (
+              <p className="field-note">Set a price above to take payment when clients book.</p>
+            ) : due ? (
+              <p className="field-note">
+                {due.kind === 'full'
+                  ? `Clients pay ${formatMoney(due.amountMinor, currency)} when they book${due.sessions > 1 ? ` — all ${due.sessions} sessions` : ''}.`
+                  : `Clients pay ${formatMoney(due.amountMinor, currency)} when they book, and the other ${formatMoney(due.totalMinor - due.amountMinor, currency)} to you directly.`}{' '}
+                Cancelled before your minimum notice: refunded automatically.
+              </p>
+            ) : paymentMode === 'none' ? (
+              <p className="field-note">
+                Clients book without paying online. Settle it however you do today.
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="field-description">
+            Not online. To have clients pay when they book,{' '}
+            <a href={`/admin/${slug}/account`}>connect Stripe on your Account page</a>.
+          </p>
+        )}
+      </div>
 
       {error && (
         <p className="notice notice-error" role="alert">

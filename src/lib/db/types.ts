@@ -6,6 +6,8 @@
  * project exists, and reconcile.
  */
 
+import type { PaymentMode } from '../payments';
+
 export type TenantPlan = 'trial' | 'starter' | 'pro' | 'cancelled';
 export type TenantStatus = 'active' | 'suspended' | 'deleted';
 export type MemberRole = 'owner' | 'admin' | 'member';
@@ -73,6 +75,15 @@ export interface TenantRow {
   /** Permanent override, independent of plan/trial state — see migration
    * 0018 for why this is a separate field from trial_ends_at. */
   free_access: boolean;
+  /** Paying intro (migration 0032): what Stripe's webhooks last said. */
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status?: string | null;
+  subscription_current_period_end?: string | null;
+  /** Being paid by clients (migration 0032): the business's own connected
+   * Stripe account, and whether Stripe lets it take payments yet. */
+  stripe_account_id?: string | null;
+  stripe_charges_enabled?: boolean;
 }
 
 export interface TenantSettingsRow {
@@ -131,6 +142,9 @@ export interface EventTypeRow {
    *  a database that has not run it yet, which reads the same as null. */
   deleted_at?: string | null;
   deleted_by?: string | null;
+  /** How clients pay for it online (migration 0032). */
+  payment_mode?: PaymentMode;
+  deposit_minor?: number | null;
 }
 
 export interface AvailabilityRuleRow {
@@ -234,6 +248,46 @@ export interface BookingRow {
    * cancel, same as sync_status is. */
   email_status: EmailStatus;
   email_error: string | null;
+  /** The payment that bought it, when it was paid online (migration 0032). */
+  payment_id?: string | null;
+}
+
+export type PaymentStatus = 'open' | 'paid' | 'expired' | 'failed' | 'refunded';
+
+/** A client's payment: a hold while they pay, then its record (migration 0032). */
+export interface PaymentRow {
+  id: string;
+  tenant_id: string;
+  event_type_id: string | null;
+  kind: 'single' | 'pack';
+  status: PaymentStatus;
+  amount_minor: number;
+  currency: string;
+  payment_mode: 'full' | 'deposit';
+  booking_input: PaymentBookingInput;
+  slot_ranges: Array<{ start: string; end: string }>;
+  expires_at: string | null;
+  stripe_account_id: string;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  refunded_minor: number;
+  paid_at: string | null;
+  created_at: string;
+}
+
+/** What to book once a payment succeeds. */
+export interface PaymentBookingInput {
+  eventTypeId: string;
+  name: string;
+  email: string;
+  notes?: string;
+  qualificationResponseId?: string | null;
+  clientId?: string | null;
+  startsAt?: string;
+  slots?: string[];
+  /** Where the client started, so the paid page can send them back. */
+  from: 'page' | 'client-link';
+  clientToken?: string | null;
 }
 
 /**
@@ -355,6 +409,7 @@ export interface TenantScopedTables {
   ai_usage_events: AiUsageEventRow;
   email_templates: EmailTemplateRow;
   email_sends: EmailSendRow;
+  payments: PaymentRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

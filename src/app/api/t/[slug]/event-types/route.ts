@@ -1,5 +1,6 @@
 import { handleError, isResponse, ok, requireTenant } from '@/lib/api';
 import { listEventTypes, type Audience } from '@/lib/booking-service';
+import { publicPayNow } from '@/lib/client-payments';
 
 export async function GET(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -13,6 +14,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     const audience: Audience = requested === 'client' ? 'client' : 'prospect';
 
     const types = await listEventTypes(resolved.scope, audience);
+    const payNow = await publicPayNow(resolved.tenant, resolved.scope);
 
     return ok({
       eventTypes: types.map((t) => ({
@@ -27,6 +29,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         priceMinor: t.price_minor,
         locationKind: t.location_kind,
         locationDetail: t.location_detail,
+        payNow: payNow(t),
       })),
     });
   } catch (error) {

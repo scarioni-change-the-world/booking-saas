@@ -2,6 +2,8 @@ import { fail, handleError, ok, readJson, requireString, requireTimezone } from 
 import { requireTenantAdmin } from '@/lib/auth';
 import { listTenantMembers, updateTenant } from '@/lib/db/console';
 import { DEFAULT_CURRENCY } from '@/lib/money';
+import { stripeConfigured, subscriptionPriceId } from '@/lib/stripe';
+import { billingState, canStartSubscription } from '@/lib/subscription';
 import type { TenantSettingsRow } from '@/lib/db/types';
 
 /**
@@ -33,10 +35,31 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         accentColor: tenant.branding?.accentColor ?? null,
         nameBesideLogo: tenant.branding?.nameBesideLogo ?? false,
       },
-      currency: (settings.data as unknown as TenantSettingsRow | null)?.currency ?? DEFAULT_CURRENCY,
-      plan: { plan: tenant.plan, trialEndsAt: tenant.trial_ends_at, freeAccess: tenant.free_access },
+      currency:
+        (settings.data as unknown as TenantSettingsRow | null)?.currency ?? DEFAULT_CURRENCY,
+      plan: {
+        plan: tenant.plan,
+        trialEndsAt: tenant.trial_ends_at,
+        freeAccess: tenant.free_access,
+        state: billingState(tenant),
+        renewsAt: tenant.subscription_current_period_end ?? null,
+        hasCustomer: !!tenant.stripe_customer_id,
+        canSubscribe:
+          stripeConfigured() &&
+          !!subscriptionPriceId() &&
+          canStartSubscription(tenant.subscription_status),
+      },
+      payments: {
+        available: stripeConfigured(),
+        connected: !!tenant.stripe_account_id,
+        chargesEnabled: !!tenant.stripe_charges_enabled,
+      },
       me: { email: team.find((m) => m.userId === userId)?.email ?? null, role },
-      team: team.map((m) => ({ email: m.email, role: m.role, you: m.userId === userId })),
+      team: team.map((m) => ({
+        email: m.email,
+        role: m.role,
+        you: m.userId === userId,
+      })),
     });
   } catch (error) {
     return handleError(error);

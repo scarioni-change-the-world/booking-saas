@@ -6,12 +6,14 @@ import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { BookingPageCard, type Branding } from '@/components/admin/BookingPageCard';
+import { GettingPaidCard, PlanCard, type PaymentsInfo, type PlanInfo } from '@/components/admin/BillingCards';
 
 interface Account {
   business: { name: string; slug: string; timezone: string; createdAt: string };
   branding: Branding;
   currency: string;
-  plan: { plan: 'trial' | 'starter' | 'pro' | 'cancelled'; trialEndsAt: string | null; freeAccess: boolean };
+  plan: PlanInfo;
+  payments: PaymentsInfo;
   me: { email: string | null; role: 'owner' | 'admin' | 'member' };
   team: Array<{ email: string | null; role: 'owner' | 'admin' | 'member'; you: boolean }>;
 }
@@ -87,6 +89,7 @@ export default function AccountPage() {
               saved={account.branding}
               onSaved={load}
             />
+            <GettingPaidCard slug={slug} payments={account.payments} onChanged={load} />
             <CurrencyCard slug={slug} current={account.currency} onSaved={load} />
 
             <section className="card acct-card">
@@ -115,10 +118,7 @@ export default function AccountPage() {
               <p className="wk-side-hint">Adding or removing someone is done by support for now — just ask.</p>
             </section>
 
-            <section className="card acct-card">
-              <div className="admin-card-title">Your plan</div>
-              <p className="acct-line">{planLine(account.plan)}</p>
-            </section>
+            <PlanCard slug={slug} plan={account.plan} />
           </div>
 
           <aside className="acct-side">
@@ -146,19 +146,6 @@ export default function AccountPage() {
       )}
     </>
   );
-}
-
-function planLine(plan: Account['plan']): string {
-  if (plan.freeAccess) return 'Free access. Nothing to pay.';
-  if (plan.plan === 'trial') {
-    if (!plan.trialEndsAt) return 'On a trial.';
-    const ends = DateTime.fromISO(plan.trialEndsAt);
-    return ends < DateTime.now()
-      ? `Your trial ended on ${ends.toFormat('d LLLL')}.`
-      : `On a trial until ${ends.toFormat('d LLLL')}.`;
-  }
-  if (plan.plan === 'cancelled') return 'Cancelled.';
-  return `On the ${plan.plan[0]!.toUpperCase()}${plan.plan.slice(1)} plan.`;
 }
 
 function BusinessCard({ slug, account, onSaved }: { slug: string; account: Account; onSaved: () => Promise<void> }) {

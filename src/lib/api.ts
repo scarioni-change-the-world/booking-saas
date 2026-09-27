@@ -75,6 +75,24 @@ export function handleError(error: unknown) {
     return fail(error.message, error.status);
   }
 
+  // Stripe's own errors: logged in full, answered plainly. Its messages can
+  // describe the account's setup, which is not for a visitor to read.
+  if (
+    error &&
+    typeof error === 'object' &&
+    String((error as { type?: unknown }).type ?? '').startsWith('Stripe')
+  ) {
+    console.error(
+      '[stripe]',
+      (error as { type: string }).type,
+      (error as { message?: string }).message,
+    );
+    return fail(
+      'The payment service did not answer as expected. Please try again in a moment.',
+      502,
+    );
+  }
+
   console.error('[api] unhandled error:', error);
   return fail('Something went wrong', 500);
 }

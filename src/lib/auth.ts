@@ -46,6 +46,12 @@ function bearerToken(request: Request): string {
   return match[1]!;
 }
 
+interface GateOptions {
+  /** Let a business whose trial ended through — only for the routes that
+   *  let it pay, which is the one thing it must still be able to do. */
+  allowGated?: boolean;
+}
+
 /**
  * Require that the caller belongs to the tenant named in the URL, at any
  * role. The shared lookup behind requireTenantAdmin below — factored out
@@ -56,6 +62,7 @@ function bearerToken(request: Request): string {
 async function requireTenantMembership(
   request: Request,
   slug: string,
+  { allowGated = false }: GateOptions = {},
 ): Promise<AuthenticatedTenant> {
   const token = bearerToken(request);
 
@@ -83,9 +90,14 @@ async function requireTenantMembership(
   // can show "your trial ended" instead of bouncing a real member back to
   // the login page, which would be the wrong message for someone who *is*
   // who they say they are.
-  if (tenantIsGated(resolved.tenant)) throw new AuthError(TRIAL_ENDED_MESSAGE, 402);
+  if (!allowGated && tenantIsGated(resolved.tenant)) throw new AuthError(TRIAL_ENDED_MESSAGE, 402);
 
-  return { ...resolved, userId: data.user.id, userEmail: data.user.email ?? null, role };
+  return {
+    ...resolved,
+    userId: data.user.id,
+    userEmail: data.user.email ?? null,
+    role,
+  };
 }
 
 /**
@@ -109,8 +121,9 @@ export async function requireTenantMember(
 export async function requireTenantAdmin(
   request: Request,
   slug: string,
+  options: GateOptions = {},
 ): Promise<AuthenticatedTenant> {
-  const membership = await requireTenantMembership(request, slug);
+  const membership = await requireTenantMembership(request, slug, options);
   if (membership.role !== 'owner' && membership.role !== 'admin') {
     throw new AuthError('You do not have permission to change this setting', 403);
   }
@@ -122,7 +135,11 @@ export interface AuthenticatedStaff {
   role: PlatformRole;
 }
 
-const PLATFORM_ROLE_RANK: Record<PlatformRole, number> = { support: 0, admin: 1, owner: 2 };
+const PLATFORM_ROLE_RANK: Record<PlatformRole, number> = {
+  support: 0,
+  admin: 1,
+  owner: 2,
+};
 
 /**
  * Require that the caller is on the company's own staff (platform_staff),
@@ -190,5 +207,9 @@ export async function resolveTenantMemberships(request: Request): Promise<Tenant
     tenants: { slug: string; name: string } | null;
   }>)
     .filter((row) => row.tenants !== null)
-    .map((row) => ({ slug: row.tenants!.slug, name: row.tenants!.name, role: row.role }));
+    .map((row) => ({
+      slug: row.tenants!.slug,
+      name: row.tenants!.name,
+      role: row.role,
+    }));
 }

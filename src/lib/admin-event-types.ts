@@ -1,5 +1,6 @@
 import { BookingError } from './booking-service';
 import type { BookingMode, ServiceLocationKind } from './db/types';
+import { PAYMENT_MODES, type PaymentMode } from './payments';
 
 const LOCATION_KINDS: ServiceLocationKind[] = ['online', 'in_person', 'phone'];
 
@@ -170,3 +171,34 @@ export function parseLocation(body: Record<string, unknown>): LocationInput | un
   return { locationKind, locationDetail };
 }
 
+/**
+ * Read how a service is paid out of a request body: `paymentMode` (none,
+ * full or deposit) and `depositMinor`. Undefined for each field not sent.
+ */
+export function parsePaymentSetting(body: Record<string, unknown>): {
+  paymentMode?: PaymentMode;
+  depositMinor?: number | null;
+} {
+  const out: { paymentMode?: PaymentMode; depositMinor?: number | null } = {};
+  if (body.paymentMode !== undefined) {
+    if (!PAYMENT_MODES.includes(body.paymentMode as PaymentMode)) {
+      throw new BookingError('"paymentMode" must be none, full or deposit', 400);
+    }
+    out.paymentMode = body.paymentMode as PaymentMode;
+  }
+  if (body.depositMinor !== undefined) {
+    const value = body.depositMinor;
+    if (value === null) out.depositMinor = null;
+    else if (
+      !Number.isInteger(value) ||
+      (value as number) <= 0 ||
+      (value as number) > PRICE_MAX_MINOR
+    ) {
+      throw new BookingError(
+        '"depositMinor" must be a whole number of minor units above zero, or null',
+        400,
+      );
+    } else out.depositMinor = value as number;
+  }
+  return out;
+}

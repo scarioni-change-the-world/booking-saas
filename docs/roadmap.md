@@ -216,6 +216,17 @@ Six rules every screen follows:
 
 11. **Self-serve signup and Stripe** — one project. Signup without billing
     means anyone can create a business for free forever.
+    **Stripe** — done (migration 0032; setup in `docs/stripe-setup.md`).
+    Businesses subscribe at €7 a month from Account or from the lock screen
+    once a trial ends; days left in a trial carry over, a failing card keeps
+    the page open while Stripe retries, and Manage billing is Stripe's own
+    portal. Businesses connect their own Stripe (Connect, Standard) and each
+    service chooses: not online, pay in full, or a deposit. The time is held
+    for 30 minutes while the client pays, booked when Stripe confirms, and
+    refunded at once if it was lost. Cancelling refunds automatically when
+    the business cancels or the client cancels before the minimum notice;
+    programme sessions return to the balance instead. intro takes no cut.
+    **Still to do:** self-serve signup.
 12. **A consented support view** — only if a case turns up that cannot be
     solved from shape alone. Time-limited, revocable, logged.
 

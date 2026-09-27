@@ -9,6 +9,7 @@ import {
   requireTenant,
 } from '@/lib/api';
 import { createBooking, loadEventType, resolveClientByToken } from '@/lib/booking-service';
+import { onlinePaymentFor, startCheckout } from '@/lib/client-payments';
 
 /**
  * A known client booking a one-off session outright — no package involved.
@@ -48,14 +49,26 @@ export async function POST(
       return fail('That session is not available to book this way', 400);
     }
 
-    const booking = await createBooking(tenant, scope, {
+    const input = {
       eventTypeId,
       startsAt: requireString(body, 'startsAt', { maxLength: 40 }),
       name: client.name,
       email: client.email,
       notes: optionalString(body, 'notes', { maxLength: 5000 }),
       clientId: client.id,
-    });
+    };
+
+    // Paid when booked: held, then made once Stripe says it is paid.
+    if (onlinePaymentFor(tenant, eventType)) {
+      const { url } = await startCheckout(tenant, scope, eventType, {
+        ...input,
+        from: 'client-link',
+        clientToken: token,
+      });
+      return ok({ checkoutUrl: url });
+    }
+
+    const booking = await createBooking(tenant, scope, input);
 
     // The confirmation email (with .ics and the manage link) and the owner
     // notification already went out from inside createBooking.

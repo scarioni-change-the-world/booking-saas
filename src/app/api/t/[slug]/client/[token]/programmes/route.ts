@@ -1,5 +1,19 @@
-import { fail, handleError, isResponse, ok, readJson, requireString, requireTenant } from '@/lib/api';
-import { BookingError, createBookingPack, resolveClientByToken } from '@/lib/booking-service';
+import {
+  fail,
+  handleError,
+  isResponse,
+  ok,
+  readJson,
+  requireString,
+  requireTenant,
+} from '@/lib/api';
+import {
+  BookingError,
+  createBookingPack,
+  loadEventType,
+  resolveClientByToken,
+} from '@/lib/booking-service';
+import { onlinePaymentFor, startCheckout } from '@/lib/client-payments';
 import { enforceRateLimit } from '@/lib/rate-limit';
 
 const MAX_SLOTS_PER_REQUEST = 20;
@@ -57,6 +71,23 @@ export async function POST(
        really is, and that the number of times matches what it is sold as —
        so a caller sending three slots for a ten-session programme is
        refused there rather than quietly buying a short one. */
+    // Paid when booked: the times are held and the client goes to Stripe.
+    const eventType = await loadEventType(scope, eventTypeId);
+    if (onlinePaymentFor(tenant, eventType)) {
+      if (!eventType.available_to_existing_clients)
+        return fail('That programme is not offered here', 400);
+      const { url } = await startCheckout(tenant, scope, eventType, {
+        eventTypeId,
+        slots,
+        name: client.name,
+        email: client.email,
+        clientId: client.id,
+        from: 'client-link',
+        clientToken: token,
+      });
+      return ok({ checkoutUrl: url });
+    }
+
     const created = await createBookingPack(tenant, scope, {
       eventTypeId,
       slots,

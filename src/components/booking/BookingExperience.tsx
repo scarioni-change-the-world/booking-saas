@@ -70,6 +70,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
     setNotes,
     submitDetails,
     confirmBooking,
+    checkoutUrl,
     confirmed,
     confirmedPack,
   } = journey;
@@ -82,7 +83,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
     month: 'long',
   });
   const dowFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+  const timeFormat = new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00:00`));
 
@@ -277,7 +281,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                       value={answers[question.id] ?? ''}
                       required={question.required}
                       onChange={(e) =>
-                        setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                        setAnswers((prev) => ({
+                          ...prev,
+                          [question.id]: e.target.value,
+                        }))
                       }
                     />
                   ) : (
@@ -296,7 +303,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                             required={question.required}
                             checked={answers[question.id] === option}
                             onChange={() =>
-                              setAnswers((prev) => ({ ...prev, [question.id]: option }))
+                              setAnswers((prev) => ({
+                                ...prev,
+                                [question.id]: option,
+                              }))
                             }
                           />
                           <span>{option}</span>
@@ -445,7 +455,10 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                             type="button"
                             className="bk-textlink bk-more"
                             onClick={() =>
-                              setExpandedPeriods((prev) => ({ ...prev, [key]: true }))
+                              setExpandedPeriods((prev) => ({
+                                ...prev,
+                                [key]: true,
+                              }))
                             }
                           >
                             Show {hidden} more
@@ -571,7 +584,11 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       {phase === 'review' && eventType && firstSlot && (
         <section>
           <h1 className="bk-heading">Check this over</h1>
-          <p className="bk-lede">Nothing is booked until you confirm.</p>
+          <p className="bk-lede">
+            {eventType.payNow
+              ? 'Nothing is booked until you have paid.'
+              : 'Nothing is booked until you confirm.'}
+          </p>
 
           <dl className="bk-review">
             <div className="bk-review-row">
@@ -691,16 +708,54 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                 <dd className="bk-review-note">{notes}</dd>
               </div>
             )}
+            {eventType.payNow && (
+              <div className="bk-review-row">
+                <dt>Pay now</dt>
+                <dd>
+                  {formatMoney(eventType.payNow.amountMinor, currency)}
+                  <span className="bk-review-sub">
+                    {eventType.payNow.kind === 'deposit'
+                      ? `Deposit · the other ${formatMoney(eventType.payNow.totalMinor - eventType.payNow.amountMinor, currency)} is paid to ${config?.name ?? 'the business'} directly`
+                      : isPack
+                        ? `For all ${chosenSlots.length} sessions`
+                        : 'The full price'}
+                  </span>
+                </dd>
+              </div>
+            )}
           </dl>
 
-          <button
-            type="button"
-            className="btn-primary btn-full"
-            disabled={busy}
-            onClick={() => void confirmBooking()}
-          >
-            {busy ? 'Booking…' : 'Confirm booking'}
-          </button>
+          {eventType.payNow && (
+            /* Said before the button, not after the card is charged. */
+            <p className="bk-privacy">
+              You pay on Stripe’s secure page, and the time is yours once it goes through. It is
+              held for you for 30 minutes while you do.{' '}
+              {isPack
+                ? 'Programme sessions can be moved, not refunded.'
+                : `Cancel at least ${refundNotice(eventType.payNow.refundHours)} before and it is refunded automatically.`}
+            </p>
+          )}
+
+          {checkoutUrl ? (
+            <a className="btn-primary btn-full" href={checkoutUrl} target="_top">
+              Open Stripe’s secure page to pay
+            </a>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary btn-full"
+              disabled={busy}
+              onClick={() => void confirmBooking()}
+            >
+              {eventType.payNow
+                ? busy
+                  ? 'Opening payment…'
+                  : `Continue to payment · ${formatMoney(eventType.payNow.amountMinor, currency)}`
+                : busy
+                  ? 'Booking…'
+                  : 'Confirm booking'}
+            </button>
+          )}
         </section>
       )}
 
@@ -724,6 +779,12 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       )}
     </div>
   );
+}
+
+/** "24 hours", "2 days" — how far ahead a cancellation is refunded. */
+function refundNotice(hours: number): string {
+  if (hours >= 48 && hours % 24 === 0) return `${hours / 24} days`;
+  return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
 /**

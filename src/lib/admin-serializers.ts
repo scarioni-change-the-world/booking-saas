@@ -37,6 +37,8 @@ export function serializeEventType(row: EventTypeRow) {
     bookingMode: row.booking_mode,
     packSize: row.pack_size,
     priceMinor: row.price_minor,
+    paymentMode: row.payment_mode ?? 'none',
+    depositMinor: row.deposit_minor ?? null,
     locationKind: row.location_kind,
     locationDetail: row.location_detail,
   };

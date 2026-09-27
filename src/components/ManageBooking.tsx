@@ -6,6 +6,7 @@ import { DateNavigator } from './booking/DateNavigator';
 import { groupSlots } from './booking/slots';
 import type { DaySlots } from './types';
 import { programmeThread, sessionName } from '@/lib/client-thread';
+import { formatMoney } from '@/lib/money';
 
 /** Matches the public booking flow — see ClientBooking for why. */
 const SLOTS_BEFORE_MORE = 8;
@@ -26,13 +27,33 @@ interface PackView {
   size: number;
   booked: number;
   remaining: number;
-  appointments: Array<{ startsAt: string; endsAt: string; status: 'confirmed' | 'cancelled' }>;
+  appointments: Array<{
+    startsAt: string;
+    endsAt: string;
+    status: 'confirmed' | 'cancelled';
+  }>;
+}
+
+/** Paid online when booked — see src/lib/client-payments.ts. */
+interface PaymentView {
+  amountMinor: number;
+  currency: string;
+  kind: 'full' | 'deposit';
+  ifCancelledNow: 'refund' | 'kept' | 'programme' | 'refunded';
+  refundHours: number;
+}
+
+interface RefundResult {
+  status: 'refunded' | 'kept' | 'failed';
+  amountMinor: number;
+  currency: string;
 }
 
 interface Payload {
   booking: BookingView;
   /** Present only when this booking is one appointment of a programme. */
   pack: PackView | null;
+  payment?: PaymentView | null;
   tenant: {
     name: string;
     timezone: string;
@@ -62,6 +83,8 @@ export default function ManageBooking({ token }: { token: string }) {
   const [days, setDays] = useState<DaySlots[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  /** What happened to the payment when they cancelled, straight from the server. */
+  const [refund, setRefund] = useState<RefundResult | null>(null);
 
   const load = useCallback(async () => {
     const response = await fetch(`/api/manage/${encodeURIComponent(token)}`);
@@ -85,8 +108,12 @@ export default function ManageBooking({ token }: { token: string }) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        refund?: RefundResult | null;
+      };
       if (!response.ok) throw new Error(result.error ?? 'Request failed');
+      if (result.refund) setRefund(result.refund);
       setMode('view');
       await load();
     } catch (cause) {
@@ -127,7 +154,10 @@ export default function ManageBooking({ token }: { token: string }) {
     month: 'long',
   });
   const dowFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+  const timeFormat = new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   const formatDay = (date: string) => dayFormat.format(new Date(`${date}T12:00:00`));
   const formatInstantDay = (iso: string) => dayFormat.format(new Date(iso));
@@ -204,6 +234,9 @@ export default function ManageBooking({ token }: { token: string }) {
             {formatInstantDay(booking.startsAt)} at {formatTime(booking.startsAt)}
           </p>
           <p className="bk-cancelled-mark">Cancelled</p>
+          {refundLine(refund, payload.payment ?? null) && (
+            <p className="bk-lede">{refundLine(refund, payload.payment ?? null)}</p>
+          )}
         </div>
       )}
 
@@ -344,7 +377,10 @@ export default function ManageBooking({ token }: { token: string }) {
                             type="button"
                             className="bk-textlink bk-more"
                             onClick={() =>
-                              setExpandedPeriods((prev) => ({ ...prev, [key]: true }))
+                              setExpandedPeriods((prev) => ({
+                                ...prev,
+                                [key]: true,
+                              }))
                             }
                           >
                             Show {hidden} more
@@ -383,6 +419,9 @@ export default function ManageBooking({ token }: { token: string }) {
               onChange={(event) => setReason(event.target.value)}
             />
           </div>
+          {payload.payment && payload.payment.ifCancelledNow !== 'refunded' && (
+            <p className="bk-privacy">{beforeCancelLine(payload.payment)}</p>
+          )}
           <button type="submit" className="btn-primary btn-full" disabled={busy}>
             {busy ? 'Cancelling…' : 'Cancel booking'}
           </button>
@@ -395,4 +434,39 @@ export default function ManageBooking({ token }: { token: string }) {
       )}
     </>,
   );
+}
+
+function hoursText(hours: number): string {
+  if (hours >= 48 && hours % 24 === 0) return `${hours / 24} days`;
+  return hours === 1 ? '1 hour' : `${hours} hours`;
+}
+
+/** Said before they press Cancel, so nobody finds out about their money after. */
+function beforeCancelLine(payment: PaymentView): string {
+  const paid = formatMoney(payment.amountMinor, payment.currency);
+  switch (payment.ifCancelledNow) {
+    case 'refund':
+      return `You paid ${paid}. Cancelling now refunds it automatically, to the card you paid with.`;
+    case 'kept':
+      return `You paid ${paid}. It is now less than ${hoursText(payment.refundHours)} before, so cancelling does not refund it.`;
+    case 'programme':
+      return 'The session goes back to your programme, for you to book again.';
+    default:
+      return '';
+  }
+}
+
+/** Said once it is cancelled: what happened to the payment. */
+function refundLine(refund: RefundResult | null, payment: PaymentView | null): string | null {
+  if (refund) {
+    const amount = formatMoney(refund.amountMinor, refund.currency);
+    if (refund.status === 'refunded')
+      return `Your ${amount} is being refunded. It usually shows within 5–10 days.`;
+    if (refund.status === 'kept')
+      return `Your ${amount} payment was not refunded, as it was cancelled less than the notice ahead.`;
+    return `We could not start your ${amount} refund automatically. Please contact the business — they can refund it from their Stripe account.`;
+  }
+  if (payment?.ifCancelledNow === 'refunded')
+    return `Your ${formatMoney(payment.amountMinor, payment.currency)} payment was refunded.`;
+  return null;
 }

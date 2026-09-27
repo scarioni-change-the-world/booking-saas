@@ -1,6 +1,7 @@
 import { fail, handleError, ok, optionalString, readJson } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { cancelBooking } from '@/lib/booking-service';
+import { refundOnCancel } from '@/lib/client-payments';
 import type { BookingRow } from '@/lib/db/types';
 
 /**
@@ -28,7 +29,11 @@ export async function POST(
 
     await cancelBooking(tenant, scope, booking, reason);
 
-    return ok({ cancelled: true });
+    // Paid online? A business cancelling always gives the money back —
+    // except a programme session, which returns to the client's balance.
+    const refund = await refundOnCancel(scope, booking, 'business');
+
+    return ok({ cancelled: true, refund });
   } catch (error) {
     return handleError(error);
   }

@@ -24,6 +24,14 @@ export interface PublicEventType {
   priceMinor: number | null;
   locationKind: 'online' | 'in_person' | 'phone' | null;
   locationDetail: string | null;
+  /* Paid on Stripe when booked (the business's own account), or null. A
+     deposit's amount is less than the total. */
+  payNow?: {
+    kind: 'full' | 'deposit';
+    amountMinor: number;
+    totalMinor: number;
+    refundHours: number;
+  } | null;
 }
 
 export interface PublicConfig {

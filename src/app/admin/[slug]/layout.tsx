@@ -5,11 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import AdminShell from '@/components/admin/AdminShell';
 import { adminFetch } from '@/lib/admin-fetch';
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import { PlanCard, type PlanInfo } from '@/components/admin/BillingCards';
 
 type Check =
   | { state: 'checking' }
   | { state: 'denied' }
-  | { state: 'gated' }
+  | { state: 'gated'; tenantName?: string; plan?: PlanInfo }
   | { state: 'misconfigured'; detail: string }
   | { state: 'ok'; tenantName: string };
 
@@ -28,6 +29,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [check, setCheck] = useState<Check>({ state: 'checking' });
+  // Back from paying: the webhook that opens the account may land a few
+  // seconds after the browser does, so ask again for a little while.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,9 +65,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           if (!cancelled) setCheck({ state: 'gated' });
           return;
         }
-        const body = await response.json().catch(() => ({}));
+        const body = (await response.json().catch(() => ({}))) as {
+          name: string;
+          gated?: boolean;
+          plan?: PlanInfo;
+        };
         if (!response.ok) throw new Error();
-        if (!cancelled) setCheck({ state: 'ok', tenantName: (body as { name: string }).name });
+        if (cancelled) return;
+        setCheck(
+          body.gated
+            ? { state: 'gated', tenantName: body.name, plan: body.plan }
+            : { state: 'ok', tenantName: body.name },
+        );
+        if (
+          body.gated &&
+          attempt < 10 &&
+          new URLSearchParams(window.location.search).get('billing') === 'done'
+        ) {
+          setTimeout(() => !cancelled && setAttempt((n) => n + 1), 3000);
+        }
       } catch {
         // Signed in, but not as someone who administers this tenant —
         // sending them to login rather than a bare error lets them switch
@@ -78,7 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => {
       cancelled = true;
     };
-  }, [slug, router]);
+  }, [slug, router, attempt]);
 
   if (check.state === 'misconfigured') {
     return (
@@ -105,12 +125,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (check.state === 'gated') {
+    const ended =
+      check.plan?.state === 'cancelled' ? 'Your subscription has ended' : 'Your trial has ended';
     return (
-      <main className="widget" style={{ paddingTop: 60, textAlign: 'center' }}>
-        <h1>Your trial has ended</h1>
-        <p className="status">
-          Get in touch with us to keep using your booking page and dashboard.
-        </p>
+      <main className="admin-app gated" style={{ padding: '60px 16px' }}>
+        <div style={{ maxWidth: 520, margin: '0 auto' }}>
+          {check.tenantName && <p className="wk-side-eyebrow">{check.tenantName}</p>}
+          <h1 style={{ marginTop: 4 }}>{ended}</h1>
+          <p className="status" style={{ textAlign: 'left' }}>
+            Your booking page is closed to new bookings until you subscribe. Nothing is lost — your
+            services, clients and bookings are all here, and open again the moment you do.
+          </p>
+          {check.plan?.canSubscribe ? (
+            <PlanCard slug={slug} plan={check.plan} />
+          ) : (
+            <p className="status" style={{ textAlign: 'left' }}>
+              Get in touch with us to keep using your booking page and dashboard.
+            </p>
+          )}
+        </div>
       </main>
     );
   }

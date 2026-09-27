@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { formatMoney } from '@/lib/money';
 import type { Reconsideration } from '@/lib/reconsideration';
 
 /**
@@ -42,7 +43,10 @@ export interface Booking {
   syncError: string | null;
   emailStatus: EmailStatus;
   emailError: string | null;
-  qualification: { outcomePathType: 'meeting' | 'other'; answers: AnsweredQuestion[] } | null;
+  qualification: {
+    outcomePathType: 'meeting' | 'other';
+    answers: AnsweredQuestion[];
+  } | null;
   createdAt: string;
   /** Whether this person already has a client record, matched on their
    * email — see the bookings route for why not on client_id. */
@@ -64,7 +68,10 @@ const dayFormat = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
   month: 'short',
 });
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const timeFormat = new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 export function formatRange(startsAt: string, endsAt: string): string {
   const start = new Date(startsAt);
@@ -94,11 +101,21 @@ export function emailBadge(
 }
 
 export function toneStyle(tone: 'live' | 'attention' | 'broken' | 'muted') {
-  if (tone === 'live') return { background: 'var(--status-live-tint)', color: 'var(--status-live-ink)' };
+  if (tone === 'live')
+    return {
+      background: 'var(--status-live-tint)',
+      color: 'var(--status-live-ink)',
+    };
   if (tone === 'attention')
-    return { background: 'var(--status-attention-tint)', color: 'var(--status-attention-ink)' };
+    return {
+      background: 'var(--status-attention-tint)',
+      color: 'var(--status-attention-ink)',
+    };
   if (tone === 'muted') return { background: 'var(--accent-tint)', color: 'var(--faint)' };
-  return { background: 'var(--status-broken-tint)', color: 'var(--status-broken)' };
+  return {
+    background: 'var(--status-broken-tint)',
+    color: 'var(--status-broken)',
+  };
 }
 
 
@@ -132,30 +149,54 @@ export function useBookingActions(slug: string, onDone: () => Promise<void> | vo
 
   function cancel(booking: Booking, reason: string) {
     return run(booking.id, async () => {
-      await adminFetchJson(`${base}/${booking.id}/cancel`, {
+      const result = await adminFetchJson<{
+        refund?: {
+          status: 'refunded' | 'kept' | 'failed';
+          amountMinor: number;
+          currency: string;
+        } | null;
+      }>(`${base}/${booking.id}/cancel`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ reason: reason || undefined }),
       });
+      /* Paid online: say what happened to the money, since it left their
+         Stripe account (or did not) without them doing anything. */
+      const refund = result.refund;
+      if (refund) {
+        const amount = formatMoney(refund.amountMinor, refund.currency);
+        setNotice(
+          refund.status === 'refunded'
+            ? `${booking.name}’s ${amount} is being refunded through your Stripe account.`
+            : refund.status === 'failed'
+              ? `Cancelled, but the ${amount} refund could not be started. Refund it from your Stripe dashboard.`
+              : `Cancelled. ${booking.name}’s ${amount} payment was kept.`,
+        );
+      }
     });
   }
 
   function retryEmail(booking: Booking) {
     return run(booking.id, async () => {
-      await adminFetchJson(`${base}/${booking.id}/retry-email`, { method: 'POST' });
+      await adminFetchJson(`${base}/${booking.id}/retry-email`, {
+        method: 'POST',
+      });
     });
   }
 
   function addAsClient(booking: Booking) {
     return run(booking.id, async () => {
-      const result = await adminFetchJson<{ inviteStatus: 'sent' | 'failed' | 'not_configured' | null }>(
-        `/api/admin/${slug}/clients`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ name: booking.name, email: booking.email, sendInvite: true }),
-        },
-      );
+      const result = await adminFetchJson<{
+        inviteStatus: 'sent' | 'failed' | 'not_configured' | null;
+      }>(`/api/admin/${slug}/clients`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: booking.name,
+          email: booking.email,
+          sendInvite: true,
+        }),
+      });
       setNotice(
         result.inviteStatus === 'sent'
           ? `${booking.name} has their own link — it's on its way to them.`
