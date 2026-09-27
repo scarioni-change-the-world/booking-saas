@@ -97,6 +97,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
         scope,
         booking,
         optionalString(body, 'reason', { maxLength: 2000 }),
+        'client',
       );
       // Paid online: refunded when cancelled before the business's notice
       // (src/lib/payments.ts), and the screen says which it was.

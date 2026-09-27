@@ -63,6 +63,11 @@ export interface Booking {
   reconsidered: Reconsideration | null;
   /** Paid online when booked (migration 0032), or null. */
   payment?: BookingPayment | null;
+  /* Migration 0033. */
+  attendance?: 'attended' | 'no_show' | null;
+  cancelledBy?: 'client' | 'business' | null;
+  source?: string | null;
+  rating?: { rating: number; comment: string | null } | null;
 }
 
 export interface BookingPayment {

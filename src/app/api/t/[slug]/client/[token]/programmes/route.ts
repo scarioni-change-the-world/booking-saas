@@ -82,6 +82,7 @@ export async function POST(
         name: client.name,
         email: client.email,
         clientId: client.id,
+        source: 'client_link',
         from: 'client-link',
         clientToken: token,
       });
@@ -94,6 +95,7 @@ export async function POST(
       name: client.name,
       email: client.email,
       clientId: client.id,
+      source: 'client_link',
     });
 
     return ok(

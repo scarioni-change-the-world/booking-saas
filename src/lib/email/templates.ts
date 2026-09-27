@@ -41,6 +41,10 @@ export const TEMPLATE_TOKENS: Record<EmailTemplateKind, string[]> = {
      {{dateTime}} from their wording should still not be able to send
      somebody a ten-session confirmation with no dates in it. */
   booking_pack_confirmed: ['clientName', 'serviceName', 'dateTime', 'packSize', 'tenantName'],
+  /* After the session. The link to rate it is appended, never placed: a
+     business that rewrites this must not be able to send one with no way
+     to answer it. */
+  session_rating: ['clientName', 'serviceName', 'dateTime', 'tenantName'],
 };
 
 export type TemplateTokens = Record<string, string>;

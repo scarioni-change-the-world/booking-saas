@@ -253,6 +253,7 @@ export async function completePayment(
     qualificationResponseId: input.qualificationResponseId ?? null,
     clientId: input.clientId ?? null,
     paymentId: payment.id,
+    source: input.source ?? null,
   };
 
   try {

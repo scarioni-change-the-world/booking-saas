@@ -209,6 +209,27 @@ Six rules every screen follows:
    also at the foot of the service's own settings page, under Pause, not
    only under Paused on Services (`components/admin/DeleteService.tsx`,
    shared by both). Services says what was deleted when it comes back.
+**Reports** — done (migration 0033). A fourth place in the top bar. Any
+   period — last 7/30/90 days, this or last month, this year, or any two
+   dates — compared with the stretch of the same length before it. Opens on
+   "What to look at": up to six notes worked out from the figures (where
+   people drop out, hours that fill or sit empty, services that earn least
+   per hour, no-shows, late cancellations, clients gone quiet, stalled
+   programmes, the channel that brings bookings), each with the place to
+   act. Beside them, a written summary drafted by the AI assistant on
+   request from anonymous figures, kept per period (20 a month). Then:
+   visit → questions → calendar → booked; services compared; a week heatmap
+   of open against booked hours; how far ahead people book; clients new,
+   returning, quiet; money; cancellations and no-shows with reasons; where
+   people come from; ratings and comments; the questions that turn people
+   away. New data behind it: visits counted without cookies, the source of
+   each booking (`?ref=` on a link, or the referring site), attendance
+   marked on the Week, who cancelled, reschedules, and a "How was it?"
+   email the morning after each session (editable and switchable in
+   Messages; ratings on /rate/<token>).
+   **Time off** on the Week closes a run of dates at once (a holiday, a bank
+   holiday), shows the bookings inside first, and opens them again. Paint
+   mode now says it is the week that repeats.
 10. **Marketing site** — redraw the carousels to match the new app. The app
     and the site must show the same thing.
 

@@ -23,6 +23,14 @@ import { AiUnavailableError } from './provider';
  */
 const MONTHLY_LIMITS: Record<AiUsageKind, number> = {
   intake_draft: 20,
+  /* Written summaries in Reports. Kept per period (report_summaries), so
+     reopening one costs nothing; this bounds how many new ones a month. */
+  report_summary: 20,
+};
+
+const LIMIT_NOUN: Record<AiUsageKind, string> = {
+  intake_draft: 'AI-assisted drafts',
+  report_summary: 'written summaries',
 };
 
 /**
@@ -59,8 +67,11 @@ export async function assertUnderMonthlyLimit(scope: TenantScope, kind: AiUsageK
 
   if ((data?.length ?? 0) >= limit) {
     throw new AiUnavailableError(
-      `You've used all ${limit} AI-assisted drafts included this month. ` +
-        `This resets at the start of next month — you can still add questions by hand any time.`,
+      kind === 'intake_draft'
+        ? `You've used all ${limit} ${LIMIT_NOUN[kind]} included this month. ` +
+            `This resets at the start of next month — you can still add questions by hand any time.`
+        : `You've used all ${limit} ${LIMIT_NOUN[kind]} included this month. ` +
+            `This resets at the start of next month — every figure in Reports is still here.`,
       429,
     );
   }

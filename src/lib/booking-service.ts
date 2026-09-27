@@ -86,6 +86,18 @@ async function loadSettings(scope: TenantScope): Promise<TenantSettingsRow> {
  * scoped to a service the tenant doesn't have (or has archived) should
  * fail the same clear way an attempt to book it does.
  */
+/**
+ * A write that named one of migration 0033's columns before that migration
+ * was run. Those columns only feed Reports, so the write is retried without
+ * them rather than failing a booking over a figure.
+ */
+const REPORT_COLUMNS = ['source', 'attendance', 'cancelled_by', 'reschedule_count', 'rating_requested_at'];
+export function missingReportColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code !== 'PGRST204' && error.code !== '42703') return false;
+  return REPORT_COLUMNS.some((c) => (error.message ?? '').includes(c));
+}
+
 export async function loadEventType(
   scope: TenantScope,
   eventTypeId: string,
@@ -273,6 +285,8 @@ export interface CreateBookingInput {
   /** The payment that bought it, when it was paid online — its own hold is
    *  then not counted against it (migration 0032). */
   paymentId?: string | null;
+  /** Where the booker came from, for Reports (migration 0033). */
+  source?: string | null;
 }
 
 /**
@@ -330,7 +344,7 @@ export async function createBooking(
      file the paperwork around it must not lose the booking. */
   let client: ClientRow | null = input.clientId ? null : await findClientQuietly(scope, input);
 
-  const { data, error } = await scope.insert('bookings', {
+  const values = {
     event_type_id: eventType.id,
     manage_token: generateManageToken(),
     starts_at: startsAt.toISO()!,
@@ -340,9 +354,11 @@ export async function createBooking(
     notes: input.notes ?? null,
     qualification_response_id: input.qualificationResponseId ?? null,
     client_id: input.clientId ?? client?.id ?? null,
-    sync_status: 'pending',
+    sync_status: 'pending' as const,
     ...(input.paymentId ? { payment_id: input.paymentId } : {}),
-  });
+  };
+  let { data, error } = await scope.insert('bookings', input.source ? { ...values, source: input.source } : values);
+  if (input.source && missingReportColumn(error)) ({ data, error } = await scope.insert('bookings', values));
 
   if (error) {
     // The exclusion constraint in migration 0004 is the last line of defence
@@ -607,10 +623,17 @@ export async function createBookingPack(
       // the business later edits the service. See migration 0025.
       pack_size: eventType.pack_size,
       ...(input.paymentId ? { payment_id: input.paymentId } : {}),
+      ...(input.source ? { source: input.source } : {}),
     };
   });
 
-  const { data, error } = await scope.insert('bookings', rows);
+  let { data, error } = await scope.insert('bookings', rows);
+  if (input.source && missingReportColumn(error)) {
+    ({ data, error } = await scope.insert(
+      'bookings',
+      rows.map(({ source: _source, ...rest }) => rest),
+    ));
+  }
 
   if (error) {
     if (error.code === '23P01') {
@@ -906,16 +929,20 @@ export async function cancelBooking(
   scope: TenantScope,
   booking: BookingRow,
   reason?: string,
+  /** Who cancelled — for Reports (migration 0033). */
+  by?: 'client' | 'business',
 ): Promise<void> {
   if (booking.status === 'cancelled') return;
 
-  const { error } = await scope
-    .update('bookings', {
-      status: 'cancelled',
-      cancelled_at: new Date().toISOString(),
-      cancellation_reason: reason ?? null,
-    })
+  const patch = {
+    status: 'cancelled' as const,
+    cancelled_at: new Date().toISOString(),
+    cancellation_reason: reason ?? null,
+  };
+  let { error } = await scope
+    .update('bookings', by ? { ...patch, cancelled_by: by } : patch)
     .eq('id', booking.id);
+  if (by && missingReportColumn(error)) ({ error } = await scope.update('bookings', patch).eq('id', booking.id));
 
   if (error) throw error;
 
@@ -1031,6 +1058,14 @@ export async function rescheduleBooking(
   if (error) {
     if (error.code === '23P01') throw new BookingError('That time was just taken', 409);
     throw error;
+  }
+
+  // Counted for Reports; a figure, so never a reason to fail the move.
+  const counted = await scope
+    .update('bookings', { reschedule_count: (booking.reschedule_count ?? 0) + 1 })
+    .eq('id', booking.id);
+  if (counted.error && !missingReportColumn(counted.error)) {
+    console.error('[booking] could not count a reschedule:', counted.error);
   }
 
   let moved: BookingRow = {

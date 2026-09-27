@@ -103,6 +103,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
 
     /* What was paid online for each, when anything was (migration 0032). */
     const payments = await paymentsFor(scope, rows);
+    const ratings = await ratingsFor(scope, rows);
 
     return ok({
       bookings: rows.map((row) => ({
@@ -111,6 +112,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         pack: row.pack_id ? (packs.get(row.pack_id) ?? null) : null,
         reconsidered: reconsiderations.get(row.id) ?? null,
         payment: row.payment_id ? (payments.get(row.payment_id) ?? null) : null,
+        attendance: row.attendance ?? null,
+        cancelledBy: row.cancelled_by ?? null,
+        source: row.source ?? null,
+        rating: ratings.get(row.id) ?? null,
       })),
     });
   } catch (error) {
@@ -304,6 +309,26 @@ async function paymentsFor(
       currency: p.currency,
       forProgramme: p.kind === 'pack',
     });
+  }
+  return map;
+}
+
+/** What clients said about these sessions, when they rated them (migration 0033). */
+async function ratingsFor(
+  scope: Awaited<ReturnType<typeof requireTenantAdmin>>['scope'],
+  rows: BookingWithJoins[],
+): Promise<Map<string, { rating: number; comment: string | null }>> {
+  const map = new Map<string, { rating: number; comment: string | null }>();
+  const now = Date.now();
+  const past = rows.filter((r) => new Date(r.starts_at).getTime() < now).map((r) => r.id);
+  if (past.length === 0) return map;
+  const { data, error } = await scope.select('session_ratings', 'booking_id, rating, comment').in('booking_id', past);
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return map;
+    throw error;
+  }
+  for (const r of (data ?? []) as unknown as Array<{ booking_id: string; rating: number; comment: string | null }>) {
+    map.set(r.booking_id, { rating: r.rating, comment: r.comment });
   }
   return map;
 }

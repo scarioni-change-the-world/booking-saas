@@ -11,6 +11,7 @@ import {
 } from '@/lib/api';
 import { createBooking, createBookingPack, loadEventType } from '@/lib/booking-service';
 import { onlinePaymentFor, startCheckout } from '@/lib/client-payments';
+import { cleanSource } from '@/lib/visit-source';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { serviceAsksProspectAnything } from '@/lib/qualification-response-service';
 import { BookingError } from '@/lib/booking-service';
@@ -107,6 +108,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       email: requireEmail(body, 'email'),
       notes: optionalString(body, 'notes', { maxLength: 5000 }),
       qualificationResponseId: responseId,
+      // Where they came from, as the page worked it out — for Reports.
+      source: cleanSource(body.source),
     };
 
     /* A pack is asked for by sending `slots` instead of `startsAt`. Which one

@@ -100,6 +100,13 @@ export const RATE_LIMITS = {
    * pairs above, and each success would make a business — so per caller and
    * per address, both tight.
    */
+  /** Counting a visit to a booking page (Reports). Generous — a real person
+   *  opens a page a few times — and only bounds a reload loop. */
+  pageVisit: {
+    limit: 30,
+    windowSeconds: 3600,
+    message: 'Too many visits from here just now.',
+  },
   signupRequest: {
     limit: 5,
     windowSeconds: 3600,

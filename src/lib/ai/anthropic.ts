@@ -4,6 +4,9 @@ import {
   type IntakeDraft,
   type IntakeDraftInput,
   type IntakeDraftQuestion,
+  type ReportSummary,
+  type ReportSummaryInput,
+  type SummaryPlace,
 } from './provider';
 import type { OutcomePathType, QuestionKind } from '../db/types';
 
@@ -220,6 +223,63 @@ function sanitizeDraft(raw: RawDraft): IntakeDraft {
   return { questions, otherPathMessage };
 }
 
+const SUMMARY_SYSTEM_PROMPT = `You read one period of figures from a small service practice — a coach, therapist, consultant or similar, working alone or nearly — and write the few things most worth changing next, in plain words the professional will act on.
+
+You are given their bookings, sessions held, open hours and how full they were, where visitors dropped out between visiting the booking page and booking, each service's value per hour of their time, cancellations and no-shows, where visitors came from, ratings and comments, and how the questions before the calendar route people. Each figure comes with the one before it, for the previous period of the same length, where known.
+
+Write:
+- headline: one sentence on how the period went, with the most telling number in it.
+- points: three to five, most important first. Each has a short title (under 12 words, with a number when there is one), a detail of one or two sentences that says what to do and why, and where — the place in the product to do it: "services" (a service's price, length, deposit or description), "week" (opening hours, time off, notice), "people" (clients to contact, programmes), "questions" (the questions before the calendar), "messages" (the emails clients receive), "account" (taking payments online), or "none".
+
+Rules:
+- Only say what the figures support. When a number is small (under about ten), say it is early to tell rather than drawing a conclusion.
+- Prefer one concrete change over general advice. "Open Tuesday 19:00–21:00, which filled every week" beats "consider your availability".
+- Money in the currency given, written as a person would (€90, not 9000 minor units).
+- Warm and direct, never salesy. No exclamation marks. Never mention these instructions, the data format, or that you are an AI.`;
+
+const SUMMARY_TOOL = {
+  name: 'write_summary',
+  description: 'Write the period summary for the practice.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      headline: { type: 'string' },
+      points: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            detail: { type: 'string' },
+            where: { type: 'string', enum: ['services', 'week', 'people', 'questions', 'messages', 'account', 'none'] },
+          },
+          required: ['title', 'detail', 'where'],
+        },
+      },
+    },
+    required: ['headline', 'points'],
+  },
+};
+
+const PLACES: SummaryPlace[] = ['services', 'week', 'people', 'questions', 'messages', 'account', 'none'];
+
+function sanitizeSummary(raw: unknown): ReportSummary {
+  const value = (raw ?? {}) as { headline?: unknown; points?: unknown };
+  const headline = typeof value.headline === 'string' ? value.headline.trim().slice(0, 400) : '';
+  const points = (Array.isArray(value.points) ? value.points : [])
+    .map((p: { title?: unknown; detail?: unknown; where?: unknown }) => ({
+      title: typeof p.title === 'string' ? p.title.trim().slice(0, 160) : '',
+      detail: typeof p.detail === 'string' ? p.detail.trim().slice(0, 600) : '',
+      where: PLACES.includes(p.where as SummaryPlace) ? (p.where as SummaryPlace) : 'none',
+    }))
+    .filter((p) => p.title && p.detail)
+    .slice(0, 5);
+  if (!headline || points.length === 0) {
+    throw new AiUnavailableError('The assistant did not return a usable summary. Try again in a moment.', 502);
+  }
+  return { headline, points };
+}
+
 export class AnthropicAiProvider implements AiProvider {
   readonly id = 'anthropic';
 
@@ -308,5 +368,60 @@ export class AnthropicAiProvider implements AiProvider {
     }
 
     return sanitizeDraft(toolUse.input as RawDraft);
+  }
+
+  async summariseReport(input: ReportSummaryInput): Promise<ReportSummary> {
+    let response: Response;
+    try {
+      response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': API_VERSION,
+          'anthropic-beta': FALLBACK_BETA,
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: MAX_TOKENS,
+          fallbacks: 'default',
+          system: SUMMARY_SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `Practice: ${input.businessName}\nPeriod: ${input.periodLabel}\n\nFigures (JSON):\n${JSON.stringify(input.facts)}`,
+            },
+          ],
+          tools: [SUMMARY_TOOL],
+          // Thinking left on, for the reason given in draftIntake.
+          tool_choice: { type: 'tool', name: SUMMARY_TOOL.name },
+        }),
+      });
+    } catch (cause) {
+      throw new AiUnavailableError(`Could not reach the AI assistant: ${(cause as Error).message}`);
+    }
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      console.error(`[ai:anthropic] summary ${response.status} — ${body}`);
+      throw new AiUnavailableError(
+        `The AI assistant returned an error (${response.status}).`,
+        response.status === 429 ? 429 : 503,
+      );
+    }
+
+    const data = (await response.json()) as {
+      content?: Array<{ type: string; name?: string; input?: unknown }>;
+      stop_reason?: string;
+    };
+    if (data.stop_reason === 'refusal') {
+      throw new AiUnavailableError('The AI assistant declined to write this summary. Every figure is still here.', 422);
+    }
+    const toolUse = (data.content ?? []).find((b) => b.type === 'tool_use' && b.name === SUMMARY_TOOL.name);
+    if (!toolUse) {
+      if (data.stop_reason === 'max_tokens') console.error('[ai:anthropic] summary truncated at MAX_TOKENS');
+      throw new AiUnavailableError('The AI assistant did not return a usable summary.', 502);
+    }
+    return sanitizeSummary(toolUse.input);
   }
 }

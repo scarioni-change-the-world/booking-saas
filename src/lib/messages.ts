@@ -35,6 +35,7 @@ export const MOMENTS: Moment[] = [
   },
   { id: 'day-before', title: 'Day before', tone: 'on', messages: ['booking_reminder'] },
   { id: 'changes', title: 'Changes plans', tone: 'on', messages: ['booking_rescheduled', 'booking_cancelled'] },
+  { id: 'after', title: 'After the session', tone: 'booked', messages: ['session_rating'] },
   { id: 'link', title: 'Gets their own link', tone: 'booked', messages: ['client_invite'] },
 ];
 
@@ -102,6 +103,13 @@ export const MESSAGES: Record<MessageId, MessageInfo> = {
     channel: 'email',
     when: 'When an appointment is cancelled, by them or by you.',
     alwaysAdded: ['For a programme: a link to book the session again'],
+  },
+  session_rating: {
+    label: 'How was it?',
+    to: 'client',
+    channel: 'email',
+    when: 'The morning after a session, unless you marked them as not having come. Their answer shows in Reports.',
+    alwaysAdded: ['A link to rate it, one to five, with room for a comment'],
   },
   client_invite: {
     label: 'Their own link',
@@ -205,6 +213,8 @@ export function sampleLinks(kind: EmailTemplateKind, tokens: TemplateTokens, tim
       return ['Change or cancel your booking'];
     case 'booking_cancelled':
       return [];
+    case 'session_rating':
+      return ['Rate your session'];
     case 'client_invite':
       return ['Book a session'];
     case 'booking_pack_confirmed': {

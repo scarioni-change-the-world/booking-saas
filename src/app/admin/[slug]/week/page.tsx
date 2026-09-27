@@ -11,6 +11,7 @@ import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { BookingRules } from '@/components/admin/BookingRules';
 import { CalendarConnection } from '@/components/admin/CalendarConnection';
+import { TimeOffPanel, TimeOffPlate } from '@/components/admin/TimeOff';
 import { useServiceMark } from '@/components/admin/ServiceMarks';
 import { formatMoney } from '@/lib/money';
 import {
@@ -84,7 +85,7 @@ interface Owed {
   remaining: number;
 }
 
-type Selection = { kind: 'booking'; id: string } | { kind: 'day'; date: string } | null;
+type Selection = { kind: 'booking'; id: string } | { kind: 'day'; date: string } | { kind: 'time-off' } | null;
 
 const HOUR_PX = 46;
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -127,6 +128,7 @@ export default function WeekPage() {
   const [selection, setSelection] = useState<Selection>(null);
 
   const [painting, setPainting] = useState(false);
+  const [timeOffVersion, setTimeOffVersion] = useState(0);
   const [draft, setDraft] = useState<Record<number, boolean[]> | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -312,6 +314,13 @@ export default function WeekPage() {
           )}
 
           <div className="wk-toolbar">
+            {painting ? (
+              /* Usual hours are the same every week, so there is no week to
+                 move to — said, rather than left as two dead arrows. */
+              <div className="wk-nav">
+                <span className="wk-range">Every week</span>
+              </div>
+            ) : (
             <div className="wk-nav">
               <button
                 type="button"
@@ -349,6 +358,7 @@ export default function WeekPage() {
                 </button>
               )}
             </div>
+            )}
 
             <div className="wk-mode" role="group" aria-label="What dragging does">
               <button
@@ -369,6 +379,15 @@ export default function WeekPage() {
                 Paint usual hours
               </button>
             </div>
+
+            <button
+              type="button"
+              className={`btn-secondary${selection?.kind === 'time-off' ? ' is-selected' : ''}`}
+              disabled={painting || !week}
+              onClick={() => setSelection({ kind: 'time-off' })}
+            >
+              Time off
+            </button>
 
             <div className="wk-legend" aria-hidden="true">
               <span><i className="wk-lg-open" />Open</span>
@@ -407,7 +426,7 @@ export default function WeekPage() {
               </div>
 
               <aside
-                className={`wk-side${!painting && !selectedBooking && selection?.kind !== 'day' ? ' is-plates' : ''}`}
+                className={`wk-side${!painting && !selectedBooking && selection?.kind !== 'day' && selection?.kind !== 'time-off' ? ' is-plates' : ''}`}
                 aria-live="polite"
               >
                 {painting && draft && original ? (
@@ -426,6 +445,16 @@ export default function WeekPage() {
                     booking={selectedBooking}
                     onClose={() => setSelection(null)}
                     onChanged={load}
+                  />
+                ) : selection?.kind === 'time-off' ? (
+                  <TimeOffPanel
+                    slug={slug}
+                    timezone={week.timezone}
+                    onClose={() => setSelection(null)}
+                    onChanged={() => {
+                      setTimeOffVersion((v) => v + 1);
+                      void load();
+                    }}
                   />
                 ) : selection?.kind === 'day' ? (
                   <div>
@@ -455,6 +484,13 @@ export default function WeekPage() {
                         bookings={bookings.length}
                         bookedMinutes={placements.reduce((sum, p) => sum + (p.endMinutes - p.startMinutes), 0)}
                         owed={owed}
+                      />
+                    </section>
+                    <section className="wk-plate wk-rules">
+                      <TimeOffPlate
+                        slug={slug}
+                        version={timeOffVersion}
+                        onOpen={() => setSelection({ kind: 'time-off' })}
                       />
                     </section>
                     {/* The rules and the calendar that narrow these hours,
@@ -589,7 +625,8 @@ function WeekGrid({
             aria-label={`${WEEKDAY_NAMES[i]} ${DateTime.fromISO(date).toFormat('d LLLL')}, open this day`}
           >
             <span className="wk-dow">{WEEKDAY_NAMES[i]!.slice(0, 3)}</span>
-            <span className="wk-dnum">{DateTime.fromISO(date).day}</span>
+            {/* Painting is the week that repeats, so no date belongs to it. */}
+            {!painting && <span className="wk-dnum">{DateTime.fromISO(date).day}</span>}
             {day.override && !painting && (
               <span className="wk-exception">{day.override.isClosed ? 'Closed' : 'Own hours'}</span>
             )}
@@ -813,6 +850,10 @@ function PaintPanel({
         Drag across the grid to open or close hours. This is the week that repeats; dates with
         their own hours keep them, and anything already booked stays where it is.
       </p>
+      <p className="wk-side-hint" style={{ marginBottom: 12 }}>
+        Closing for a holiday, a bank holiday or a single day? That is <b>Time off</b>, beside Paint — it leaves
+        these hours alone.
+      </p>
 
       {/* The effect, before saving. */}
       <dl className="wk-facts">
@@ -945,6 +986,19 @@ function BookingPanel({
 
       {b.reconsidered && <ReconsideredMark reconsidered={b.reconsidered} />}
 
+      {new Date(b.startsAt).getTime() < Date.now() && (
+        <Attendance slug={slug} booking={b} onChanged={onChanged} />
+      )}
+      {b.rating && (
+        <p className="wk-rating">
+          <span aria-label={`Rated ${b.rating.rating} out of 5`}>
+            {'★'.repeat(b.rating.rating)}
+            <span className="wk-rating-off">{'★'.repeat(5 - b.rating.rating)}</span>
+          </span>
+          {b.rating.comment ? <span className="wk-note"> “{b.rating.comment}”</span> : null}
+        </p>
+      )}
+
       {b.notes && <p className="wk-note">“{b.notes}”</p>}
 
       {b.qualification && b.qualification.answers.length > 0 && (
@@ -1037,6 +1091,73 @@ function BookingPanel({
             Cancel booking
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Did they come? Asked on every appointment once it has started, answered
+ * with one tap. It feeds Reports (no-shows by service and by time), and a
+ * no-show is not asked to rate a session they did not have.
+ */
+function Attendance({
+  slug,
+  booking,
+  onChanged,
+}: {
+  slug: string;
+  booking: Booking;
+  onChanged: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const current = booking.attendance ?? null;
+
+  async function mark(value: 'attended' | 'no_show') {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminFetchJson(`/api/admin/${slug}/bookings/${booking.id}/attendance`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ attendance: current === value ? null : value }),
+      });
+      await onChanged();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="wk-attend">
+      <p className="wk-side-eyebrow">Did they come?</p>
+      <div className="wk-attend-keys" role="group" aria-label="Did they come?">
+        <button
+          type="button"
+          className="filter-chip"
+          aria-pressed={current === 'attended'}
+          disabled={busy}
+          onClick={() => void mark('attended')}
+        >
+          Came
+        </button>
+        <button
+          type="button"
+          className="filter-chip"
+          aria-pressed={current === 'no_show'}
+          disabled={busy}
+          onClick={() => void mark('no_show')}
+        >
+          Didn’t come
+        </button>
+      </div>
+      {error && (
+        <p className="notice notice-error" role="alert">
+          {error}
+        </p>
       )}
     </div>
   );

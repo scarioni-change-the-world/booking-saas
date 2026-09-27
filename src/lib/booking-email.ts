@@ -98,9 +98,13 @@ async function recordEmailStatus(
   status: Exclude<EmailStatus, 'pending'>,
   error?: string,
 ): Promise<void> {
-  await scope
-    .update('bookings', { email_status: status, email_error: error ?? null })
-    .eq('id', bookingId);
+  // The rating request is sent after the appointment is over: the badge on
+  // the booking describes the emails it depends on, not a thank-you note.
+  if (kind !== 'session_rating') {
+    await scope
+      .update('bookings', { email_status: status, email_error: error ?? null })
+      .eq('id', bookingId);
+  }
   await logEmailSend(scope, { kind, status, bookingId, error });
 }
 
@@ -157,7 +161,7 @@ async function sendClientEmail(
   // Unless the tenant placed the token themselves, in which case they have
   // decided where it goes and repeating it underneath would be noise.
   const links: TemplateLink[] = [];
-  if (booking.meeting_url && !template.body.includes('{{meetingLink}}')) {
+  if (booking.meeting_url && kind !== 'session_rating' && !template.body.includes('{{meetingLink}}')) {
     links.push({ label: 'Join the video call', url: booking.meeting_url });
   }
   if (options.includeManageLink) {
@@ -350,6 +354,23 @@ export async function sendBookingReminderEmail(
   return sendClientEmail(tenant, scope, booking, 'booking_reminder', {
     includeIcs: false,
     includeManageLink: true,
+  });
+}
+
+/**
+ * After the session: how was it? One link, to a page with five choices and
+ * room for a comment (/rate/[token]). The manage link is left off — there
+ * is nothing left to change.
+ */
+export async function sendSessionRatingEmail(
+  tenant: TenantRow,
+  scope: TenantScope,
+  booking: BookingRow,
+): Promise<EmailStatus> {
+  return sendClientEmail(tenant, scope, booking, 'session_rating', {
+    includeIcs: false,
+    includeManageLink: false,
+    extraLinks: [{ label: 'Rate your session', url: `${baseUrl()}/rate/${booking.manage_token}` }],
   });
 }
 

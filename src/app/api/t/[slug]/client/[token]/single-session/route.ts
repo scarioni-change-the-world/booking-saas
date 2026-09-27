@@ -56,6 +56,7 @@ export async function POST(
       email: client.email,
       notes: optionalString(body, 'notes', { maxLength: 5000 }),
       clientId: client.id,
+      source: 'client_link',
     };
 
     // Paid when booked: held, then made once Stripe says it is paid.

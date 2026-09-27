@@ -9035,3 +9035,500 @@ body:has(.bk-embedded) {
   background: var(--emphasis-ink);
   color: var(--surface);
 }
+
+/* ── Time off (Week) ─────────────────────────────────────────────────── */
+.to-list,
+.to-runs {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+.to-list li + li {
+  margin-top: 4px;
+}
+.to-runs li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+}
+.to-dates {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 10px;
+}
+.to-dates input,
+.to-form input {
+  width: 100%;
+  min-width: 0;
+}
+.to-dates .field {
+  margin-bottom: 6px;
+}
+.to-preview {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.to-preview p {
+  margin: 0;
+}
+.to-preview p + p {
+  margin-top: 6px;
+}
+.to-preview ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+/* Bookings inside the run need a decision from you: Ochre. */
+.to-preview.is-need {
+  background: var(--emphasis-tint);
+  color: var(--emphasis-ink);
+}
+
+/* ── Week: attendance and rating on a past booking ─────────────────────── */
+.wk-attend {
+  margin: 14px 0 4px;
+}
+.wk-attend-keys {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.wk-rating {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+.wk-rating-off {
+  color: var(--rule);
+}
+
+/* ── Rating a session (client-facing, inside .bk) ─────────────────────── */
+.bk-rate {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 18px;
+}
+.bk .bk-rate-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 10px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--faint);
+  font: inherit;
+  cursor: pointer;
+}
+.bk .bk-rate-key[aria-checked='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.bk-rate-star {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--faint) 35%, var(--surface));
+}
+.bk .bk-rate-key.is-on .bk-rate-star {
+  color: var(--accent);
+}
+.bk-rate-word {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+@media (max-width: 380px) {
+  .bk-rate-word {
+    font-size: 0.68rem;
+  }
+}
+
+/* ── Reports ──────────────────────────────────────────────────────────────
+   One series per chart, so one colour: Mineral (--accent) for every mark,
+   Ochre only beside what needs the professional. Text is always ink. */
+.rep-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin: 0 0 18px;
+}
+.rep-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rep-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.rep-custom label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+.rep-compare {
+  margin: 0;
+  font-size: 0.92rem;
+}
+.rep.is-loading {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+.rep {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+/* A wide table scrolls inside its plate; it never widens the page. */
+.rep > *,
+.rep-top > * {
+  min-width: 0;
+}
+.rep-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 18px;
+}
+.rep-findings,
+.rep-summary-points,
+.rep-questions,
+.rep-quotes,
+.rep-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.rep-findings li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+.rep-findings li:first-child {
+  border-top: 0;
+}
+.rep-findings .lamp {
+  margin-top: 6px;
+}
+.rep-finding-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.rep-finding-detail {
+  margin: 3px 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.rep-summary-headline {
+  margin: 6px 0 4px;
+  font-size: 1.02rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.rep-summary-points {
+  counter-reset: pt;
+}
+.rep-summary-points li {
+  padding: 10px 0 0;
+  border-top: 1px solid var(--rule);
+  margin-top: 10px;
+}
+.rep-headline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.rep-headline .rep-stat {
+  padding: 16px 18px;
+  border-radius: var(--radius-plate, 20px);
+  background: var(--surface);
+  box-shadow: var(--plate-shadow);
+}
+.rep-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 18px;
+  margin: 6px 0 16px;
+}
+.rep-stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.rep-stat-value {
+  margin: 4px 0 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.rep-stat-sub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.rep-stat.is-need .rep-stat-value {
+  color: var(--emphasis-ink);
+}
+.rep-meter {
+  display: block;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 3px;
+  background: var(--accent-tint);
+  overflow: hidden;
+}
+.rep-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.rep-section {
+  scroll-margin-top: 80px;
+}
+.rep-h {
+  margin: 0;
+  font-size: 1.12rem;
+}
+.rep-lede {
+  margin: 4px 0 14px;
+  font-size: 0.9rem;
+  color: var(--faint);
+}
+.rep-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px 24px;
+  margin: 16px 0;
+}
+.rep-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 0;
+  font-size: 0.9rem;
+}
+.rep-list .lamp {
+  flex: none;
+  transform: translateY(1px);
+}
+.rep-quotes li {
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+.rep-quotes small {
+  display: block;
+  margin-top: 2px;
+  color: var(--faint);
+}
+.rep-questions li {
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+}
+.rep-big {
+  margin: 0 0 8px;
+  font-size: 2.2rem;
+  font-weight: 600;
+}
+.rep-big small {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+/* Bars: thin (≤ 24px), a rounded data end, square at the baseline. */
+.rep-track {
+  display: block;
+  height: 14px;
+  border-radius: 0 4px 4px 0;
+  background: transparent;
+}
+.rep-bar {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+.rep-journey {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.rep-journey li {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr minmax(170px, auto);
+  align-items: center;
+  gap: 6px 14px;
+}
+.rep-journey-label {
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+.rep-journey .rep-track {
+  height: 20px;
+}
+.rep-journey-value {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.rep-journey-value small {
+  color: var(--faint);
+}
+.rep-journey-note {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--emphasis-ink);
+}
+.rep-bars {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.rep-bars li {
+  display: grid;
+  grid-template-columns: minmax(80px, 120px) 1fr minmax(48px, auto);
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.rep-bars-value {
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The week heatmap: one hue, light to dark; closed hours are the page. */
+.rep-readout {
+  min-height: 1.4em;
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.rep-heat {
+  display: grid;
+  gap: 2px;
+  align-items: center;
+}
+.rep-heat-hour {
+  font-size: 0.68rem;
+  color: var(--faint);
+  text-align: left;
+}
+.rep-heat-day {
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.rep-heat-cell {
+  display: inline-block;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--canvas);
+}
+.rep-heat .rep-heat-cell:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.rep-heat-cell.s0 {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, var(--surface));
+}
+.rep-heat-cell.s1 {
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+}
+.rep-heat-cell.s2 {
+  background: color-mix(in srgb, var(--accent) 48%, var(--surface));
+}
+.rep-heat-cell.s3 {
+  background: color-mix(in srgb, var(--accent) 70%, var(--surface));
+}
+.rep-heat-cell.s4 {
+  background: var(--accent);
+}
+.rep-scale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+.rep-scale .rep-heat-cell {
+  width: 14px;
+  height: 14px;
+}
+
+.rep-table-wrap {
+  overflow-x: auto;
+}
+.rep-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+.rep-table th,
+.rep-table td {
+  color: var(--ink);
+  padding: 9px 10px;
+  border-top: 1px solid var(--rule);
+  text-align: right;
+  white-space: nowrap;
+}
+.rep-table thead th {
+  border-top: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--faint);
+}
+.rep-table th[scope='row'],
+.rep-table thead th:first-child {
+  text-align: left;
+}
+.rep-table th[scope='row'] a {
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .rep-top {
+    grid-template-columns: 1fr;
+  }
+  .rep-journey li {
+    grid-template-columns: 1fr;
+  }
+  .rep-journey-note {
+    grid-column: 1;
+  }
+}

@@ -55,9 +55,35 @@ export interface IntakeDraftInput {
   };
 }
 
+/**
+ * Reports: a written reading of one period, drafted on request. Given the
+ * figures only — never a client's name or address — and asked for the few
+ * things most worth changing, each pointing at the place in intro to do it.
+ */
+export type SummaryPlace = 'services' | 'week' | 'people' | 'questions' | 'messages' | 'account' | 'none';
+
+export interface ReportSummaryPoint {
+  title: string;
+  detail: string;
+  where: SummaryPlace;
+}
+
+export interface ReportSummary {
+  headline: string;
+  points: ReportSummaryPoint[];
+}
+
+export interface ReportSummaryInput {
+  businessName: string;
+  periodLabel: string;
+  /** The period's figures, already anonymous — see summaryFacts in reports-summary.ts. */
+  facts: unknown;
+}
+
 export interface AiProvider {
   readonly id: string;
   draftIntake(input: IntakeDraftInput): Promise<IntakeDraft>;
+  summariseReport(input: ReportSummaryInput): Promise<ReportSummary>;
 }
 
 /**

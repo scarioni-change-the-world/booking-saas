@@ -6,6 +6,7 @@ import { applicableSteps, previousStep, stepIdFor } from './journey';
 import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from '../types';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import { TEST_HEADER, type TestMessage } from '@/lib/test-run';
+import { recordVisit, visitSource } from './visit';
 
 /**
  * What a test run adds to every request: that it is one, and who is
@@ -82,6 +83,18 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /* Where this visitor came from, and the visit itself, counted once per
+     tab (see visit.ts — no cookie, nothing that identifies anybody). A
+     business's own test run is not a visit. */
+  const [source, setSource] = useState<string | null>(null);
+  useEffect(() => {
+    if (test) return;
+    const embedded = window.parent !== window;
+    const found = visitSource(slug, embedded);
+    setSource(found);
+    recordVisit(slug, embedded ? 'embedded' : 'page', found);
+  }, [slug, test]);
   /* Stripe's payment page will not open inside a frame. On a page embedded
      in the business's own site, the review step offers a link that leaves
      the frame instead of navigating it. */
@@ -324,6 +337,7 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
         email,
         notes,
         responseId,
+        source,
       });
       /* Paid when booked: the time is held and the rest happens on Stripe's
          page, then /paid. Busy stays on so the button cannot be pressed twice

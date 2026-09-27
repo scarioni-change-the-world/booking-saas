@@ -47,7 +47,9 @@ export type EmailTemplateKind =
    * client's own private booking link to them — see src/lib/client-email.ts. */
   | 'client_invite'
   | 'booking_reminder'
-  | 'booking_pack_confirmed';
+  | 'booking_pack_confirmed'
+  /** After a session: how was it? (migration 0033) */
+  | 'session_rating';
 
 export interface TenantBranding {
   logoUrl?: string;
@@ -96,6 +98,8 @@ export interface TenantSettingsRow {
      one currency, and per-service would let two sit side by side on one
      page. See migration 0024. */
   currency: string;
+  /** Ask each client for a rating after their session (migration 0033). */
+  rating_emails?: boolean;
   updated_at: string;
 }
 
@@ -250,6 +254,43 @@ export interface BookingRow {
   email_error: string | null;
   /** The payment that bought it, when it was paid online (migration 0032). */
   payment_id?: string | null;
+  /* Migration 0033: where the booking came from, whether they came, who
+     cancelled, how often it moved, and when a rating was asked for. */
+  source?: string | null;
+  attendance?: Attendance | null;
+  cancelled_by?: 'client' | 'business' | null;
+  reschedule_count?: number;
+  rating_requested_at?: string | null;
+}
+
+export type Attendance = 'attended' | 'no_show';
+
+export type VisitSurface = 'page' | 'embedded' | 'client_link';
+
+export interface PageVisitRow {
+  id: number;
+  tenant_id: string;
+  visited_at: string;
+  source: string;
+  surface: VisitSurface;
+}
+
+export interface SessionRatingRow {
+  id: string;
+  tenant_id: string;
+  booking_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export interface ReportSummaryRow {
+  id: string;
+  tenant_id: string;
+  period_from: string;
+  period_to: string;
+  summary: unknown;
+  created_at: string;
 }
 
 export type PaymentStatus = 'open' | 'paid' | 'expired' | 'failed' | 'refunded';
@@ -287,6 +328,8 @@ export interface PaymentBookingInput {
   slots?: string[];
   /** Where the client started, so the paid page can send them back. */
   from: 'page' | 'client-link';
+  /** Where the booker came from (migration 0033). */
+  source?: string | null;
   clientToken?: string | null;
 }
 
@@ -366,7 +409,7 @@ export interface CalendarConnectionRow {
  * each kind independently. One value today; a future AI feature (draft
  * history, per-service scoping, ...) adds its own rather than reusing this
  * one. */
-export type AiUsageKind = 'intake_draft';
+export type AiUsageKind = 'intake_draft' | 'report_summary';
 
 /**
  * One metered AI generation, recorded after it succeeds — see
@@ -410,6 +453,9 @@ export interface TenantScopedTables {
   email_templates: EmailTemplateRow;
   email_sends: EmailSendRow;
   payments: PaymentRow;
+  page_visits: PageVisitRow;
+  session_ratings: SessionRatingRow;
+  report_summaries: ReportSummaryRow;
 }
 
 export type TenantScopedTable = keyof TenantScopedTables;

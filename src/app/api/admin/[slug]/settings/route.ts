@@ -73,6 +73,10 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ slug: str
       const value = body.notificationEmail;
       patch.notification_email = value === null || value === '' ? null : requireEmail(body, 'notificationEmail');
     }
+    if ('ratingEmails' in body) {
+      if (typeof body.ratingEmails !== 'boolean') return fail('"ratingEmails" must be true or false', 400);
+      patch.rating_emails = body.ratingEmails;
+    }
     if ('replyToEmail' in body) {
       const value = body.replyToEmail;
       patch.reply_to_email = value === null || value === '' ? null : requireEmail(body, 'replyToEmail');

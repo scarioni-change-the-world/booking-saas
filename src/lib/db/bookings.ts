@@ -85,3 +85,46 @@ export async function claimReminder(bookingId: string): Promise<boolean> {
   if (error) throw error;
   return (data ?? []).length > 0;
 }
+
+/**
+ * Sessions that ended in the window and have not been asked for a rating
+ * yet — not cancelled, and not marked as a no-show (somebody who did not
+ * come has nothing to rate). Returns null before migration 0033, when there
+ * is no column to remember the asking in: better to send none than to send
+ * the same one every morning.
+ */
+export async function bookingsDueARating(
+  fromIso: string,
+  toIso: string,
+  limit: number,
+): Promise<BookingRow[] | null> {
+  const { data, error } = await __unsafeServiceClient()
+    .from('bookings')
+    .select('*')
+    .eq('status', 'confirmed')
+    .is('rating_requested_at', null)
+    .or('attendance.is.null,attendance.eq.attended')
+    .gte('ends_at', fromIso)
+    .lte('ends_at', toIso)
+    .order('ends_at', { ascending: true })
+    .limit(limit);
+  if (error) {
+    if (error.code === '42703' || error.code === 'PGRST204' || /rating_requested_at|attendance/.test(error.message)) {
+      return null;
+    }
+    throw error;
+  }
+  return (data ?? []) as BookingRow[];
+}
+
+/** Claim a booking's rating request — the same claim-before-send as claimReminder. */
+export async function claimRatingRequest(bookingId: string): Promise<boolean> {
+  const { data, error } = await __unsafeServiceClient()
+    .from('bookings')
+    .update({ rating_requested_at: new Date().toISOString() })
+    .eq('id', bookingId)
+    .is('rating_requested_at', null)
+    .select('id');
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}

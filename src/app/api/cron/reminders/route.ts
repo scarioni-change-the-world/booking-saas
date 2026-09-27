@@ -2,8 +2,8 @@ import { DateTime } from 'luxon';
 import { NextResponse } from 'next/server';
 import { handleError, ok } from '@/lib/api';
 import { cronSecretConfigured, isScheduledRequest } from '@/lib/cron-auth';
-import { sendBookingReminderEmail } from '@/lib/booking-email';
-import { bookingsDueAReminder, claimReminder, tenantScope } from '@/lib/db';
+import { sendBookingReminderEmail, sendSessionRatingEmail } from '@/lib/booking-email';
+import { bookingsDueARating, bookingsDueAReminder, claimRatingRequest, claimReminder, tenantScope } from '@/lib/db';
 import type { BookingRow, TenantRow } from '@/lib/db/types';
 import { __unsafeServiceClient } from '@/lib/db/client';
 
@@ -122,10 +122,59 @@ export async function GET(request: Request) {
     console.log(
       `[cron:reminders] ${due.length} due · ${sent} sent · ${skipped} already claimed · ${failed} failed`,
     );
-    return ok({ due: due.length, sent, skipped, failed });
+
+    const ratings = await askForRatings(now, loadTenant);
+    return ok({ due: due.length, sent, skipped, failed, ratings });
   } catch (error) {
     return handleError(error);
   }
+}
+
+/**
+ * The same run asks yesterday's clients how it went (migration 0033): every
+ * session that ended between 26 hours and 1 hour ago. Like the reminder
+ * window, consecutive daily runs overlap rather than leave a gap, and the
+ * claim means the overlap never asks twice. A business that turned the
+ * rating email off in Messages is skipped — and its sessions stay unclaimed,
+ * which is what they are.
+ */
+const RATING_FROM_HOURS = 26;
+const RATING_TO_HOURS = 1;
+
+async function askForRatings(
+  now: DateTime,
+  loadTenant: (id: string) => Promise<TenantRow | null>,
+): Promise<{ due: number; sent: number; failed: number } | null> {
+  const due = await bookingsDueARating(
+    now.minus({ hours: RATING_FROM_HOURS }).toISO()!,
+    now.minus({ hours: RATING_TO_HOURS }).toISO()!,
+    MAX_PER_RUN,
+  );
+  if (due === null) return null;
+
+  let sent = 0;
+  let failed = 0;
+  const wants = new Map<string, boolean>();
+  for (const booking of due) {
+    const tenant = await loadTenant(booking.tenant_id);
+    if (!tenant) continue;
+    if (!wants.has(tenant.id)) {
+      const { data } = await tenantScope(tenant.id).select('tenant_settings', 'rating_emails').maybeSingle();
+      wants.set(tenant.id, (data as { rating_emails?: boolean } | null)?.rating_emails !== false);
+    }
+    if (!wants.get(tenant.id)) continue;
+    if (!(await claimRatingRequest(booking.id))) continue;
+    try {
+      const status = await sendSessionRatingEmail(tenant, tenantScope(tenant.id), booking);
+      if (status === 'sent') sent += 1;
+      else failed += 1;
+    } catch (cause) {
+      console.error('[cron:ratings] send failed for', booking.id, cause);
+      failed += 1;
+    }
+  }
+  console.log(`[cron:ratings] ${due.length} due · ${sent} sent · ${failed} failed`);
+  return { due: due.length, sent, failed };
 }
 
 // Reminders are sent, not cached.

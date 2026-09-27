@@ -70,6 +70,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
          than seven times. */
       emailConfigured: emailProvider().id !== 'console',
       notificationEmail: (settings.data as unknown as TenantSettingsRow | null)?.notification_email ?? null,
+      ratingEmails: (settings.data as unknown as TenantSettingsRow | null)?.rating_emails !== false,
       serviceName: firstService?.name ?? null,
       templates: ((templates.data ?? []) as unknown as EmailTemplateRow[]).map(serializeEmailTemplate),
       nextSteps: otherPath ? serializeOutcomePath(otherPath) : null,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { clientThread, type HistoryBooking } from '@/lib/client-thread';
 import { useAutoResize } from './useAutoResize';
 import { DEFAULT_CURRENCY, formatMoney } from '@/lib/money';
+import { recordVisit } from './booking/visit';
 import { DateNavigator } from './booking/DateNavigator';
 import {
   downloadCalendar,
@@ -167,6 +168,10 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
  */
 export default function ClientBooking({ slug, token }: Props) {
   useAutoResize();
+  // A returning client opening their own link: counted apart from the public page.
+  useEffect(() => {
+    recordVisit(slug, 'client_link', 'client_link');
+  }, [slug]);
 
   const [step, setStep] = useState<Step>('loading');
   const [error, setError] = useState<string | null>(null);

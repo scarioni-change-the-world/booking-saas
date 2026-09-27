@@ -27,7 +27,7 @@ export async function POST(
     if (!booking) return fail('Not found', 404);
     if (booking.status === 'cancelled') return fail('That booking is already cancelled', 409);
 
-    await cancelBooking(tenant, scope, booking, reason);
+    await cancelBooking(tenant, scope, booking, reason, 'business');
 
     // Paid online? A business cancelling always gives the money back —
     // except a programme session, which returns to the client's balance.

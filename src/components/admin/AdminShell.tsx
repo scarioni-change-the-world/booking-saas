@@ -34,6 +34,7 @@ const PLACES = [
   { href: "week", label: "Week" },
   { href: "people", label: "People" },
   { href: "messages", label: "Messages" },
+  { href: "reports", label: "Reports" },
 ];
 
 /** Routes that are parts of the flow, opened from it. */

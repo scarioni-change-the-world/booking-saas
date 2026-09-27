@@ -48,6 +48,8 @@ interface Payload {
   timezone: string;
   emailConfigured: boolean;
   notificationEmail: string | null;
+  /** Whether the "How was it?" email is sent at all (migration 0033). */
+  ratingEmails?: boolean;
   serviceName: string | null;
   templates: Template[];
   nextSteps: NextSteps | null;
@@ -195,7 +197,9 @@ export default function MessagesPage() {
                             ? `${data.shownElsewhere} shown`
                             : id === 'owner_notification' && !data.notificationEmail
                               ? 'Off: no address set'
-                              : describeTally(tally!)}
+                              : id === 'session_rating' && data.ratingEmails === false
+                                ? 'Off'
+                                : describeTally(tally!)}
                         </small>
                       </button>
                     );
@@ -319,6 +323,7 @@ function EmailEditor({
           {info.when}
           {kind === 'booking_reminder' && ` Sent at about ${reminderLocalTime(data.timezone, nowIso)} your time.`}
         </p>
+        {kind === 'session_rating' && <RatingSwitch slug={slug} on={data.ratingEmails !== false} onSaved={onSaved} />}
         {kind === 'owner_notification' && (
           <p className={data.notificationEmail ? 'ms-when' : 'wk-warning'}>
             {data.notificationEmail ? (
@@ -671,5 +676,43 @@ function NextStepsEditor({
         )}
       </div>
     </section>
+  );
+}
+
+/** The one email a business may choose not to send: asking for a rating. */
+function RatingSwitch({ slug, on, onSaved }: { slug: string; on: boolean; onSaved: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function flip() {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminFetchJson(`/api/admin/${slug}/settings`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ratingEmails: !on }),
+      });
+      await onSaved();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="ms-when">
+      <label className="setup-audience" style={{ margin: '6px 0' }}>
+        <input type="checkbox" checked={on} disabled={busy} onChange={() => void flip()} />
+        <span>
+          <strong>{on ? 'On — clients are asked after each session' : 'Off — nobody is asked'}</strong>
+          <small>Their answers appear in Reports, by service, and beside the booking on the Week.</small>
+        </span>
+      </label>
+      {error && (
+        <p className="notice notice-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
