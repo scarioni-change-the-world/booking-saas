@@ -101,12 +101,16 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
        was made by somebody who had been turned away an hour earlier. */
     const reconsiderations = await reconsiderationsFor(scope, rows);
 
+    /* What was paid online for each, when anything was (migration 0032). */
+    const payments = await paymentsFor(scope, rows);
+
     return ok({
       bookings: rows.map((row) => ({
         ...serializeBooking(row),
         isClient: clientEmails.has(row.email.toLowerCase()),
         pack: row.pack_id ? (packs.get(row.pack_id) ?? null) : null,
         reconsidered: reconsiderations.get(row.id) ?? null,
+        payment: row.payment_id ? (payments.get(row.payment_id) ?? null) : null,
       })),
     });
   } catch (error) {
@@ -251,4 +255,55 @@ async function reconsiderationsFor(
   }
 
   return found;
+}
+
+export interface BookingPaymentSummary {
+  /** paid, or refunded (in full) — 'failed' and 'open' never reach a booking. */
+  status: 'paid' | 'refunded';
+  kind: 'full' | 'deposit';
+  amountMinor: number;
+  refundedMinor: number;
+  currency: string;
+  /** One payment for every session of a programme. */
+  forProgramme: boolean;
+}
+
+/**
+ * The payments behind these bookings, one query for the page. A database
+ * without migration 0032 has none, and says so by not having the table.
+ */
+async function paymentsFor(
+  scope: Awaited<ReturnType<typeof requireTenantAdmin>>['scope'],
+  rows: BookingWithJoins[],
+): Promise<Map<string, BookingPaymentSummary>> {
+  const ids = [...new Set(rows.map((r) => r.payment_id).filter((id): id is string => !!id))];
+  const map = new Map<string, BookingPaymentSummary>();
+  if (ids.length === 0) return map;
+  const { data, error } = await scope
+    .select('payments', 'id, status, kind, payment_mode, amount_minor, refunded_minor, currency')
+    .in('id', ids);
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return map;
+    throw error;
+  }
+  for (const p of (data ?? []) as unknown as Array<{
+    id: string;
+    status: string;
+    kind: 'single' | 'pack';
+    payment_mode: 'full' | 'deposit';
+    amount_minor: number;
+    refunded_minor: number;
+    currency: string;
+  }>) {
+    if (p.status !== 'paid' && p.status !== 'refunded') continue;
+    map.set(p.id, {
+      status: p.status,
+      kind: p.payment_mode,
+      amountMinor: p.amount_minor,
+      refundedMinor: p.refunded_minor,
+      currency: p.currency,
+      forProgramme: p.kind === 'pack',
+    });
+  }
+  return map;
 }

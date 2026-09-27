@@ -8,10 +8,10 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
 /**
  * Sign in.
  *
- * No sign-up here — there is no self-serve account creation yet (see the
- * README roadmap); a tenant is currently linked to a login by hand, via
- * supabase/bootstrap/02_bootstrap_owner.sql. This page only authenticates,
- * which is why there is no "Create account" link below the form.
+ * Signing up is its own page (/admin/signup), linked below the form. A login
+ * that signed up but whose business was never made — the email link opened
+ * elsewhere, or not at all on a project that confirms addresses itself — is
+ * finished here, on first sign-in.
  *
  * There is a "Forgot your password?" link, and it goes somewhere real —
  * /admin/forgot-password and /admin/reset-password are the other two halves
@@ -34,6 +34,10 @@ export default function AdminLoginPage() {
         password,
       });
       if (signInError || !data.session) {
+        // Supabase's code for a login whose address was never confirmed.
+        if (signInError?.code === 'email_not_confirmed') {
+          throw new Error('Confirm your email first — open the link we sent when you signed up.');
+        }
         throw new Error(signInError?.message ?? 'Could not sign in');
       }
 
@@ -47,13 +51,28 @@ export default function AdminLoginPage() {
       if (!response.ok) throw new Error(body.error ?? 'Could not sign in');
 
       const first = body.tenants?.[0];
-      if (!first) {
-        throw new Error(
-          "You're signed in, but your account isn't linked to a business yet.",
-        );
+      if (first) {
+        window.location.href = `/admin/${first.slug}/flow`;
+        return;
       }
 
-      window.location.href = `/admin/${first.slug}/flow`;
+      /* Signed up, but the business was never made — the email link was
+         not opened here, or this project confirms addresses by itself.
+         Signing in finishes it. */
+      const finished = await fetch('/api/signup/complete', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${data.session.access_token}` },
+      });
+      const made = (await finished.json().catch(() => ({}))) as { slug?: string; error?: string };
+      if (finished.ok && made.slug) {
+        window.location.href = `/admin/${made.slug}/flow`;
+        return;
+      }
+      throw new Error(
+        finished.status === 404
+          ? "You're signed in, but your account isn't linked to a business yet."
+          : (made.error ?? 'Could not open your account.'),
+      );
     } catch (cause) {
       setError((cause as Error).message);
       setBusy(false);
@@ -107,6 +126,9 @@ export default function AdminLoginPage() {
 
       <p className="signin-aside">
         <a href="/admin/forgot-password">Forgot your password?</a>
+      </p>
+      <p className="signin-aside">
+        New to intro? <a href="/admin/signup">Create an account</a> — 7 days free.
       </p>
     </SignInLayout>
   );

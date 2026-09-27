@@ -95,6 +95,21 @@ export const RATE_LIMITS = {
     windowSeconds: 3600,
     message: 'Too many requests for that address just now. Please try again in a little while.',
   },
+  /**
+   * Creating an account. It mails an address the caller typed, like the two
+   * pairs above, and each success would make a business — so per caller and
+   * per address, both tight.
+   */
+  signupRequest: {
+    limit: 5,
+    windowSeconds: 3600,
+    message: 'Too many sign-ups from here just now. Please try again in a little while.',
+  },
+  signupAddress: {
+    limit: 3,
+    windowSeconds: 3600,
+    message: 'Too many sign-ups for that address just now. Please try again in a little while.',
+  },
 } as const;
 
 /**

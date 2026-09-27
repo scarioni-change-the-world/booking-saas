@@ -61,6 +61,26 @@ export interface Booking {
   /** Set when this booking was made on a second attempt, after the person
    * had already been sent elsewhere. */
   reconsidered: Reconsideration | null;
+  /** Paid online when booked (migration 0032), or null. */
+  payment?: BookingPayment | null;
+}
+
+export interface BookingPayment {
+  status: 'paid' | 'refunded';
+  kind: 'full' | 'deposit';
+  amountMinor: number;
+  refundedMinor: number;
+  currency: string;
+  forProgramme: boolean;
+}
+
+/** "Paid €90.00", "Deposit €30.00 paid", "Refunded €30.00" — for a mark beside the booking. */
+export function paymentLabel(p: BookingPayment): string {
+  const amount = formatMoney(p.amountMinor, p.currency);
+  if (p.status === 'refunded' || p.refundedMinor >= p.amountMinor) return `Refunded ${amount}`;
+  const paid = p.kind === 'deposit' ? `Deposit ${amount} paid` : `Paid ${amount}`;
+  const part = p.refundedMinor > 0 ? ` · ${formatMoney(p.refundedMinor, p.currency)} refunded` : '';
+  return `${paid}${p.forProgramme ? ' for the programme' : ''}${part}`;
 }
 
 const dayFormat = new Intl.DateTimeFormat(undefined, {

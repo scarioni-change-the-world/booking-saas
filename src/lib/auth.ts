@@ -189,6 +189,14 @@ export async function requirePlatformStaff(
  * is a legitimate state (an account exists but nobody has added them to a
  * business yet), for the caller to explain.
  */
+/** The signed-in person, from the request's token, or a 401. */
+export async function requireSignedInUser(request: Request) {
+  const token = bearerToken(request);
+  const { data, error } = await __unsafeServiceClient().auth.getUser(token);
+  if (error || !data.user) throw new AuthError('Sign in required', 401);
+  return data.user;
+}
+
 export async function resolveTenantMemberships(request: Request): Promise<TenantMembership[]> {
   const token = bearerToken(request);
 

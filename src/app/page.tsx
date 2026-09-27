@@ -70,6 +70,11 @@ export default function HomePage() {
       </div>
 
       <p className="tz">
+        Run a practice? <a href="/admin/signup">Create an account</a> — 7 days
+        free — or <a href="/admin/login">sign in</a>.
+      </p>
+
+      <p className="tz">
         Questions about how your data is handled? See the{' '}
         <a href="/privacy">privacy policy</a>, which names the address to
         write to.

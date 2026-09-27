@@ -764,6 +764,66 @@ a.btn-secondary {
   color: var(--faint);
 }
 
+/* Sign-up: a hint that needs something from you reads in Ochre ink. */
+.signin-hint.is-need {
+  color: var(--emphasis-ink);
+}
+.signin-form select {
+  min-height: 52px;
+}
+
+/* A button that reads as a link: "Use mara-studio-2", "Change". */
+.signin-textbutton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.signin-textbutton:hover {
+  color: var(--ink);
+}
+
+/* The web address: the fixed part and the part you choose in one box, so it
+   reads as the address it will be. */
+.signin-address {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.signin-address:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.signin-address__prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 2px 0 14px;
+  color: var(--faint);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.signin-form .signin-address input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding-left: 2px;
+  box-shadow: none;
+}
+.signin-form .signin-address input:focus,
+.signin-form .signin-address input:focus-visible {
+  box-shadow: none;
+}
+
 .signin-foot {
   margin-top: 28px;
   padding-top: 20px;

@@ -12,9 +12,11 @@ import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { BookingRules } from '@/components/admin/BookingRules';
 import { CalendarConnection } from '@/components/admin/CalendarConnection';
 import { useServiceMark } from '@/components/admin/ServiceMarks';
+import { formatMoney } from '@/lib/money';
 import {
   emailBadge,
   formatRange,
+  paymentLabel,
   syncBadge,
   toneStyle,
   useBookingActions,
@@ -909,6 +911,11 @@ function BookingPanel({
               : `Booked while ${b.pack.priorSessionsOwed} sessions were still owed`}
           </span>
         ) : null}
+        {b.payment && (
+          <span className="notice" style={{ padding: '3px 10px', margin: 0, ...toneStyle('muted') }}>
+            {paymentLabel(b.payment)}
+          </span>
+        )}
         {sync && (
           <span className="notice" style={{ padding: '3px 10px', margin: 0, ...toneStyle(sync.tone) }}>
             {sync.label}
@@ -978,6 +985,11 @@ function BookingPanel({
           <p className="wk-side-hint">
             {b.name} is emailed that it is cancelled
             {b.pack ? ', with a way to book the session again' : ''}.
+            {b.payment && b.payment.status === 'paid' && b.payment.refundedMinor < b.payment.amountMinor
+              ? b.pack
+                ? ' The programme’s payment is not refunded — the session goes back to them to book.'
+                : ` Their ${formatMoney(b.payment.amountMinor - b.payment.refundedMinor, b.payment.currency)} is refunded through your Stripe account.`
+              : ''}
           </p>
           <div className="wk-actions">
             <button

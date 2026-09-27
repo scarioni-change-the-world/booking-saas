@@ -79,6 +79,9 @@ export interface CreateTenantInput {
   name: string;
   timezone: string;
   ownerEmail: string;
+  /** An owner whose login already exists — self-serve signup, where the
+   *  person creating the business is the one signed in. Skips the invite. */
+  owner?: { userId: string; email: string | null };
 }
 
 /**
@@ -129,7 +132,7 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
 
   let owner: { userId: string; email: string | null };
   try {
-    owner = await findOrInviteUser(input.ownerEmail);
+    owner = input.owner ?? (await findOrInviteUser(input.ownerEmail));
   } catch (cause) {
     // A business whose owner could not be resolved is a business nobody can
     // sign in to, so it does not get to exist. Deleting it here keeps the

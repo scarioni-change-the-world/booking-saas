@@ -226,7 +226,16 @@ Six rules every screen follows:
     refunded at once if it was lost. Cancelling refunds automatically when
     the business cancels or the client cancels before the minimum notice;
     programme sessions return to the balance instead. intro takes no cut.
-    **Still to do:** self-serve signup.
+    **Self-serve signup** — done. /admin/signup asks for the business's
+    name, its web address (follows the name, says as you type whether it is
+    free, offers the next numbered one), email, password and time zone. The
+    business is made only when the emailed link is opened (/admin/welcome),
+    and the form answers the same whether or not the address already has an
+    account — an existing one is told by email instead. Linked from sign-in
+    and the home page. Optional SIGNUP_ALERT_EMAIL tells you when a business
+    joins. **Needs** `/admin/welcome` on Supabase's Redirect URLs.
+    The Week's booking panel now shows what was paid, and what cancelling
+    will do with it.
 12. **A consented support view** — only if a case turns up that cannot be
     solved from shape alone. Time-limited, revocable, logged.
 
