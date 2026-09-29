@@ -12,25 +12,11 @@ import { DateTime } from 'luxon';
 import type { AiUsageKind } from '../db/types';
 import type { TenantScope } from '../db';
 import { AiUnavailableError } from './provider';
-
-/**
- * How many generations of each kind a tenant gets per calendar month.
- * Generous for how the feature is actually used — drafting a questionnaire
- * during setup, occasionally revisited — while bounding what a runaway
- * script, a stuck retry loop, or a shared-tenant mistake can cost in a
- * month. A new AI feature adds its own entry here rather than sharing this
- * one, so each can be tuned independently.
- */
-const MONTHLY_LIMITS: Record<AiUsageKind, number> = {
-  intake_draft: 20,
-  /* Written summaries in Reports. Kept per period (report_summaries), so
-     reopening one costs nothing; this bounds how many new ones a month. */
-  report_summary: 10,
-};
+import { MONTHLY_LIMITS } from './limits';
 
 const LIMIT_NOUN: Record<AiUsageKind, string> = {
   intake_draft: 'AI-assisted drafts',
-  report_summary: 'written summaries',
+  report_summary: 'report summaries',
 };
 
 /**

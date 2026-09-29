@@ -9,6 +9,7 @@ import { Bars, JourneyBars, WeekHeat } from '@/components/admin/ReportCharts';
 import { PRESETS, type Period, type PeriodPreset } from '@/lib/report-period';
 import { bandName, formatMinor, weekdayName, type Figure, type Report } from '@/lib/reports';
 import type { ReportSummary, SummaryPlace } from '@/lib/ai/provider';
+import { MONTHLY_LIMITS } from '@/lib/ai/limits';
 
 interface Payload {
   today: string;
@@ -758,7 +759,7 @@ function SummaryPlate({
   return (
     <section className="wk-plate rep-summary" aria-labelledby="rep-summary-h">
       <p className="wk-side-eyebrow" id="rep-summary-h">
-        Written summary
+        Summary
       </p>
       {saved ? (
         <>
@@ -783,9 +784,9 @@ function SummaryPlate({
             })}
           </ol>
           <p className="wk-side-hint">
-            Drafted {DateTime.fromISO(saved.created_at).toFormat('d LLLL')} from the figures below.{' '}
+            Generated {DateTime.fromISO(saved.created_at).toFormat('d LLLL')} from the figures below.{' '}
             <button type="button" className="btn-link" disabled={busy} onClick={() => void write()}>
-              {busy ? 'Writing…' : 'Write it again'}
+              {busy ? 'Generating…' : 'Generate again'}
             </button>
           </p>
         </>
@@ -793,15 +794,20 @@ function SummaryPlate({
         <>
           <p className="wk-side-hint">
             A short reading of this period — how it went and the three to five things most worth changing —
-            drafted from the figures below. Your clients’ names and addresses are never sent.
+            generated for you by the AI assistant from the figures below. Your clients’ names and addresses
+            are never sent.
           </p>
           <div className="wk-actions">
             <button type="button" className="btn-primary" disabled={busy} onClick={() => void write()}>
-              {busy ? 'Writing… (up to a minute)' : 'Write a summary'}
+              {busy ? 'Generating… (up to a minute)' : 'Generate a summary'}
             </button>
           </div>
         </>
       )}
+      <p className="wk-side-hint">
+        You can generate up to {MONTHLY_LIMITS.report_summary} summaries a month. Opening one you already
+        have doesn’t count.
+      </p>
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
