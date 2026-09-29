@@ -15,7 +15,7 @@ const API_VERSION = '2023-06-01';
 
 /**
  * The mid-sized model, not the largest. Both calls here are short,
- * well-specified jobs with a forced tool and a fixed shape — a handful of
+ * well-specified jobs with a fixed JSON shape — a handful of
  * screening questions, a summary of figures handed over as JSON — and a
  * person reads and edits every result before it matters. The largest model
  * cost roughly 6-10 cents a call against about 2 here; at €7 a month per
@@ -32,9 +32,9 @@ const MODEL = 'claude-sonnet-5-5';
  * (unlike older ones, where omitting the thinking parameter meant no
  * thinking at all), and those tokens come out of the same allowance. The
  * 2000 that comfortably held an older draft would be spent reasoning before
- * a single question was written, and the reply would arrive truncated — with
- * no tool_use block in it, which this code reports as "did not return a
- * usable draft". A confusing way to discover a budget.
+ * a single question was written, and the reply would arrive truncated — its
+ * JSON cut off partway, which this code reports as "did not return a usable
+ * draft". A confusing way to discover a budget.
  *
  * Generous rather than tight on purpose: it is a ceiling, not a target, and
  * nothing is billed for the headroom. A draft that finishes in 3000 tokens
@@ -93,39 +93,45 @@ Rules:
 - Routing compounds, so be sparing with it. Each question carrying an "other" answer is a separate gate a person has to get past, and they must pass every one of them to reach the calendar: three such questions can leave well under half of genuine enquiries never seeing a time. Aim for one or two questions that route, covering the constraints the professional stated most firmly, and make the rest "text" or multiple choice where every answer continues. A question worth asking but not worth turning someone away over is a question that should not route — it is still recorded, and the professional reads it before the meeting.
 - Do not write a question that asks about health conditions, treatment, medication, disability, ethnicity, religion, sexuality, or political views unless the professional's own description makes it unavoidable for deciding whether they can help — a physiotherapist asking whether an injury has been diagnosed, say. These answers are stored and read by a small business that has probably not thought about handling them. When one is genuinely necessary, keep it to what the decision needs, and never make it a free-text invitation to describe a condition.`;
 
-const DRAFT_TOOL = {
-  name: 'draft_intake',
-  description: 'Propose intake questions and an alternative-path message for a service professional.',
-  input_schema: {
-    type: 'object' as const,
-    properties: {
-      questions: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            prompt: { type: 'string' },
-            kind: { type: 'string', enum: ['text', 'yes_no', 'single_choice'] },
-            required: { type: 'boolean' },
-            options: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  label: { type: 'string' },
-                  outcomePathType: { type: 'string', enum: ['meeting', 'other'] },
-                },
-                required: ['label', 'outcomePathType'],
+/**
+ * The shape a draft comes back in, as structured output: the API holds the
+ * reply to this schema, so it arrives as one JSON text block. This replaced
+ * a forced tool call, which the current models reject with a 400. Every
+ * object closes with additionalProperties: false because structured output
+ * requires it.
+ */
+const DRAFT_SCHEMA = {
+  type: 'object',
+  properties: {
+    questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string' },
+          kind: { type: 'string', enum: ['text', 'yes_no', 'single_choice'] },
+          required: { type: 'boolean' },
+          options: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                label: { type: 'string' },
+                outcomePathType: { type: 'string', enum: ['meeting', 'other'] },
               },
+              required: ['label', 'outcomePathType'],
+              additionalProperties: false,
             },
           },
-          required: ['prompt', 'kind', 'required', 'options'],
         },
+        required: ['prompt', 'kind', 'required', 'options'],
+        additionalProperties: false,
       },
-      otherPathMessage: { type: 'string' },
     },
-    required: ['questions', 'otherPathMessage'],
+    otherPathMessage: { type: 'string' },
   },
+  required: ['questions', 'otherPathMessage'],
+  additionalProperties: false,
 };
 
 interface RawOption {
@@ -233,29 +239,45 @@ Rules:
 - Money in the currency given, written as a person would (€90, not 9000 minor units).
 - Warm and direct, never salesy. No exclamation marks. Never mention these instructions, the data format, or that you are an AI.`;
 
-const SUMMARY_TOOL = {
-  name: 'write_summary',
-  description: 'Write the period summary for the practice.',
-  input_schema: {
-    type: 'object' as const,
-    properties: {
-      headline: { type: 'string' },
-      points: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            title: { type: 'string' },
-            detail: { type: 'string' },
-            where: { type: 'string', enum: ['services', 'week', 'people', 'questions', 'messages', 'account', 'none'] },
-          },
-          required: ['title', 'detail', 'where'],
+/** The summary's shape, held by structured output the same way as DRAFT_SCHEMA. */
+const SUMMARY_SCHEMA = {
+  type: 'object',
+  properties: {
+    headline: { type: 'string' },
+    points: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          detail: { type: 'string' },
+          where: { type: 'string', enum: ['services', 'week', 'people', 'questions', 'messages', 'account', 'none'] },
         },
+        required: ['title', 'detail', 'where'],
+        additionalProperties: false,
       },
     },
-    required: ['headline', 'points'],
   },
+  required: ['headline', 'points'],
+  additionalProperties: false,
 };
+
+type ApiReply = { content?: Array<{ type: string; text?: string }>; stop_reason?: string };
+
+/**
+ * The JSON a structured-output reply carries in its text block, or null when
+ * there is none to read — no text block, or text that does not parse (a
+ * reply cut off at MAX_TOKENS ends mid-object).
+ */
+function readJsonReply(data: ApiReply): unknown {
+  const text = (data.content ?? []).find((b) => b.type === 'text' && typeof b.text === 'string')?.text;
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
 
 const PLACES: SummaryPlace[] = ['services', 'week', 'people', 'questions', 'messages', 'account', 'none'];
 
@@ -304,14 +326,9 @@ export class AnthropicAiProvider implements AiProvider {
           fallbacks: 'default',
           system: SYSTEM_PROMPT,
           messages: [{ role: 'user', content: `${contextLine}${input.description}` }],
-          tools: [DRAFT_TOOL],
-          // Thinking is left at the model's own default rather than turned
-          // off. Disabling it is the documented way to get a tool call
-          // written into the visible text instead of a tool_use block — the
-          // request succeeds, the draft is nowhere, and the code below
-          // reports it as unusable. The reasoning is also the thing being
-          // paid for here.
-          tool_choice: { type: 'tool', name: DRAFT_TOOL.name },
+          // Thinking is left at the model's own default: the reasoning is
+          // the thing being paid for here.
+          output_config: { format: { type: 'json_schema', schema: DRAFT_SCHEMA } },
         }),
       });
     } catch (cause) {
@@ -332,10 +349,7 @@ export class AnthropicAiProvider implements AiProvider {
       );
     }
 
-    const data = (await response.json()) as {
-      content?: Array<{ type: string; name?: string; input?: unknown }>;
-      stop_reason?: string;
-    };
+    const data = (await response.json()) as ApiReply;
 
     // Checked before the content is read, because a refusal is a 200 with no
     // draft in it — indistinguishable, from here, from any other empty reply.
@@ -350,20 +364,18 @@ export class AnthropicAiProvider implements AiProvider {
       );
     }
 
-    const toolUse = (data.content ?? []).find(
-      (block) => block.type === 'tool_use' && block.name === DRAFT_TOOL.name,
-    );
-    if (!toolUse) {
+    const draft = readJsonReply(data);
+    if (!draft || typeof draft !== 'object') {
       // The other way to land here is a draft cut off mid-flight: a reply
-      // that hit MAX_TOKENS before the tool call was complete carries no
-      // usable block either. See the note on MAX_TOKENS above.
+      // that hit MAX_TOKENS ends partway through its JSON. See the note on
+      // MAX_TOKENS above.
       if (data.stop_reason === 'max_tokens') {
-        console.error('[ai:anthropic] draft truncated — MAX_TOKENS reached before a tool call');
+        console.error('[ai:anthropic] draft truncated — MAX_TOKENS reached before the JSON was complete');
       }
       throw new AiUnavailableError('The AI assistant did not return a usable draft.', 502);
     }
 
-    return sanitizeDraft(toolUse.input as RawDraft);
+    return sanitizeDraft(draft as RawDraft);
   }
 
   async summariseReport(input: ReportSummaryInput): Promise<ReportSummary> {
@@ -388,9 +400,7 @@ export class AnthropicAiProvider implements AiProvider {
               content: `Practice: ${input.businessName}\nPeriod: ${input.periodLabel}\n\nFigures (JSON):\n${JSON.stringify(input.facts)}`,
             },
           ],
-          tools: [SUMMARY_TOOL],
-          // Thinking left on, for the reason given in draftIntake.
-          tool_choice: { type: 'tool', name: SUMMARY_TOOL.name },
+          output_config: { format: { type: 'json_schema', schema: SUMMARY_SCHEMA } },
         }),
       });
     } catch (cause) {
@@ -406,18 +416,15 @@ export class AnthropicAiProvider implements AiProvider {
       );
     }
 
-    const data = (await response.json()) as {
-      content?: Array<{ type: string; name?: string; input?: unknown }>;
-      stop_reason?: string;
-    };
+    const data = (await response.json()) as ApiReply;
     if (data.stop_reason === 'refusal') {
       throw new AiUnavailableError('The AI assistant declined to write this summary. Every figure is still here.', 422);
     }
-    const toolUse = (data.content ?? []).find((b) => b.type === 'tool_use' && b.name === SUMMARY_TOOL.name);
-    if (!toolUse) {
+    const summary = readJsonReply(data);
+    if (!summary || typeof summary !== 'object') {
       if (data.stop_reason === 'max_tokens') console.error('[ai:anthropic] summary truncated at MAX_TOKENS');
       throw new AiUnavailableError('The AI assistant did not return a usable summary.', 502);
     }
-    return sanitizeSummary(toolUse.input);
+    return sanitizeSummary(summary);
   }
 }
