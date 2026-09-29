@@ -23,7 +23,8 @@ Stripe dashboard), then repeat it in live mode with live keys.
 Stripe dashboard → **Product catalogue** → **Add product**
 
 - Name: `intro`
-- Recurring, **€7.00 / month**
+- Recurring, **€7.00 / month**, with **Tax behaviour: Exclusive** — the price is €7 + VAT, so VAT is
+  added on top rather than taken out of the €7
 - Save, then copy the price's id (`price_…`) → `STRIPE_PRICE_ID`
 
 ## 3. Connect
@@ -72,7 +73,7 @@ Its signing secret → `STRIPE_CONNECT_WEBHOOK_SECRET`
 | `STRIPE_PRICE_ID`               | from step 2                                                                             |
 | `STRIPE_WEBHOOK_SECRET`         | from endpoint A                                                                         |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | from endpoint B                                                                         |
-| `STRIPE_AUTOMATIC_TAX`          | optional: `1` to have Stripe Tax add VAT to the subscription (turn on Stripe Tax first) |
+| `STRIPE_AUTOMATIC_TAX`          | `1` to have Stripe Tax add VAT to the subscription (turn on Stripe Tax first)            |
 
 Redeploy afterwards.
 

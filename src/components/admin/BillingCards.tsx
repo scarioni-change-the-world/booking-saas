@@ -81,7 +81,7 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
             <>
               <div className="wk-actions" style={{ marginTop: 0 }}>
                 <button type="button" className="btn-primary" disabled={busy} onClick={subscribe}>
-                  {busy ? 'Opening Stripe…' : 'Subscribe — €7 a month'}
+                  {busy ? 'Opening Stripe…' : 'Subscribe — €7 + VAT a month'}
                 </button>
               </div>
               <p className="field-note">
@@ -101,7 +101,7 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
       {plan.state === 'active' && (
         <>
           <p className="acct-line">
-            €7 a month
+            €7 + VAT a month
             {plan.renewsAt ? ` · renews on ${day(plan.renewsAt)}` : ''}.
           </p>
           {plan.hasCustomer && (
@@ -136,7 +136,7 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
           {plan.canSubscribe && (
             <div className="wk-actions" style={{ marginTop: 0 }}>
               <button type="button" className="btn-primary" disabled={busy} onClick={subscribe}>
-                {busy ? 'Opening Stripe…' : 'Subscribe — €7 a month'}
+                {busy ? 'Opening Stripe…' : 'Subscribe — €7 + VAT a month'}
               </button>
             </div>
           )}
