@@ -20,6 +20,15 @@ interface Payload {
   visitsSince: string | null;
   report: Report;
   summary: { summary: ReportSummary; created_at: string } | null;
+  /** The latest summaries for any period, newest first. */
+  pastSummaries: PastSummary[];
+}
+
+interface PastSummary {
+  from: string;
+  to: string;
+  createdAt: string;
+  headline: string;
 }
 
 const PLACE: Record<SummaryPlace, { label: string; href: string } | null> = {
@@ -84,6 +93,14 @@ export default function ReportsPage() {
     }
     setEditingCustom(false);
     void load(p, custom);
+  }
+
+  /** Open a past summary: its exact dates, as a chosen period, where it is saved. */
+  function openPast(from: string, to: string) {
+    setPreset('custom');
+    setCustom({ from, to });
+    setEditingCustom(false);
+    void load('custom', { from, to });
   }
 
   const r = data?.report;
@@ -212,7 +229,26 @@ export default function ReportsPage() {
               slug={slug}
               data={data}
               preset={preset}
-              onDone={(s) => setData({ ...data, summary: s })}
+              onDone={(s) =>
+                setData({
+                  ...data,
+                  summary: s,
+                  pastSummaries: s
+                    ? [
+                        {
+                          from: data.period.from,
+                          to: data.period.to,
+                          createdAt: s.created_at,
+                          headline: s.summary.headline,
+                        },
+                        ...data.pastSummaries.filter(
+                          (p) => p.from !== data.period.from || p.to !== data.period.to,
+                        ),
+                      ]
+                    : data.pastSummaries,
+                })
+              }
+              onOpen={openPast}
             />
           </div>
 
@@ -724,11 +760,13 @@ function SummaryPlate({
   data,
   preset,
   onDone,
+  onOpen,
 }: {
   slug: string;
   data: Payload;
   preset: PeriodPreset;
   onDone: (s: Payload['summary']) => void;
+  onOpen: (from: string, to: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -805,9 +843,46 @@ function SummaryPlate({
         </>
       )}
       <p className="wk-side-hint">
-        You can generate up to {MONTHLY_LIMITS.report_summary} summaries a month. Opening one you already
-        have doesn’t count.
+        You can generate up to {MONTHLY_LIMITS.report_summary} summaries a month. Every one is kept under
+        Past summaries, and opening one again doesn’t count.
       </p>
+      {(data.pastSummaries ?? []).length > 0 && (
+        <details className="rep-past">
+          <summary>Past summaries ({data.pastSummaries.length})</summary>
+          <ul>
+            {data.pastSummaries.map((p) => {
+              const here = p.from === data.period.from && p.to === data.period.to;
+              return (
+                <li key={`${p.from}:${p.to}`}>
+                  <button
+                    type="button"
+                    className="rep-past-open"
+                    aria-current={here ? 'true' : undefined}
+                    disabled={here}
+                    onClick={() => onOpen(p.from, p.to)}
+                  >
+                    <span className="rep-past-when">
+                      {rangeText(p.from, p.to)}
+                      {DateTime.fromISO(p.to).year !== DateTime.fromISO(data.today).year &&
+                        ` ${DateTime.fromISO(p.to).year}`}
+                      {here && <small> · showing</small>}
+                    </span>
+                    {p.headline && <span className="rep-past-headline">{p.headline}</span>}
+                    <small className="wk-muted">
+                      Generated{' '}
+                      {DateTime.fromISO(p.createdAt).toFormat(
+                        DateTime.fromISO(p.createdAt).year === DateTime.fromISO(data.today).year
+                          ? 'd LLLL'
+                          : 'd LLLL yyyy',
+                      )}
+                    </small>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
       {error && (
         <p className="notice notice-error" role="alert">
           {error}

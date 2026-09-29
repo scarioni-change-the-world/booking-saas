@@ -9691,3 +9691,64 @@ body:has(.bk-embedded) {
     border-radius: 18px;
   }
 }
+
+/* Reports: summaries made before, for any period. Closed by default — the
+   plate's job is this period's summary; the list is for going back. */
+.rep-past {
+  margin-top: 12px;
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+}
+.rep-past > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+}
+.rep-past ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.rep-past li + li {
+  border-top: 1px solid var(--rule);
+}
+.rep-past-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.rep-past-open:hover .rep-past-when,
+.rep-past-open:focus-visible .rep-past-when {
+  text-decoration: underline;
+}
+.rep-past-open:disabled {
+  cursor: default;
+}
+.rep-past-open:disabled .rep-past-when {
+  text-decoration: none;
+}
+.rep-past-when {
+  font-weight: 600;
+  color: var(--accent, #566b68);
+}
+.rep-past-open[aria-current] .rep-past-when {
+  color: var(--ink);
+}
+.rep-past-headline {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
