@@ -217,7 +217,7 @@ Six rules every screen follows:
    per hour, no-shows, late cancellations, clients gone quiet, stalled
    programmes, the channel that brings bookings), each with the place to
    act. Beside them, a written summary drafted by the AI assistant on
-   request from anonymous figures, kept per period (20 a month). Then:
+   request from anonymous figures, kept per period (10 a month). Then:
    visit → questions → calendar → booked; services compared; a week heatmap
    of open against booked hours; how far ahead people book; clients new,
    returning, quiet; money; cancellations and no-shows with reasons; where

@@ -14,28 +14,24 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 
 /**
- * The questions this drafts are the product. Everything else here — the
- * calendar, the emails, the dashboard — exists in a dozen other booking
- * tools; the screening in front of the calendar is the reason this one is
- * worth using. So this is the one call in the codebase where the stronger
- * model earns its price, and it is judgment work rather than transcription:
- * deciding what is actually worth asking a stranger on a phone, in what
- * order, to learn whether a meeting helps them.
- *
- * Per draft that is roughly 6-10 cents against Sonnet's 2, bounded by the
- * 20-per-month ceiling in usage.ts — a couple of pounds a month per tenant
- * at the absolute cap, for the part of the product nothing else replaces.
+ * The mid-sized model, not the largest. Both calls here are short,
+ * well-specified jobs with a forced tool and a fixed shape — a handful of
+ * screening questions, a summary of figures handed over as JSON — and a
+ * person reads and edits every result before it matters. The largest model
+ * cost roughly 6-10 cents a call against about 2 here; at €7 a month per
+ * business that difference is the margin, and the monthly ceilings in
+ * usage.ts bound the rest.
  */
-const MODEL = 'claude-opus-5';
+const MODEL = 'claude-sonnet-5-5';
 
 /**
  * Covers the model's reasoning *and* the draft it returns — one budget for
  * both, not just the answer.
  *
- * This matters more than the number looks. Opus 5 thinks by default (unlike
- * the model this replaced, where omitting the thinking parameter meant no
+ * This matters more than the number looks. Current models think by default
+ * (unlike older ones, where omitting the thinking parameter meant no
  * thinking at all), and those tokens come out of the same allowance. The
- * 2000 that comfortably held a Sonnet draft would be spent reasoning before
+ * 2000 that comfortably held an older draft would be spent reasoning before
  * a single question was written, and the reply would arrive truncated — with
  * no tool_use block in it, which this code reports as "did not return a
  * usable draft". A confusing way to discover a budget.
@@ -47,7 +43,7 @@ const MODEL = 'claude-opus-5';
 const MAX_TOKENS = 8000;
 
 /**
- * Opus 5's safety classifiers can decline a request outright. That arrives
+ * The model's safety classifiers can decline a request outright. That arrives
  * as a perfectly ordinary HTTP 200 carrying stop_reason 'refusal' — not an
  * error status — so nothing below would have caught it except by noticing
  * the draft was missing.

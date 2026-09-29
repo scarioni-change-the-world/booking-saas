@@ -191,7 +191,7 @@ describe('AnthropicAiProvider', () => {
       .catch(() => undefined);
 
     const body = calls[0]!.body as { model: string; max_tokens: number; thinking?: unknown };
-    expect(body.model).toBe('claude-opus-5');
+    expect(body.model).toBe('claude-sonnet-5-5');
     expect(body.max_tokens).toBeGreaterThanOrEqual(8000);
     // Turning thinking off is how a tool call ends up in visible text
     // instead of a tool_use block — see the note in anthropic.ts.

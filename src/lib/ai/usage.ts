@@ -25,7 +25,7 @@ const MONTHLY_LIMITS: Record<AiUsageKind, number> = {
   intake_draft: 20,
   /* Written summaries in Reports. Kept per period (report_summaries), so
      reopening one costs nothing; this bounds how many new ones a month. */
-  report_summary: 20,
+  report_summary: 10,
 };
 
 const LIMIT_NOUN: Record<AiUsageKind, string> = {
