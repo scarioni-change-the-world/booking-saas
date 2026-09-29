@@ -9532,3 +9532,162 @@ body:has(.bk-embedded) {
     grid-column: 1;
   }
 }
+
+/* ─── The privacy policy (/privacy) ───────────────────────────────────────
+   Reached from the marketing site's footer, so it wears the marketing
+   site's look, not the app's: warm chalk page, soft white plates with no
+   border, the wordmark top left, a pill "Sign in" key, a hairline footer.
+   The values are the website's own (its sell.css), copied rather than
+   shared because the two live in different repositories. Light only, as
+   the website is. */
+.legal {
+  --legal-chalk: #f4f1eb;
+  --legal-white: #fcfbf8;
+  --legal-granite: #353a38;
+  --legal-copy: #4b4e4c;
+  --legal-grey: #666a67;
+  --legal-mineral: #566b68;
+  --legal-hair: #d2d6d1;
+  min-height: 100vh;
+  background: var(--legal-chalk);
+  color: var(--legal-copy);
+  font-family: var(--font-body);
+  color-scheme: light;
+}
+.legal-shell {
+  width: min(880px, calc(100% - 32px));
+  margin-inline: auto;
+}
+.legal-top {
+  border-bottom: 1px solid var(--legal-hair);
+}
+.legal-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 18px;
+}
+.legal-wordmark {
+  font-family: var(--font-wordmark);
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: -0.075em;
+  line-height: 1;
+  color: var(--legal-granite);
+  text-decoration: none;
+}
+.legal-key {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 20px;
+  border: 2px solid var(--legal-mineral);
+  border-radius: 999px;
+  color: var(--legal-mineral);
+  font-weight: 700;
+  text-decoration: none;
+}
+.legal-key:hover,
+.legal-key:focus-visible {
+  background: var(--legal-mineral);
+  color: var(--legal-white);
+}
+.legal-main {
+  padding-block: 56px 72px;
+}
+.legal-eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--legal-grey);
+}
+.legal h1 {
+  margin: 0 0 14px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--legal-granite);
+}
+.legal-lede {
+  margin: 0 0 40px;
+  max-width: 60ch;
+  font-size: 1.12rem;
+  line-height: 1.55;
+}
+.legal-plate {
+  margin-bottom: 18px;
+  padding: 30px 32px;
+  background: var(--legal-white);
+  border-radius: 22px;
+  box-shadow: 0 14px 40px rgba(32, 34, 33, 0.06);
+  line-height: 1.65;
+}
+.legal-plate h2 {
+  margin: 0 0 14px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--legal-granite);
+}
+.legal-plate p {
+  margin: 0 0 12px;
+}
+.legal-plate ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.legal-plate li {
+  margin-bottom: 8px;
+}
+.legal-plate > :last-child {
+  margin-bottom: 0;
+}
+.legal-plate strong {
+  color: var(--legal-granite);
+}
+.legal-plate a {
+  color: var(--legal-mineral);
+}
+.legal-plate code {
+  font-size: 0.9em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--legal-chalk);
+  color: var(--legal-granite);
+  overflow-wrap: anywhere;
+}
+.legal-footer {
+  padding-block: 38px;
+  border-top: 1px solid var(--legal-hair);
+}
+.legal-footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px 24px;
+  font-size: 0.86rem;
+  color: var(--legal-grey);
+}
+.legal-footer a {
+  color: var(--legal-mineral);
+  font-weight: 700;
+  text-decoration: none;
+}
+.legal-footer a:hover {
+  text-decoration: underline;
+}
+@media (max-width: 600px) {
+  .legal-main {
+    padding-block: 36px 48px;
+  }
+  .legal-plate {
+    padding: 22px 20px;
+    border-radius: 18px;
+  }
+}
