@@ -27,10 +27,12 @@
 export default function HomePage() {
   return (
     <main className="widget">
-      <h1>Booking</h1>
+      {/* The name must match the app name on Google's consent screen exactly. */}
+      <h1>Khloe</h1>
       <p className="lede">
-        Scheduling software for coaches, therapists and consultants, with a
-        qualification questionnaire in front of the calendar.
+        Khloe is booking software for coaches, therapists and consultants, with
+        a short set of questions in front of the calendar. More at{' '}
+        <a href="https://khloe.io">khloe.io</a>.
       </p>
 
       <div className="card">
@@ -62,7 +64,7 @@ export default function HomePage() {
         </ul>
         <p style={{ margin: '10px 0 0' }}>
           Calendar data is used only to schedule that business&apos;s own
-          bookings. It is never sold, never shared with other businesses using
+          bookings in Khloe. It is never sold, never shared with other businesses using
           this app, and never used for advertising or model training. A business
           can disconnect its calendar at any time from its settings, which
           deletes the stored credentials.
