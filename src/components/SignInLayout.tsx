@@ -32,7 +32,9 @@ export function SignInLayout({ children }: { children: React.ReactNode }) {
       <main className="signin-panel">
         <div className="signin-column">
           {/* A span, not an h1: each page's own heading says what it is for.
-              The wordmark says whose door this is, which is a different job. */}
+              The wordmark says whose door this is, which is a different job.
+              On a wide screen it sits on the picture instead (below); this one
+              is for phones, where the picture is not shown. */}
           <span className="signin-wordmark">khloe</span>
 
           {children}
@@ -64,6 +66,7 @@ export function SignInLayout({ children }: { children: React.ReactNode }) {
           aria-hidden="true"
         />
         <div className="signin-scene__shade" aria-hidden="true" />
+        <span className="signin-scene__wordmark">khloe</span>
         <div className="signin-scene__words">
           <p className="signin-scene__line">Manage the booking. Improve the meeting.</p>
           <p className="signin-scene__sub">

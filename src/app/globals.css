@@ -603,8 +603,24 @@ a.btn-secondary {
     to top,
     rgba(53, 58, 56, 0.8) 0%,
     rgba(53, 58, 56, 0.5) 42%,
-    rgba(53, 58, 56, 0.26) 100%
+    rgba(53, 58, 56, 0.26) 72%,
+    rgba(53, 58, 56, 0.5) 100%
   );
+}
+/* The wordmark on the picture, top left, in Soft White: the name greets you
+   on the photograph, and the panel beside it is left to the form. The
+   shade above is deepened at the top so it reads on the pale wall. */
+.signin-scene__wordmark {
+  position: absolute;
+  top: 44px;
+  left: 44px;
+  font-family: var(--font-wordmark);
+  font-weight: 900;
+  font-size: 48px;
+  letter-spacing: -0.075em;
+  line-height: 1;
+  text-transform: lowercase;
+  color: var(--surface);
 }
 .signin-scene__words {
   position: relative;
@@ -639,6 +655,12 @@ a.btn-secondary {
   text-transform: lowercase;
   color: var(--ink);
   margin-bottom: 34px;
+}
+/* On a wide screen the wordmark is on the picture; this copy is for phones. */
+@media (min-width: 901px) {
+  .signin-wordmark {
+    display: none;
+  }
 }
 /* Graphite, as every eyebrow in the admin is: Ochre is kept for what needs
    you, and on this screen that is only a sign-in that failed. */
