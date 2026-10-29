@@ -24,7 +24,7 @@
  */
 const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL;
 
-export const SUPPORT_EMAIL = 'hello.intro.booking@gmail.com';
+export const SUPPORT_EMAIL = 'khloe.bookings@gmail.com';
 
 export function SignInLayout({ children }: { children: React.ReactNode }) {
   return (
