@@ -10,7 +10,7 @@ export interface ShellBusiness {
 /**
  * The page every client-facing screen stands on when opened directly: the
  * business's nameplate in a bar across the top, the screen's own content,
- * and intro's credit, once and small, at the foot. The booking page, a
+ * and khloe's credit, once and small, at the foot. The booking page, a
  * booking's manage link, a client's own link and "get your booking link"
  * all use it, so a client moving between them never meets a second product.
  *
@@ -34,9 +34,9 @@ export function ClientShell({
         {aside && <div className="bk-masthead-aside">{aside}</div>}
       </header>
       <main className="bk-page">{children}</main>
-      {/* The only place intro speaks on these pages, and it speaks quietly. */}
+      {/* The only place khloe speaks on these pages, and it speaks quietly. */}
       <p className="bk-credit">
-        Powered by <span className="bk-wordmark">intro</span>
+        Powered by <span className="bk-wordmark">khloe</span>
       </p>
     </div>
   );

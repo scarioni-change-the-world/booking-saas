@@ -31,13 +31,13 @@ describe('sendPasswordResetEmail', () => {
     expect(sent.text).toContain(LINK);
   });
 
-  it('sends from intro, not from any business — this is the one email the product sends on its own behalf', async () => {
+  it('sends from khloe, not from any business — this is the one email the product sends on its own behalf', async () => {
     await sendPasswordResetEmail('owner@example.com', LINK);
 
     const sent = send.mock.calls[0]![0];
-    expect(sent.fromName).toBe('intro');
+    expect(sent.fromName).toBe('khloe');
     expect(sent.to).toEqual({ email: 'owner@example.com' });
-    expect(sent.subject).toBe('Reset your intro password');
+    expect(sent.subject).toBe('Reset your khloe password');
   });
 
   it('tells the reader nothing has changed if it was not them', async () => {

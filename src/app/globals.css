@@ -1,6 +1,6 @@
 /*
- * intro design tokens — built from Intro's brand strategy and web
- * guidelines. Exact hex values below are taken directly from the "INTRO —
+ * khloe design tokens — built from Khloe's brand strategy and web
+ * guidelines. Exact hex values below are taken directly from the "KHLOE —
  * DIGITAL BRAND KIT" colour system table, the live site's own source of
  * truth — a later, more complete document than the earlier brand-guidelines
  * PDF this file originally cited; every value matched except Soft Mineral,
@@ -21,7 +21,7 @@
  *                 too. Ink on hover is the part that does not move.
  *                 Soft Mineral is the default
  *                 for a tenant who has not set their own; it is not
- *                 "intro's colour" applied to their page, it is simply what
+ *                 "khloe's colour" applied to their page, it is simply what
  *                 an unbranded page looks like until they pick one.
  *
  *   --emphasis    is ALSO brand, but the guide is explicit that Muted Ochre
@@ -65,7 +65,7 @@
   --ghost: #9a988f;
 
   /* Brand — tenant-owned. See the file header for why Soft Mineral rather
-     than "intro's colour". --accent-tint and --accent-ink are DERIVED from
+     than "khloe's colour". --accent-tint and --accent-ink are DERIVED from
      --accent with color-mix, not separate hex values — so overriding
      --accent alone (which is all BookingFlow does per tenant) still
      produces a coherent selected-state tint and readable ink, rather than a
@@ -164,12 +164,12 @@
      Plus-Jakarta-Sans stand-in was:
        - --font-wordmark is "Arial Black" specifically — a distinct font
          family on most systems, not just a heavy weight of "Arial" — used
-         ONLY for the "intro" wordmark itself (see .admin-brand,
+         ONLY for the "khloe" wordmark itself (see .admin-brand,
          .preview-wordmark). Its consuming rules force font-weight: 900.
        - --font-heading is plain "Arial", used for hero numerals, page
          headings and other display moments, at weight 700 (Bold) —
          the guide is explicit that Arial Black's density "belongs to the
-         intro wordmark" and headlines should read lighter and calmer.
+         khloe wordmark" and headlines should read lighter and calmer.
      Both are system fonts, loaded via no webfont at all (see layout.tsx) —
      that's what makes this the real, final answer rather than another
      placeholder like Plus Jakarta Sans was. */
@@ -271,7 +271,7 @@ a:visited {
   line-height: 1.55;
 }
 
-/* Tenant identity — never intro's own. Reads from branding.logoUrl /
+/* Tenant identity — never khloe's own. Reads from branding.logoUrl /
    the tenant's own initials, and its ring colour is --accent, which a
    tenant may have overridden. */
 .brand-row {
@@ -525,9 +525,9 @@ a.btn-secondary {
  * Deliberately its own class rather than a rule on .widget: the public
  * booking flow uses .widget too, and that surface belongs to whichever
  * business a visitor is booking with — it carries their accent colour, and
- * putting intro's own material under it would be this product talking over
+ * putting khloe's own material under it would be this product talking over
  * its customer. Signing in is the one moment the person is dealing with
- * intro directly, and it is the screen they arrive at from the marketing
+ * khloe directly, and it is the screen they arrive at from the marketing
  * site, so it is the one place the two should feel continuous. */
 .signin-ground {
   min-height: 100svh;
@@ -2792,7 +2792,7 @@ button.text-action {
  * from a link and a client who books inside the professional's own site are
  * using the same product, not two that resemble each other.
  *
- * The business is the identity on this surface. intro appears once, small,
+ * The business is the identity on this surface. khloe appears once, small,
  * at the foot of the standalone shell. --accent may be the business's own
  * colour (see brand.ts), so nothing here assumes Soft Mineral by name.
  */
@@ -5769,7 +5769,7 @@ body:has(.bk-embedded) {
   letter-spacing: 0.03em;
 }
 /* A test run's banner on the booking page itself. Ochre, the product's
-   "look at this" colour, never the business's own accent: it is intro
+   "look at this" colour, never the business's own accent: it is khloe
    speaking, not the business. */
 .bk-test {
   margin: 0 0 14px;

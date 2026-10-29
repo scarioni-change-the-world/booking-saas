@@ -101,7 +101,7 @@ Six rules every screen follows:
    clients keep their history. The five-service allowance (active only) is
    now enforced on the server, on adding and on resuming.
    **The Braun system** — done. The admin app is built the way a Braun
-   radio is, in intro's own colours and fonts: Soft White faceplates that
+   radio is, in khloe's own colours and fonts: Soft White faceplates that
    sit on Warm Chalk by their shadow, no outlines; round-ended keys for
    buttons and filters, recessed strips for two-way choices; each service
    a knob (its letters in a ring of its colour, dashed while nobody can
@@ -246,7 +246,7 @@ Six rules every screen follows:
     for 30 minutes while the client pays, booked when Stripe confirms, and
     refunded at once if it was lost. Cancelling refunds automatically when
     the business cancels or the client cancels before the minimum notice;
-    programme sessions return to the balance instead. intro takes no cut.
+    programme sessions return to the balance instead. khloe takes no cut.
     **Self-serve signup** — done. /admin/signup asks for the business's
     name, its web address (follows the name, says as you type whether it is
     free, offers the next numbered one), email, password and time zone. The

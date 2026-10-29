@@ -5,7 +5,7 @@ import type { EmailStatus } from './db/types';
 /**
  * The record that a service was deleted, sent to whoever deleted it.
  *
- * Like the password reset (password-reset-email.ts), this is intro writing
+ * Like the password reset (password-reset-email.ts), this is khloe writing
  * about the account, not the business writing to a client: fixed wording,
  * never a row in email_templates a business could edit or turn off. It goes
  * through renderTemplate for the same escaping every other email gets.
@@ -40,7 +40,7 @@ export async function sendServiceDeletedEmail(input: {
     });
     await provider.send({
       to: { email: input.to },
-      fromName: 'intro',
+      fromName: 'khloe',
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,

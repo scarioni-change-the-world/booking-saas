@@ -190,7 +190,7 @@ export default function SignupPage() {
           >
             {address.state === 'checking' && 'Checking…'}
             {address.state === 'free' && 'Free — this is yours if you want it. It can’t be changed later.'}
-            {address.state === 'reserved' && 'That one is kept for intro itself. Choose another.'}
+            {address.state === 'reserved' && 'That one is kept for khloe itself. Choose another.'}
             {address.state === 'invalid' &&
               'Lowercase letters, numbers and single dashes, at least 3 characters.'}
             {address.state === 'taken' && (

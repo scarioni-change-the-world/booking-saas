@@ -1,7 +1,7 @@
 import type { TenantPlan } from './db/types';
 
 /**
- * A business paying intro: Stripe's subscription states, read as intro's own
+ * A business paying khloe: Stripe's subscription states, read as khloe's own
  * plan. Pure, so the webhook and the Account page agree.
  *
  * One plan exists (€7 a month); in the tenants table it is `starter`.
@@ -48,7 +48,7 @@ export interface BillingSubject {
   subscription_status?: string | null;
 }
 
-/** What the Account page says about paying intro. */
+/** What the Account page says about paying khloe. */
 export function billingState(tenant: BillingSubject): BillingState {
   if (tenant.free_access) return 'free';
   if (tenant.subscription_status === 'past_due') return 'past_due';

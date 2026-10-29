@@ -1,7 +1,7 @@
 /**
  * AI-assisted intake design (PRODUCT_VISION.md's Layer-3 idea backlog,
  * "AI-assisted intake design"): "a professional describes in plain
- * language how they decide who's ready to work with them; Intro proposes
+ * language how they decide who's ready to work with them; Khloe proposes
  * intake questions, answer options, alignment criteria, and alternative
  * paths from that description."
  *
@@ -58,7 +58,7 @@ export interface IntakeDraftInput {
 /**
  * Reports: a written reading of one period, drafted on request. Given the
  * figures only — never a client's name or address — and asked for the few
- * things most worth changing, each pointing at the place in intro to do it.
+ * things most worth changing, each pointing at the place in khloe to do it.
  */
 export type SummaryPlace = 'services' | 'week' | 'people' | 'questions' | 'messages' | 'account' | 'none';
 

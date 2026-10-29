@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     return ok({
       message:
-        "If that address has an intro account, we've sent it a link for setting a new password. It's good for one hour.",
+        "If that address has a khloe account, we've sent it a link for setting a new password. It's good for one hour.",
     });
   } catch (error) {
     return handleError(error);

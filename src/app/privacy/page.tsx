@@ -41,8 +41,8 @@ const OPERATOR = {
 const WEBSITE = process.env.NEXT_PUBLIC_MARKETING_URL?.replace(/\/+$/, '') || '/';
 
 export const metadata: Metadata = {
-  title: 'Privacy policy — intro',
-  description: 'What data intro collects, why, who processes it, and how to exercise your rights over it.',
+  title: 'Privacy policy — khloe',
+  description: 'What data khloe collects, why, who processes it, and how to exercise your rights over it.',
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
       <header className="legal-top">
         <div className="legal-shell legal-top-row">
           <a className="legal-wordmark" href={WEBSITE}>
-            intro
+            khloe
           </a>
           <a className="legal-key" href="/admin/login">
             Sign in
@@ -72,13 +72,13 @@ export default function PrivacyPage() {
         <p className="legal-eyebrow">Privacy</p>
         <h1>Privacy policy</h1>
         <p className="legal-lede">
-          What intro collects, why it collects it, and who else ever sees it. Last updated{' '}
+          What khloe collects, why it collects it, and who else ever sees it. Last updated{' '}
           {OPERATOR.lastUpdated}.
         </p>
 
         <Section title="Who we are">
           <p>
-            intro is operated by {OPERATOR.legalName}, {OPERATOR.address}, established in{' '}
+            khloe is operated by {OPERATOR.legalName}, {OPERATOR.address}, established in{' '}
             {OPERATOR.jurisdiction}. For anything in this policy, including a request to see or delete
             your data, write to <strong>{OPERATOR.contactEmail}</strong>.
           </p>
@@ -88,11 +88,11 @@ export default function PrivacyPage() {
           <p>This matters for knowing who to ask about what, so it comes first rather than buried at the end.</p>
           <ul>
             <li>
-              <strong>If you are a business using intro</strong>, we are the controller of your account
+              <strong>If you are a business using khloe</strong>, we are the controller of your account
               data — your email, your settings, your billing status. You deal with us directly.
             </li>
             <li>
-              <strong>If you booked an appointment through a business that uses intro</strong>, that
+              <strong>If you booked an appointment through a business that uses khloe</strong>, that
               business is the controller of your booking, your questionnaire answers and any rating you
               leave. We only process it on their instructions, as their supplier. Ask them first — about
               what they hold, why, or to have it deleted. We will help them answer, and we will not use
@@ -117,7 +117,7 @@ export default function PrivacyPage() {
             follows it up.
           </p>
           <p>
-            <strong>From businesses using intro:</strong> the email address of each team member (used to
+            <strong>From businesses using khloe:</strong> the email address of each team member (used to
             sign in), the business&apos;s name, address for its booking page, time zone, opening hours
             and booking settings, and its client list where it chooses to keep one. When a business signs
             up, we email it a link to confirm the address before the account exists. Subscription billing
@@ -141,7 +141,7 @@ export default function PrivacyPage() {
             This section applies only to a business that chooses to connect its Google Calendar. Nothing
             here affects people booking appointments.
           </p>
-          <p>With permission, intro requests three scopes and uses each for one thing:</p>
+          <p>With permission, khloe requests three scopes and uses each for one thing:</p>
           <ul>
             <li>
               <code>calendar.freebusy</code> — to read which times are already committed, so a busy slot
@@ -163,12 +163,12 @@ export default function PrivacyPage() {
             deletes the stored credentials and asks Google to revoke them.
           </p>
           <p>
-            intro&apos;s use of information received from Google APIs adheres to the{' '}
+            khloe&apos;s use of information received from Google APIs adheres to the{' '}
             <a href="https://developers.google.com/terms/api-services-user-data-policy">
               Google API Services User Data Policy
             </a>
             , including the Limited Use requirements. Google user data is used only to provide the
-            scheduling features above. It is never sold, never shared with other businesses using intro,
+            scheduling features above. It is never sold, never shared with other businesses using khloe,
             never used for advertising, never sent to the AI assistant described below, and never used to
             train any model.
           </p>
@@ -190,7 +190,7 @@ export default function PrivacyPage() {
               <strong>Stripe</strong> — takes subscription payments from businesses, and, for a business
               that asks clients to pay when they book, takes that payment on the business&apos;s own Stripe
               account. Stripe receives the payer&apos;s card details directly; they never pass through
-              intro.
+              khloe.
             </li>
             <li>
               <strong>Our email provider</strong> — delivers sign-up links, booking confirmations,
@@ -234,7 +234,7 @@ export default function PrivacyPage() {
             {OPERATOR.contactEmail}.
           </p>
           <p>
-            If you booked through a business using intro, that business is the one to ask — see
+            If you booked through a business using khloe, that business is the one to ask — see
             &ldquo;Two different relationships&rdquo; above. You can also complain to the data-protection
             authority in {OPERATOR.jurisdiction} or in the country where you live.
           </p>
@@ -254,14 +254,14 @@ export default function PrivacyPage() {
         <Section title="Changes to this policy">
           <p>
             If we change how data is handled in a way that affects you, we will update the date at the top
-            of this page, and tell businesses using intro directly where the change is material.
+            of this page, and tell businesses using khloe directly where the change is material.
           </p>
         </Section>
       </main>
 
       <footer className="legal-footer">
         <div className="legal-shell legal-footer-row">
-          <a href={WEBSITE}>← Back to intro</a>
+          <a href={WEBSITE}>← Back to khloe</a>
           <span>Questions about your data: {OPERATOR.contactEmail}</span>
         </div>
       </footer>

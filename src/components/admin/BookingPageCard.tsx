@@ -173,7 +173,7 @@ export function BookingPageCard({
                   <span style={{ background: p.hex }} aria-hidden="true" />
                   <span className="sr-only">
                     {p.label}
-                    {p.hex === DEFAULT_BRAND ? ', intro’s own' : ''}
+                    {p.hex === DEFAULT_BRAND ? ', khloe’s own' : ''}
                   </span>
                 </label>
               ))}

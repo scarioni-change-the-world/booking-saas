@@ -1,5 +1,9 @@
 # Product vision — the core instruction for this project
 
+> **Name:** this document was written when the product was called Intro. It is now
+> **Khloe** (khloe.io). Everywhere below, "Intro" means Khloe; the text is kept as
+> adopted.
+
 Status: **the main instruction for the whole project, from the date below
 onward.** Every future feature decision should be checked against this
 document first. Where it conflicts with older, narrower framing elsewhere in

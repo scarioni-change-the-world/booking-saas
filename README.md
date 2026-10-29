@@ -1,7 +1,10 @@
-# booking-saas / Intro
+# booking-saas / Khloe
+
+> The product was called **Intro** until October 2026 and is now **Khloe** (khloe.io).
+> Older notes, the design folder and the migrations still say "intro".
 
 **Read `PRODUCT_VISION.md` first.** It is the standing instruction for the
-whole project: what Intro actually is (a pre-meeting alignment platform, not
+whole project: what Khloe actually is (a pre-meeting alignment platform, not
 a scheduling tool with a questionnaire bolted on), what it deliberately does
 not do, and the feature hierarchy that governs what gets built next. Every
 feature decision from here on should be checked against it. Its own closing
@@ -413,7 +416,7 @@ hierarchy the way the Roadmap below is.
   from what the code actually does rather than from a template: the three
   Google scopes and what each is for, the Limited Use disclosure verification
   requires, the controller/processor split between us and a business using
-  intro, every subprocessor, and the fact that no client data ever reaches
+  khloe, every subprocessor, and the fact that no client data ever reaches
   the AI feature. **It still has placeholders** — legal entity, address,
   contact address, jurisdiction, in the `OPERATOR` block at the top of the
   file — and they render visibly on the page until filled in, deliberately.

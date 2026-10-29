@@ -126,7 +126,7 @@ export default function FlowPage() {
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
       const msg = event.data as TestMessage;
-      if (!msg || msg.type !== 'intro:test') return;
+      if (!msg || msg.type !== 'khloe:test') return;
       const chosen = msg.eventTypeId ? model!.lanes.find((l) => l.id === msg.eventTypeId) : null;
       if (chosen) setLaneId(chosen.id);
       const part = partForPhase(msg.phase);

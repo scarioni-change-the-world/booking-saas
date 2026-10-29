@@ -1,6 +1,6 @@
 # Launch checklist
 
-What is still to do before intro charges real customers. Tick items off as
+What is still to do before khloe charges real customers. Tick items off as
 they are done; the details for Stripe are in `stripe-setup.md`.
 
 ## Stripe: VAT on the subscription (saved for later)
@@ -11,7 +11,7 @@ checkout, but only when all three of these are in place:
 - [ ] **Vercel** (app project): set `STRIPE_AUTOMATIC_TAX` to `1`, then redeploy.
 - [ ] **Stripe → Settings → Tax**: turn on Stripe Tax, add the business address
       and the country where you are registered for VAT.
-- [ ] **Stripe → Product catalogue → intro → the €7 price**: Tax behaviour
+- [ ] **Stripe → Product catalogue → khloe → the €7 price**: Tax behaviour
       **Exclusive**, so VAT is added on top of the €7.
 
 ### Test it (in Stripe test mode first)
@@ -33,8 +33,28 @@ checkout, but only when all three of these are in place:
 - [ ] Privacy page: fill in the four `[[ … ]]` placeholders in
       `src/app/privacy/page.tsx`.
 - [ ] Terms of service page (not built yet), linked from signup.
-- [ ] New name and domain; then update `NEXT_PUBLIC_MARKETING_URL`,
-      `PUBLIC_BASE_URL`, the Supabase redirect URLs and the Google sign-in
-      settings, and submit Google sign-in for verification.
+- [ ] **Khloe on khloe.io** (renamed in the app; see the next section for what
+      is left to do outside the code).
 - [ ] Email plan: Resend's free tier stops at 100 emails a day (about 15
       businesses).
+
+## The move to khloe.io
+
+The app's name is Khloe everywhere in the code. What is left is outside it:
+
+- [ ] DNS: point the marketing site at `khloe.io` and the app at `app.khloe.io`
+      (or whichever split you choose), both on Vercel.
+- [ ] Vercel, app project: `PUBLIC_BASE_URL=https://app.khloe.io` and
+      `NEXT_PUBLIC_MARKETING_URL=https://khloe.io`, then redeploy.
+- [ ] Vercel, website project: `NEXT_PUBLIC_APP_URL=https://app.khloe.io` and
+      `NEXT_PUBLIC_SITE_URL=https://khloe.io`.
+- [ ] Supabase → Authentication → URL Configuration: site URL, and the redirect
+      URLs `/admin/welcome` and `/admin/reset-password` on the new app address.
+- [ ] Google Cloud (sign-in and Calendar): app name Khloe, homepage and privacy
+      policy on khloe.io, the new redirect URI, then submit for verification.
+- [ ] Stripe: rename the business and the product to Khloe; the webhook URL
+      moves to the new app address; check the checkout branding.
+- [ ] Email: set up an address on the domain (for example hello@khloe.io), then
+      change `SUPPORT_EMAIL` in `src/components/SignInLayout.tsx` (it still
+      points to the old mailbox) and the sending address in the email settings.
+- [ ] Update the privacy page placeholders, now that the domain exists.

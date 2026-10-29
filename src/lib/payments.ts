@@ -3,8 +3,8 @@
  * booking page and the routes all read the same answers.
  *
  * The business is the seller: every payment is a charge on the business's
- * own Stripe account (Stripe Connect, direct charges), and intro takes no
- * cut. What intro decides is only when a payment is asked for, how much, and
+ * own Stripe account (Stripe Connect, direct charges), and khloe takes no
+ * cut. What khloe decides is only when a payment is asked for, how much, and
  * when a cancellation is refunded.
  */
 

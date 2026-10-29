@@ -52,7 +52,7 @@ export default function ConsoleLoginPage() {
       <main className="widget" style={{ paddingTop: 88 }}>
         <div className="brand-row" style={{ justifyContent: 'center' }}>
           <span className="admin-brand" style={{ fontSize: 28 }}>
-            intro <span className="console-mark">console</span>
+            khloe <span className="console-mark">console</span>
           </span>
         </div>
         <p className="admin-eyebrow" style={{ textAlign: 'center', marginBottom: 26 }}>

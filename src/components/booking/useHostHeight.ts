@@ -15,7 +15,7 @@ import { useEffect } from 'react';
  * itself catches all of them without anybody having to remember to announce
  * a new one.
  *
- * Two message names go out, from one observer. `intro:height` is what
+ * Two message names go out, from one observer. `khloe:height` is what
  * public/embed.js listens for; `booking:resize` is the name this product
  * shipped with first, and there may be a host page still listening for it.
  * Sending both costs a function call and means an existing embed does not
@@ -36,7 +36,7 @@ export function useHostHeight(): void {
       const height = Math.ceil(document.documentElement.scrollHeight);
       if (height === last) return;
       last = height;
-      window.parent.postMessage({ type: 'intro:height', height }, '*');
+      window.parent.postMessage({ type: 'khloe:height', height }, '*');
       window.parent.postMessage({ type: 'booking:resize', height }, '*');
     };
 

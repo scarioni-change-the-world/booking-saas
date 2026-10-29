@@ -116,7 +116,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     <div className="admin-app shell console">
       <header className="shell-bar">
         <a href="/console" className="admin-brand">
-          intro <span className="console-mark">console</span>
+          khloe <span className="console-mark">console</span>
         </a>
         <div className="shell-account">
           <span className="shell-tenant console-role">{check.role}</span>

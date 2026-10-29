@@ -32,7 +32,7 @@ import type {
  * silently swallowed.
  */
 
-const PRODUCT_NAME = 'Intro';
+const PRODUCT_NAME = 'Khloe';
 
 interface ServiceFacts {
   name: string;

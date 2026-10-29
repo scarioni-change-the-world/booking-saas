@@ -32,7 +32,7 @@ export type SignupStart =
 /**
  * The form was sent. Create a login that cannot be used until the address is
  * confirmed, and return the link that confirms it — Supabase generates it
- * here without sending anything, so the email that carries it is intro's own.
+ * here without sending anything, so the email that carries it is khloe's own.
  *
  * An address that started signing up and never confirmed starts again: the
  * new password and business replace the old ones. Until the link is opened

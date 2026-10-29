@@ -5,7 +5,7 @@ import Stripe from 'stripe';
  *
  * Unset keys are not an error for the rest of the app: a deployment without
  * Stripe keeps working exactly as before — businesses on trial or free
- * access, clients paying outside intro — and only the screens that would
+ * access, clients paying outside khloe — and only the screens that would
  * start a payment say it is not available yet.
  */
 
@@ -19,7 +19,7 @@ export function stripe(): Stripe {
   if (cached) return cached;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
-  cached = new Stripe(key, { appInfo: { name: 'intro' } });
+  cached = new Stripe(key, { appInfo: { name: 'khloe' } });
   return cached;
 }
 

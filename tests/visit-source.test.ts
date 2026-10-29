@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { classifySource, sourceLabel } from '../src/lib/visit-source';
 
-const base = { search: '', referrer: '', ownHost: 'intro.app', embedded: false };
+const base = { search: '', referrer: '', ownHost: 'khloe.io', embedded: false };
 
 describe('classifySource', () => {
   it('trusts a label the business put on its own link', () => {
@@ -24,7 +24,7 @@ describe('classifySource', () => {
       'mara-studio.com',
     );
     expect(classifySource(base)).toBe('direct');
-    expect(classifySource({ ...base, referrer: 'https://intro.app/t/mara' })).toBe('direct');
+    expect(classifySource({ ...base, referrer: 'https://khloe.io/t/mara' })).toBe('direct');
   });
 
   it('reads an embedded page as the website it sits in', () => {

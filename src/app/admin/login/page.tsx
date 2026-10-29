@@ -128,7 +128,7 @@ export default function AdminLoginPage() {
         <a href="/admin/forgot-password">Forgot your password?</a>
       </p>
       <p className="signin-aside">
-        New to intro? <a href="/admin/signup">Create an account</a> — 7 days free.
+        New to khloe? <a href="/admin/signup">Create an account</a> — 7 days free.
       </p>
     </SignInLayout>
   );

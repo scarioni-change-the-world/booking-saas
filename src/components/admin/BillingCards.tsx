@@ -38,7 +38,7 @@ async function go(url: string, setError: (e: string) => void, setBusy: (b: boole
 }
 
 /**
- * Paying intro. The card says where the business stands and offers the one
+ * Paying khloe. The card says where the business stands and offers the one
  * thing to do next: subscribe, manage billing on Stripe's own page, or fix
  * a card that failed — the only Ochre here, because it needs them.
  */
@@ -148,7 +148,7 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
 
 /**
  * Being paid by clients: the business's own Stripe account. The money goes
- * straight to them; intro takes no cut.
+ * straight to them; khloe takes no cut.
  */
 export function GettingPaidCard({
   slug,
@@ -194,7 +194,7 @@ export function GettingPaidCard({
           </p>
           <p className="field-note">
             Choose how each service is paid in its settings — in full, a deposit, or not online. Payments,
-            refunds and payouts are in your own Stripe, and intro takes no cut.{' '}
+            refunds and payouts are in your own Stripe, and khloe takes no cut.{' '}
             <a href="https://dashboard.stripe.com" target="_blank" rel="noreferrer">
               Open Stripe
             </a>
@@ -216,7 +216,7 @@ export function GettingPaidCard({
         <>
           <p className="acct-line">
             Let clients pay when they book — for a session, a deposit or a whole programme. The money goes
-            straight to your own Stripe account; intro takes no cut, and you pay only Stripe’s fee.
+            straight to your own Stripe account; khloe takes no cut, and you pay only Stripe’s fee.
           </p>
           <div className="wk-actions" style={{ marginTop: 0 }}>
             <button type="button" className="btn-primary" disabled={busy} onClick={connect}>

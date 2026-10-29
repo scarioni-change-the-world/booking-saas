@@ -8,7 +8,7 @@ import { stripe, stripeConfigured } from '@/lib/stripe';
  * Link the business's own Stripe account, so its clients can pay it.
  *
  * A Standard account: the business owns it, logs into Stripe directly, sees
- * every payment and refund there, and is the seller in law. intro only asks
+ * every payment and refund there, and is the seller in law. khloe only asks
  * Stripe to take payments on its behalf, and takes no cut. Stripe's own
  * onboarding collects who they are and where the money goes; this returns
  * its address. Calling it again for a half-finished account picks up where

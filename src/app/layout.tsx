@@ -28,7 +28,7 @@ import './globals.css';
  * a placeholder, so that stand-in is gone.
  */
 export const metadata: Metadata = {
-  title: 'intro',
+  title: 'khloe',
   description:
     'The right meeting starts with alignment — a pre-meeting alignment layer for professionals whose work begins with a real conversation.',
 };

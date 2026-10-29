@@ -9,7 +9,7 @@ const CONFIG = {
   secure: false,
   user: 'demo@example.com',
   password: 'super-secret-password',
-  fromAddress: 'no-reply@intro.app',
+  fromAddress: 'no-reply@khloe.io',
 };
 
 function fakeTransporter(impl: (mail: unknown) => Promise<{ messageId: string }>) {
@@ -33,7 +33,7 @@ describe('SmtpEmailProvider', () => {
     expect(result).toEqual({ id: 'msg-1' });
     expect(transporter.sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: '"Demo Coaching" <no-reply@intro.app>',
+        from: '"Demo Coaching" <no-reply@khloe.io>',
         to: '"Ana Test" <ana@example.com>',
         replyTo: 'owner@example.com',
         subject: 'Hi',
@@ -109,9 +109,9 @@ describe('emailProvider', () => {
   const FULL = {
     SMTP_HOST: 'smtp.example.com',
     SMTP_PORT: '587',
-    SMTP_USER: 'demo@intro.app',
+    SMTP_USER: 'demo@khloe.io',
     SMTP_PASSWORD: 'super-secret-password',
-    EMAIL_FROM_ADDRESS: 'no-reply@intro.app',
+    EMAIL_FROM_ADDRESS: 'no-reply@khloe.io',
   };
 
   function stub(overrides: Partial<Record<keyof typeof FULL, string>>) {

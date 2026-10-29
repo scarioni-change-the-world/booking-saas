@@ -13,7 +13,7 @@
  */
 
 /**
- * Where "Back to the Intro website" goes.
+ * Where "Back to the Khloe website" goes.
  *
  * Read from the environment rather than hard-coded, because the marketing
  * site has no final domain yet — the product name is still being decided.
@@ -33,14 +33,14 @@ export function SignInLayout({ children }: { children: React.ReactNode }) {
         <div className="signin-column">
           {/* A span, not an h1: each page's own heading says what it is for.
               The wordmark says whose door this is, which is a different job. */}
-          <span className="signin-wordmark">intro</span>
+          <span className="signin-wordmark">khloe</span>
 
           {children}
 
           <div className="signin-foot">
             {MARKETING_URL && (
               <p>
-                <a href={MARKETING_URL}>Back to the Intro website</a>
+                <a href={MARKETING_URL}>Back to the Khloe website</a>
               </p>
             )}
             <p>

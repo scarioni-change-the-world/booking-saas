@@ -144,7 +144,7 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
   useEffect(() => {
     if (!test || typeof window === 'undefined' || window.parent === window) return;
     const message: TestMessage = {
-      type: 'intro:test',
+      type: 'khloe:test',
       phase,
       eventTypeId: eventType?.id ?? null,
     };

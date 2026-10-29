@@ -590,7 +590,7 @@ function QuestionsPreview({ questions }: { questions: Question[] }) {
   return (
     <div className="preview-mat">
       <div className="preview-card">
-        <div className="preview-wordmark">intro</div>
+        <div className="preview-wordmark">khloe</div>
         {questions.length === 0 ? (
           <p className="preview-empty">
             No questions yet — a prospect goes straight to the calendar after giving their email.

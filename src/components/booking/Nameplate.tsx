@@ -3,7 +3,7 @@
  * business's own identity. Their logo if they have one, their name beside it
  * if they asked for that, and their name alone if there is no logo.
  *
- * The name is set in the heading face, never as intro's wordmark — that would
+ * The name is set in the heading face, never as khloe's wordmark — that would
  * be this product wearing its customer's identity.
  */
 export interface NameplateBranding {

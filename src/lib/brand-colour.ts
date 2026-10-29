@@ -106,7 +106,7 @@ export function brandRefusal(check: Exclude<BrandCheck, { ok: true }>): string {
 }
 
 /**
- * The colour a client page should use, or undefined for intro's Mineral.
+ * The colour a client page should use, or undefined for khloe's Mineral.
  * A value saved before this rule existed, or written by hand, is checked
  * here too rather than trusted.
  */

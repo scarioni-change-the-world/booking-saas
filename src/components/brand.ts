@@ -2,7 +2,7 @@ import { brandAccent } from '@/lib/brand-colour';
 
 /**
  * Tenant identity helpers, shared by every surface a client sees — never
- * intro's own identity.
+ * khloe's own identity.
  */
 
 /**

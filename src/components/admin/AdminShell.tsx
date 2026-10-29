@@ -72,7 +72,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
       <div className="admin-app shell">
         <header className="shell-bar">
           <a href={`/admin/${slug}/flow`} className="admin-brand">
-            intro
+            khloe
           </a>
           <nav className="shell-places" aria-label="Places">
             {PLACES.map((item) => (

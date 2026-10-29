@@ -1,12 +1,12 @@
 # Setting up Stripe
 
-intro uses Stripe for two separate things:
+khloe uses Stripe for two separate things:
 
-1. **Businesses paying intro** — the €7 a month subscription. Stripe Billing,
+1. **Businesses paying khloe** — the €7 a month subscription. Stripe Billing,
    on your own Stripe account.
 2. **Clients paying businesses** — a session, a deposit or a whole programme,
    paid when booked. Stripe Connect (Standard accounts): each business
-   connects its own Stripe account, every charge is made on it, and intro
+   connects its own Stripe account, every charge is made on it, and khloe
    takes no cut. The business pays Stripe's fee.
 
 Without the keys below the app works exactly as before: trials and free
@@ -22,7 +22,7 @@ Stripe dashboard), then repeat it in live mode with live keys.
 
 Stripe dashboard → **Product catalogue** → **Add product**
 
-- Name: `intro`
+- Name: `khloe`
 - Recurring, **€7.00 / month**, with **Tax behaviour: Exclusive** — the price is €7 + VAT, so VAT is
   added on top rather than taken out of the €7
 - Save, then copy the price's id (`price_…`) → `STRIPE_PRICE_ID`

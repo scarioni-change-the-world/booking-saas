@@ -59,7 +59,7 @@ describe('signupProblem', () => {
 
   it('names the one thing wrong', () => {
     expect(signupProblem({ ...form, businessName: ' ' })).toMatch(/called/);
-    expect(signupProblem({ ...form, slug: 'admin' })).toMatch(/kept for intro/);
+    expect(signupProblem({ ...form, slug: 'admin' })).toMatch(/kept for khloe/);
     expect(signupProblem({ ...form, slug: 'a b' })).toMatch(/lowercase/);
     expect(signupProblem({ ...form, email: 'mara@' })).toMatch(/email/);
     expect(signupProblem({ ...form, password: 'short' })).toMatch(/at least 8/);

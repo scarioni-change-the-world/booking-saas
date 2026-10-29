@@ -27,7 +27,7 @@ function write(key: string, value: string): void {
 
 /** Where this visitor came from, worked out once per tab. */
 export function visitSource(slug: string, embedded: boolean): string {
-  const key = `intro-source-${slug}`;
+  const key = `khloe-source-${slug}`;
   const saved = read(key);
   if (saved) return saved;
   const source = classifySource({
@@ -46,7 +46,7 @@ export function recordVisit(
   surface: 'page' | 'embedded' | 'client_link',
   source: string,
 ): void {
-  const key = `intro-visit-${slug}-${surface}`;
+  const key = `khloe-visit-${slug}-${surface}`;
   if (read(key)) return;
   write(key, '1');
   void fetch(`/api/t/${encodeURIComponent(slug)}/visit`, {

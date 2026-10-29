@@ -3,7 +3,7 @@ import { renderTemplate, type TemplateLink } from './email/templates';
 import type { EmailStatus } from './db/types';
 
 /**
- * The emails signing up sends — intro writing on its own behalf, like the
+ * The emails signing up sends — khloe writing on its own behalf, like the
  * password reset (see password-reset-email.ts, whose posture this follows:
  * fixed wording in code, and a send that reports rather than throws).
  */
@@ -22,7 +22,7 @@ async function send(
     const rendered = renderTemplate(template, tokens, link);
     await provider.send({
       to: { email: to },
-      fromName: 'intro',
+      fromName: 'khloe',
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
@@ -43,15 +43,15 @@ export function sendSignupConfirmEmail(
   return send(
     email,
     {
-      subject: 'Confirm your email to open {business} on intro',
+      subject: 'Confirm your email to open {business} on khloe',
       body:
-        'Welcome to intro.\n\n' +
+        'Welcome to khloe.\n\n' +
         'Open the link below to confirm this is your address. Your account for {business} is ready the moment you ' +
         'do, with 7 days free and nothing to pay until you decide to stay.\n\n' +
         'The link works once, for an hour — sign up again for a fresh one. If you did not sign up, ignore this email and nothing is created.',
     },
     { business: businessName },
-    { label: 'Confirm and open intro', url: link },
+    { label: 'Confirm and open khloe', url: link },
   );
 }
 
@@ -64,20 +64,20 @@ export function sendAlreadyRegisteredEmail(email: string, signInUrl: string): Pr
   return send(
     email,
     {
-      subject: 'You already have an intro account',
+      subject: 'You already have a khloe account',
       body:
-        'Somebody — probably you — tried to sign up to intro with this address. It already has an account, so ' +
+        'Somebody — probably you — tried to sign up to khloe with this address. It already has an account, so ' +
         'nothing new was created.\n\n' +
         'Sign in with the link below. If you have forgotten your password, the sign-in page can send you a new one. ' +
         'If this was not you, you can ignore this email.',
     },
     {},
-    { label: 'Sign in to intro', url: signInUrl },
+    { label: 'Sign in to khloe', url: signInUrl },
   );
 }
 
 /**
- * Tell whoever runs intro that a business joined (SIGNUP_ALERT_EMAIL).
+ * Tell whoever runs khloe that a business joined (SIGNUP_ALERT_EMAIL).
  * Optional: unset, nothing is sent.
  */
 export async function sendNewSignupAlert(
@@ -89,7 +89,7 @@ export async function sendNewSignupAlert(
   await send(
     to,
     {
-      subject: 'New business on intro: {business}',
+      subject: 'New business on khloe: {business}',
       body: '{business} (/t/{slug}) just signed up, as {owner}. It is on a 7-day trial.',
     },
     { business: business.name, slug: business.slug, owner },

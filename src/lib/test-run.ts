@@ -11,7 +11,7 @@
  */
 
 /** Sent on every request of a test run; honoured only for a signed-in admin. */
-export const TEST_HEADER = 'x-intro-test';
+export const TEST_HEADER = 'x-khloe-test';
 
 /** The prefix a test run's response ids carry — never a real row's id. */
 export const TEST_RESPONSE_PREFIX = 'test:';
@@ -28,7 +28,7 @@ export type TestPhase =
   | 'confirmed';
 
 export interface TestMessage {
-  type: 'intro:test';
+  type: 'khloe:test';
   phase: TestPhase;
   eventTypeId: string | null;
 }

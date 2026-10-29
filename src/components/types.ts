@@ -14,7 +14,7 @@ export interface PublicEventType {
   durationMinutes: number;
   color: string;
   /* Declared on the service itself (migration 0013). A client cannot buy a
-     pack through intro yet — there is no checkout — so this is shown as
+     pack through khloe yet — there is no checkout — so this is shown as
      information about what the service is, not as a quantity to choose. */
   bookingMode: 'single' | 'pack';
   packSize: number | null;

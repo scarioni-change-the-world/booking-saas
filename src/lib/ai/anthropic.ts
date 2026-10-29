@@ -76,7 +76,7 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
  *     human reviews, edits and explicitly accepts every question before
  *     anything saves.
  */
-const SYSTEM_PROMPT = `You help a service professional design the intake questionnaire for Intro, a pre-meeting alignment tool. A prospective client answers these questions before any calendar is shown; the professional's own answer-routing then decides whether a meeting is the useful next step or whether the person is better served another way.
+const SYSTEM_PROMPT = `You help a service professional design the intake questionnaire for Khloe, a pre-meeting alignment tool. A prospective client answers these questions before any calendar is shown; the professional's own answer-routing then decides whether a meeting is the useful next step or whether the person is better served another way.
 
 Given a plain-language description of how this professional decides who they're ready to meet, propose:
 1. A short list of intake questions (2-5 is usually enough — this is answered on a phone, often from a social link; every extra question costs completions).

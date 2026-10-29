@@ -1,5 +1,5 @@
 /**
- * Resizes an embedded intro booking widget to fit its content.
+ * Resizes an embedded khloe booking widget to fit its content.
  *
  * Without this the embed technically works and feels broken. The widget's
  * height changes enormously as someone moves through it — a short list of
@@ -19,7 +19,7 @@
  *     event.source against that frame's contentWindow, so another frame on
  *     the page — an ad, an unrelated embed — cannot resize this one.
  *   - The origin is checked against the frame's own src, so a message from
- *     anywhere other than the intro host is ignored.
+ *     anywhere other than the khloe host is ignored.
  *   - The height is clamped. A hostile or broken value cannot turn the host
  *     page into a hundred thousand pixels of scrollbar.
  */
@@ -37,7 +37,7 @@
     }
   }
 
-  /** Every iframe on this page that points at an intro booking page. */
+  /** Every iframe on this page that points at an khloe booking page. */
   function widgets() {
     var found = [];
     var frames = document.getElementsByTagName('iframe');
@@ -50,7 +50,7 @@
 
   window.addEventListener('message', function (event) {
     var data = event.data;
-    if (!data || data.type !== 'intro:height') return;
+    if (!data || data.type !== 'khloe:height') return;
 
     var height = Number(data.height);
     if (!isFinite(height)) return;
@@ -59,7 +59,7 @@
     var frames = widgets();
     for (var i = 0; i < frames.length; i += 1) {
       var frame = frames[i];
-      // Identity, not just origin: two intro widgets on one page must not
+      // Identity, not just origin: two khloe widgets on one page must not
       // resize each other, and nor must anything else that happens to be
       // served from the same host.
       if (frame.contentWindow !== event.source) continue;

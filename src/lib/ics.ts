@@ -101,7 +101,7 @@ export function buildIcsCalendar(events: readonly IcsEventInput[]): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Intro//Booking//EN',
+    'PRODID:-//Khloe//Booking//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
   ];
@@ -117,6 +117,8 @@ export function buildIcsCalendar(events: readonly IcsEventInput[]): string {
 function eventLines(input: IcsEventInput): string[] {
   const lines = [
     'BEGIN:VEVENT',
+    // The host part is only a namespace. It stays as it was before the rename, so
+    // a reschedule or cancellation still finds the invite already in a client's calendar.
     `UID:${input.uid}@intro`,
     `DTSTAMP:${toIcsUtc(new Date().toISOString())}`,
     `DTSTART:${toIcsUtc(input.startsAt)}`,

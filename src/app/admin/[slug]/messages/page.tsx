@@ -404,7 +404,7 @@ function EmailEditor({
         <p className="wk-side-eyebrow">{dirty ? 'As they will see it, once saved' : 'As they see it'}</p>
         <div className="ms-mail">
           <p className="ms-mail-from">
-            From <b>{info.to === 'you' ? 'Intro' : data.tenantName}</b> ·{' '}
+            From <b>{info.to === 'you' ? 'Khloe' : data.tenantName}</b> ·{' '}
             {info.to === 'you' ? 'to you' : `to ${tokens.clientName}`}
           </p>
           <p className="ms-mail-subject">{preview.subject || <span className="wk-muted">(no subject)</span>}</p>
@@ -643,7 +643,7 @@ function NextStepsEditor({
         <p className="wk-side-eyebrow">{dirty ? 'As they will see it, once saved' : 'As they see it'}</p>
         <div className="preview-mat">
           <div className="preview-card">
-            <div className="preview-wordmark">intro</div>
+            <div className="preview-wordmark">khloe</div>
             {value.message.trim() === '' ? (
               <p className="preview-empty">
                 {value.redirectUrl

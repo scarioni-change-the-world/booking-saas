@@ -8,7 +8,7 @@ import type { EmailStatus } from './db/types';
  * Every other message here is a *tenant's* — their name in the From line,
  * their words in the body, their row in email_templates (see
  * src/lib/email/templates.ts). A password reset belongs to none of them: it
- * is intro writing to somebody about their intro account, and a business
+ * is khloe writing to somebody about their khloe account, and a business
  * must never be able to edit, disable or even see it. So the wording is
  * fixed here in code rather than seeded into a table, and it is deliberate
  * that this is the only file that does that.
@@ -24,9 +24,9 @@ import type { EmailStatus } from './db/types';
 export const RECOVERY_LINK_HOURS = 1;
 
 const TEMPLATE = {
-  subject: 'Reset your intro password',
+  subject: 'Reset your khloe password',
   body:
-    'Somebody asked to reset the password for the intro account registered to this address.\n\n' +
+    'Somebody asked to reset the password for the khloe account registered to this address.\n\n' +
     `Use the link below within ${RECOVERY_LINK_HOURS} hour to choose a new one. ` +
     'It can only be used once.\n\n' +
     'If this was not you, nothing has changed and you can ignore this email — ' +
@@ -58,7 +58,7 @@ export async function sendPasswordResetEmail(
 
     await provider.send({
       to: { email },
-      fromName: 'intro',
+      fromName: 'khloe',
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,

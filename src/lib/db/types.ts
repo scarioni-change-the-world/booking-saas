@@ -77,7 +77,7 @@ export interface TenantRow {
   /** Permanent override, independent of plan/trial state — see migration
    * 0018 for why this is a separate field from trial_ends_at. */
   free_access: boolean;
-  /** Paying intro (migration 0032): what Stripe's webhooks last said. */
+  /** Paying khloe (migration 0032): what Stripe's webhooks last said. */
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   subscription_status?: string | null;

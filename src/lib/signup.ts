@@ -1,5 +1,5 @@
 /**
- * The rules for somebody creating their own business on intro — pure, so the
+ * The rules for somebody creating their own business on khloe — pure, so the
  * sign-up page and the route give the same answers.
  *
  * Signing up is two steps, and the gap between them is the point: the form
@@ -21,8 +21,8 @@ export interface PendingBusiness {
 }
 
 /**
- * Web addresses no business may have: they read as part of intro itself,
- * or would confuse support ("go to intro.app/t/admin").
+ * Web addresses no business may have: they read as part of khloe itself,
+ * or would confuse support ("go to khloe.io/t/admin").
  */
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'admin',
@@ -35,6 +35,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'demo',
   'help',
   'intro',
+  'khloe',
   'login',
   'manage',
   'paid',
@@ -89,7 +90,7 @@ export function signupProblem(form: SignupForm): string | null {
   if (form.businessName.trim().length > BUSINESS_NAME_MAX) return 'That name is too long.';
   if (!isValidSlug(form.slug)) {
     return RESERVED_SLUGS.has(form.slug)
-      ? 'That web address is kept for intro itself. Choose another.'
+      ? 'That web address is kept for khloe itself. Choose another.'
       : 'A web address uses lowercase letters, numbers and single dashes, at least 3 characters.';
   }
   if (!/^[^\s@,;:<>]+@[^\s@,;:<>]+\.[^\s@,;:<>]+$/.test(form.email.trim())) {

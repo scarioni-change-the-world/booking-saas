@@ -24,7 +24,7 @@ import { stripe, stripeConfigured } from './stripe';
  *
  * A charge is made on the business's account (a direct charge), so the
  * business is the seller, sees it in its own Stripe, and pays Stripe's fee.
- * intro takes nothing.
+ * khloe takes nothing.
  */
 
 /** What a client pays online for this service, or null when nothing is paid online here. */
