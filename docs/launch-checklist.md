@@ -35,18 +35,18 @@ checkout, but only when all three of these are in place:
 - [ ] Terms of service page (not built yet), linked from signup.
 - [ ] **Khloe on khloe.io** (renamed in the app; see the next section for what
       is left to do outside the code).
-- [ ] Email plan: Resend's free tier stops at 100 emails a day (about 15
-      businesses).
+- [ ] Email plan: sending is through Gmail (about 500 emails a day). Before
+      that limit, move to a sender on khloe.io (for example Resend).
 
 ## The move to khloe.io
 
 The app's name is Khloe everywhere in the code. What is left is outside it:
 
-- [ ] DNS: point the marketing site at `khloe.io` and the app at `app.khloe.io`
+- [x] DNS: point the marketing site at `khloe.io` and the app at `app.khloe.io`
       (or whichever split you choose), both on Vercel.
-- [ ] Vercel, app project: `PUBLIC_BASE_URL=https://app.khloe.io` and
+- [x] Vercel, app project: `PUBLIC_BASE_URL=https://app.khloe.io` and
       `NEXT_PUBLIC_MARKETING_URL=https://khloe.io`, then redeploy.
-- [ ] Vercel, website project: `NEXT_PUBLIC_APP_URL=https://app.khloe.io` and
+- [x] Vercel, website project: `NEXT_PUBLIC_APP_URL=https://app.khloe.io` and
       `NEXT_PUBLIC_SITE_URL=https://khloe.io`.
 - [x] Supabase → Authentication → URL Configuration: site URL, and the redirect
       URLs `/admin/welcome` and `/admin/reset-password` on the new app address.
@@ -56,7 +56,7 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
       moves to the new app address; check the checkout branding.
 - [x] Support address: khloe.bookings@gmail.com (`SUPPORT_EMAIL` in
       `src/components/SignInLayout.tsx`).
-- [ ] Sending: `SMTP_*` and `EMAIL_FROM_ADDRESS` in Vercel moved to the new
+- [x] Sending: `SMTP_*` and `EMAIL_FROM_ADDRESS` in Vercel moved to the new
       account; `SIGNUP_ALERT_EMAIL` too.
-- [ ] Website: `CONTACT_EMAIL` in the site's `lib/config.ts`.
+- [x] Website: `CONTACT_EMAIL` in the site's `lib/config.ts`.
 - [ ] Update the privacy page placeholders, now that the domain exists.
