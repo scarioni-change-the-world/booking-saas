@@ -62,7 +62,34 @@ async function embedDomains(slug: string): Promise<string[]> {
  */
 const APP_ROUTES = new Set(['admin', 'api', 'console', 'manage', 'privacy', 'rate', 'signup', 't']);
 
+/**
+ * The app has one public address (PUBLIC_BASE_URL, app.khloe.io). Production
+ * is also reachable at its *.vercel.app address, and anyone who lands there —
+ * an old bookmark, an old email — signs in to a session that lives on that
+ * host only. So in production, a page request on any *.vercel.app host is
+ * sent to the same path on the real address. Preview deployments are left
+ * alone, and /api is outside this matcher, so Stripe's webhooks still arrive.
+ */
+function canonicalRedirect(request: NextRequest): NextResponse | null {
+  if (process.env.VERCEL_ENV !== 'production') return null;
+  const base = process.env.PUBLIC_BASE_URL?.trim();
+  if (!base) return null;
+  let target: URL;
+  try {
+    target = new URL(base);
+  } catch {
+    return null;
+  }
+  const host = request.headers.get('host') ?? request.nextUrl.host;
+  if (host === target.host || !host.endsWith('.vercel.app')) return null;
+  const url = new URL(request.nextUrl.pathname + request.nextUrl.search, target);
+  return NextResponse.redirect(url, 308);
+}
+
 export async function proxy(request: NextRequest) {
+  const moved = canonicalRedirect(request);
+  if (moved) return moved;
+
   const path = request.nextUrl.pathname;
   let slug: string | null = null;
   let response: NextResponse;
@@ -93,5 +120,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Everything except Next's own files, the API and files with an extension
   // (embed.js, images); the function above decides what is a booking page.
-  matcher: ['/((?!_next/|api/|.*\\..*).+)'],
+  // '/' is listed on its own because the pattern needs at least one character.
+  matcher: ['/', '/((?!_next/|api/|.*\\..*).+)'],
 };
