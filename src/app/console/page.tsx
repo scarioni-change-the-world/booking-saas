@@ -329,7 +329,7 @@ function Businesses({ tenants, health }: { tenants: Tenant[]; health: HealthPayl
                 {/* Their booking page is public, so this is the one place a
                     support person can see what a client sees without asking
                     anybody's permission for anything. */}
-                <a href={`/t/${t.slug}`} target="_blank" rel="noreferrer">
+                <a href={`/${t.slug}`} target="_blank" rel="noreferrer">
                   Their booking page →
                 </a>
                 {h?.activity && (

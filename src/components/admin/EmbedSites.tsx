@@ -127,7 +127,7 @@ export function EmbedSites({ slug }: { slug: string }) {
       {domains.length === 0 ? (
         <p className="notice notice-muted" style={{ marginTop: 16 }}>
           No sites listed yet, so your booking page can&apos;t be shown inside another site. It
-          still works on its own at <code>{origin}/t/{slug}</code>.
+          still works on its own at <code>{origin}/{slug}</code>.
         </p>
       ) : (
         <div style={{ marginTop: 20 }}>

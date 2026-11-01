@@ -22,7 +22,7 @@ import type { ClientRow, EmailStatus, TenantRow } from './db/types';
 /** The link itself — the whole point of the email. */
 export function clientBookingUrl(tenantSlug: string, accessToken: string): string {
   const base = baseUrl();
-  return `${base}/t/${encodeURIComponent(tenantSlug)}/client/${encodeURIComponent(accessToken)}`;
+  return `${base}/${encodeURIComponent(tenantSlug)}/client/${encodeURIComponent(accessToken)}`;
 }
 
 /**

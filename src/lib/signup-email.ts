@@ -90,7 +90,7 @@ export async function sendNewSignupAlert(
     to,
     {
       subject: 'New business on khloe: {business}',
-      body: '{business} (/t/{slug}) just signed up, as {owner}. It is on a 7-day trial.',
+      body: '{business} (/{slug}) just signed up, as {owner}. It is on a 7-day trial.',
     },
     { business: business.name, slug: business.slug, owner },
   );

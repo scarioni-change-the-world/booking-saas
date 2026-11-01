@@ -276,7 +276,7 @@ export default function ConsoleTenantPage() {
               )}
               <p className="wk-side-hint">
                 Counts and fixed words only — never their clients, questions or answers.{' '}
-                <a href={`/t/${tenant.slug}`} target="_blank" rel="noreferrer">
+                <a href={`/${tenant.slug}`} target="_blank" rel="noreferrer">
                   See their booking page →
                 </a>
               </p>

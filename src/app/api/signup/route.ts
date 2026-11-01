@@ -15,7 +15,7 @@ import { sendAlreadyRegisteredEmail, sendSignupConfirmEmail } from '@/lib/signup
  * route gives: anything else is a way to ask which people are customers.
  *
  * A web address already taken is said plainly: which businesses exist is
- * public anyway, at /t/<address>.
+ * public anyway, at /<address>.
  *
  * SETUP NOTE: `${baseUrl()}/admin/welcome` must be on Supabase's Redirect URLs
  * list (Authentication → URL Configuration), or the link lands on the Site

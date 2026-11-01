@@ -215,7 +215,7 @@ export function BookingPageCard({
               {busy === 'save' ? 'Saving…' : 'Save'}
             </button>
             {done && !dirty && <span className="ms-saved">Saved.</span>}
-            <a href={`/t/${slug}`} target="_blank" rel="noreferrer" className="bp-open">
+            <a href={`/${slug}`} target="_blank" rel="noreferrer" className="bp-open">
               Open your page
             </a>
           </div>

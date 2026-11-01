@@ -567,7 +567,7 @@ export default function ReportsPage() {
             )}
             <p className="wk-side-hint">
               Tag your own links to tell them apart: add <code>?ref=newsletter</code> (or any word) to your
-              booking link, e.g. <code>/t/{slug}?ref=instagram-bio</code>.
+              booking link, e.g. <code>/{slug}?ref=instagram-bio</code>.
             </p>
           </Section>
 

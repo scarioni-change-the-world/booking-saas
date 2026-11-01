@@ -22,7 +22,9 @@ export interface PendingBusiness {
 
 /**
  * Web addresses no business may have: they read as part of khloe itself,
- * or would confuse support ("go to khloe.io/t/admin").
+ * or would confuse support ("go to app.khloe.io/admin"). Every top-level
+ * route of the app is here too, since a booking page now lives at the root
+ * (app.khloe.io/<slug>, see proxy.ts).
  */
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'admin',
@@ -40,9 +42,11 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'manage',
   'paid',
   'privacy',
+  'rate',
   'signup',
   'stripe',
   'support',
+  't',
   'test',
   'www',
 ]);

@@ -53,13 +53,35 @@ async function embedDomains(slug: string): Promise<string[]> {
   }
 }
 
+/**
+ * The app's own top-level routes. Any other first segment is a business's
+ * booking page: app.khloe.io/mara-studio is served by /t/mara-studio (and
+ * /mara-studio/client/…, /mara-studio/paid likewise). /t/… keeps working —
+ * embeds already pasted into businesses' sites point there.
+ * signup.ts's RESERVED_SLUGS keeps every one of these out of reach of a slug.
+ */
+const APP_ROUTES = new Set(['admin', 'api', 'console', 'manage', 'privacy', 'rate', 'signup', 't']);
+
 export async function proxy(request: NextRequest) {
-  const match = /^\/t\/([^/]+)/.exec(request.nextUrl.pathname);
-  const response = NextResponse.next();
+  const path = request.nextUrl.pathname;
+  let slug: string | null = null;
+  let response: NextResponse;
 
-  if (!match) return response;
+  const long = /^\/t\/([^/]+)/.exec(path);
+  const short = /^\/([^/.]+)(\/.*)?$/.exec(path);
+  if (long) {
+    slug = long[1]!;
+    response = NextResponse.next();
+  } else if (short && !APP_ROUTES.has(short[1]!)) {
+    slug = short[1]!;
+    const url = request.nextUrl.clone();
+    url.pathname = `/t${path}`;
+    response = NextResponse.rewrite(url);
+  } else {
+    return NextResponse.next();
+  }
 
-  const domains = await embedDomains(decodeURIComponent(match[1]!));
+  const domains = await embedDomains(decodeURIComponent(slug));
 
   // Built by the same function the admin API validates against, so the
   // header can never be assembled from a shape that was never allowed to be
@@ -69,5 +91,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/t/:path*'],
+  // Everything except Next's own files, the API and files with an extension
+  // (embed.js, images); the function above decides what is a booking page.
+  matcher: ['/((?!_next/|api/|.*\\..*).+)'],
 };

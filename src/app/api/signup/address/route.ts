@@ -6,7 +6,7 @@ import { isValidSlug, RESERVED_SLUGS, slugCandidates, slugFromName } from '@/lib
  * Is this web address free? For the sign-up form, as somebody types their
  * business's name. Offers the next free numbered one when it is not.
  *
- * Tells nobody anything they could not learn by opening /t/<address>.
+ * Tells nobody anything they could not learn by opening /<address>.
  */
 export async function GET(request: Request) {
   try {

@@ -55,7 +55,7 @@ export default function PaidReturn({ slug, sessionId }: { slug: string; sessionI
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`/api/t/${encodeURIComponent(slug)}/payments/confirm`, {
+        const response = await fetch(`/api/${encodeURIComponent(slug)}/payments/confirm`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ sessionId }),
@@ -102,7 +102,7 @@ export default function PaidReturn({ slug, sessionId }: { slug: string; sessionI
                 <h1 className="bk-heading">We can’t find this payment</h1>
                 <p className="bk-lede">
                   If you paid, your confirmation email has everything. Otherwise,{' '}
-                  <a className="bk-textlink" href={`/t/${encodeURIComponent(slug)}`}>
+                  <a className="bk-textlink" href={`/${encodeURIComponent(slug)}`}>
                     start again from the booking page
                   </a>
                   .

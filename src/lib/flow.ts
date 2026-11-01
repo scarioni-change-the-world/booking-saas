@@ -393,10 +393,10 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
     find = {
       id: 'find',
       label: 'Your page',
-      short: `/t/${slug}`,
+      short: `/${slug}`,
       flag: null,
       title: 'They find it on your booking page',
-      detail: `/t/${slug}`,
+      detail: `/${slug}`,
       state: 'set',
       figure: counted ? { value: String(lane.started), label: 'chose it' } : null,
       change: { label: 'Change', href: settings },

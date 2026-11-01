@@ -401,7 +401,7 @@ function PersonPanel({
   const [grant, setGrant] = useState({ eventTypeId: '', sessions: '10' });
 
   const link = client && typeof window !== 'undefined'
-    ? `${window.location.origin}/t/${slug}/client/${client.accessToken}`
+    ? `${window.location.origin}/${slug}/client/${client.accessToken}`
     : '';
   const displayName = person.name ?? person.email ?? 'This person';
 

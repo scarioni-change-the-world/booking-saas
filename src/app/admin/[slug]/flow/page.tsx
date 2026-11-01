@@ -792,7 +792,7 @@ function StepDetail({
 function FindDetail({ slug, model, lane }: { slug: string; model: FlowModel; lane: Lane }) {
   const [url, setUrl] = useState('');
   const [copied, setCopied] = useState(false);
-  useEffect(() => setUrl(`${window.location.origin}/t/${slug}`), [slug]);
+  useEffect(() => setUrl(`${window.location.origin}/${slug}`), [slug]);
 
   async function copy() {
     try {
@@ -807,12 +807,12 @@ function FindDetail({ slug, model, lane }: { slug: string; model: FlowModel; lan
   return (
     <div>
       <p className="wk-side-eyebrow">Your booking page</p>
-      <code className="pp-link">{url || `/t/${slug}`}</code>
+      <code className="pp-link">{url || `/${slug}`}</code>
       <div className="wk-actions" style={{ marginTop: 10 }}>
         <button type="button" className="btn-secondary" onClick={() => void copy()} disabled={!url}>
           {copied ? 'Copied' : 'Copy link'}
         </button>
-        <a href={url || `/t/${slug}`} target="_blank" rel="noreferrer">
+        <a href={url || `/${slug}`} target="_blank" rel="noreferrer">
           Open it
         </a>
       </div>

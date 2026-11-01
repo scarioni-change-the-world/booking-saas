@@ -167,12 +167,17 @@ export default function SignupPage() {
           <label htmlFor="slug">Your booking page’s address</label>
           <div className="signin-address">
             <span className="signin-address__prefix" aria-hidden="true">
-              {origin}/t/
+              {origin}/
             </span>
             <input
               id="slug"
               type="text"
               required
+              // Not a contact or a login: keep browsers and password managers from
+              // offering to fill it (their icon sat inside the field).
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
               autoCapitalize="none"
               spellCheck={false}
               aria-describedby="slug-state"

@@ -217,7 +217,7 @@ function BusinessCard({ slug, account, onSaved }: { slug: string; account: Accou
       </div>
       <div className="field">
         <label htmlFor="acct-address">Web address</label>
-        <input id="acct-address" type="text" value={`/t/${account.business.slug}`} readOnly />
+        <input id="acct-address" type="text" value={`/${account.business.slug}`} readOnly />
         <p className="field-note">Fixed, so links you have already shared keep working.</p>
       </div>
       <div className="field">

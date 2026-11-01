@@ -149,7 +149,7 @@ export default function BookingFlow({ slug, mode, test }: Props) {
       aside={
         (journey.phase === 'service' || journey.phase === 'email') && journey.config ? (
           <>
-            Worked with {journey.config.name} before? <a href={`/t/${slug}/client`}>Get your booking link</a>
+            Worked with {journey.config.name} before? <a href={`/${slug}/client`}>Get your booking link</a>
           </>
         ) : undefined
       }

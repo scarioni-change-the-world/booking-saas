@@ -30,7 +30,7 @@ export default function ClientLinkRequest({ slug }: Props) {
   const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const base = `/api/t/${encodeURIComponent(slug)}`;
+  const base = `/api/${encodeURIComponent(slug)}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +78,7 @@ export default function ClientLinkRequest({ slug }: Props) {
               <h1 className="bk-heading">Check your inbox</h1>
               <p className="bk-lede">{sent}</p>
               <p className="bk-after">
-                <a className="bk-textlink" href={`/t/${slug}`}>
+                <a className="bk-textlink" href={`/${slug}`}>
                   Back to booking
                 </a>
               </p>
@@ -114,7 +114,7 @@ export default function ClientLinkRequest({ slug }: Props) {
                 {busy ? 'Sending…' : 'Send my link'}
               </button>
               <p className="bk-after">
-                <a className="bk-textlink" href={`/t/${slug}`}>
+                <a className="bk-textlink" href={`/${slug}`}>
                   First time? Book from the start
                 </a>
               </p>

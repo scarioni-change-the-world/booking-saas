@@ -136,8 +136,8 @@ export async function startCheckout(
   const slug = encodeURIComponent(tenant.slug);
   const back =
     input.from === 'client-link' && input.clientToken
-      ? `${baseUrl()}/t/${slug}/client/${encodeURIComponent(input.clientToken)}`
-      : `${baseUrl()}/t/${slug}`;
+      ? `${baseUrl()}/${slug}/client/${encodeURIComponent(input.clientToken)}`
+      : `${baseUrl()}/${slug}`;
   const what = due.sessions > 1 ? `${eventType.name} — ${due.sessions} sessions` : eventType.name;
 
   try {
@@ -165,7 +165,7 @@ export async function startCheckout(
           metadata: { payment_id: payment.id, tenant_id: tenant.id },
         },
         expires_at: Math.floor(expiresAt.toSeconds()),
-        success_url: `${baseUrl()}/t/${slug}/paid?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${baseUrl()}/${slug}/paid?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: back,
       },
       { stripeAccount: tenant.stripe_account_id! },
