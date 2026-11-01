@@ -54,7 +54,7 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
       client keys in Vercel, app published, calendar connection tested.
 - [x] Google: khloe.io ownership verified in Search Console (TXT record in
       Vercel DNS; keep it, or verification lapses).
-- [ ] Google: branding verification submitted (Branding → Verify branding).
+- [x] Google: branding verified (Branding → Verify branding), then Publish branding.
 - [ ] Google: demo video recorded, then scope verification submitted
       (Verification Center). Removes the "unverified app" warning.
 - [ ] Stripe: rename the business and the product to Khloe; the webhook URL
