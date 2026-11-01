@@ -102,6 +102,30 @@ export function frameAncestors(domains: readonly string[]): string {
 }
 
 /**
+ * The business's own website (Account → Your website), as frame hosts: its
+ * host and the same host with or without "www.", since sites answer on
+ * both. Run through the same strict shape as a typed domain, so nothing
+ * reaches the header that could not have been typed into the list.
+ *
+ * Allowed without being listed because it is the one site the business has
+ * already told us is theirs — and the place their clients come from.
+ */
+export function websiteFrameHosts(websiteUrl?: string | null): string[] {
+  if (!websiteUrl) return [];
+  const host = normaliseEmbedDomain(websiteUrl);
+  if (!host || host.startsWith('*.')) return [];
+  const twin = normaliseEmbedDomain(host.startsWith('www.') ? host.slice(4) : `www.${host}`);
+  return twin && twin !== host ? [host, twin] : [host];
+}
+
+/** Everything allowed to frame the page: the typed list, then the website. */
+export function allowedFrameHosts(listed: readonly string[], websiteUrl?: string | null): string[] {
+  const all = [...listed];
+  for (const h of websiteFrameHosts(websiteUrl)) if (!all.includes(h)) all.push(h);
+  return all;
+}
+
+/**
  * The snippet a tenant pastes into their own site.
  *
  * An iframe plus one script tag. The script is what makes the difference
@@ -110,8 +134,9 @@ export function frameAncestors(domains: readonly string[]): string {
  * and picking a time, and a fixed-height frame either scrolls inside itself
  * — miserable on a phone — or cuts the confirmation off.
  */
-export function embedSnippet(baseUrl: string, slug: string): string {
-  const src = `${baseUrl}/t/${slug}`;
+export function embedSnippet(baseUrl: string, slug: string, service?: string | null): string {
+  // One service only (Share's picker): the page starts on it, list one step back.
+  const src = `${baseUrl}/t/${slug}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
   return [
     `<iframe`,
     `  src="${src}"`,

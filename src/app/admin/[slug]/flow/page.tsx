@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
-import { EmbedSites } from '@/components/admin/EmbedSites';
 import { Dial, Grille, Lamp } from '@/components/admin/Instruments';
 import {
   asksQuestions,
@@ -310,12 +309,17 @@ export default function FlowPage() {
         description="Choose a service to configure it."
         actions={
           model && !trying ? (
-            <button type="button" className="btn-primary btn-add" onClick={() => setAdding(true)}>
-              <span className="btn-add-plus" aria-hidden="true">
-                +
-              </span>
-              Add a service
-            </button>
+            <>
+              <a className="btn-secondary" href={`/admin/${slug}/share`}>
+                Share your page
+              </a>
+              <button type="button" className="btn-primary btn-add" onClick={() => setAdding(true)}>
+                <span className="btn-add-plus" aria-hidden="true">
+                  +
+                </span>
+                Add a service
+              </button>
+            </>
           ) : undefined
         }
       />
@@ -853,10 +857,11 @@ function FindDetail({ slug, model, lane }: { slug: string; model: FlowModel; lan
           the questions. <a href={`/admin/${slug}/people`}>See them in People</a>
         </p>
       )}
-      <details className="fl-embed">
-        <summary>Put it on your own website</summary>
-        <EmbedSites slug={slug} />
-      </details>
+      <p className="wk-side-hint">
+        <a href={`/admin/${slug}/share?service=${encodeURIComponent(lane.id)}`}>
+          Share {lane.name} on its own, or put it on your website
+        </a>
+      </p>
     </div>
   );
 }

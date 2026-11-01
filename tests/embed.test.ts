@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_EMBED_DOMAINS,
+  allowedFrameHosts,
+  websiteFrameHosts,
   embedSnippet,
   frameAncestors,
   normaliseEmbedDomain,
@@ -115,5 +117,37 @@ describe('embedSnippet', () => {
     expect(snippet).toContain('https://app.example.com/t/acme');
     expect(snippet).toContain('https://app.example.com/embed.js');
     expect(snippet).toContain('<iframe');
+  });
+});
+
+
+describe('websiteFrameHosts', () => {
+  it('allows the website with and without www', () => {
+    expect(websiteFrameHosts('https://mara.studio')).toEqual(['mara.studio', 'www.mara.studio']);
+    expect(websiteFrameHosts('https://www.mara.studio/coaching')).toEqual(['www.mara.studio', 'mara.studio']);
+  });
+
+  it('allows nothing without a usable website', () => {
+    expect(websiteFrameHosts(null)).toEqual([]);
+    expect(websiteFrameHosts('not a site; script-src *')).toEqual([]);
+  });
+});
+
+describe('allowedFrameHosts', () => {
+  it('adds the website after the listed sites, without repeats', () => {
+    expect(allowedFrameHosts(['mara.studio', 'blog.example.com'], 'https://mara.studio')).toEqual([
+      'mara.studio',
+      'blog.example.com',
+      'www.mara.studio',
+    ]);
+  });
+});
+
+describe('embedSnippet for one service', () => {
+  it('starts the frame on that service', () => {
+    expect(embedSnippet('https://app.khloe.io', 'mara', 'discovery-call')).toContain(
+      'src="https://app.khloe.io/t/mara?service=discovery-call"',
+    );
+    expect(embedSnippet('https://app.khloe.io', 'mara')).toContain('src="https://app.khloe.io/t/mara"');
   });
 });

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { frameAncestors } from '@/lib/embed';
+import { allowedFrameHosts, frameAncestors } from '@/lib/embed';
 
 /**
  * Per-tenant frame-ancestors (brief 7.2).
@@ -38,13 +38,17 @@ async function embedDomains(slug: string): Promise<string[]> {
 
   try {
     const response = await fetch(
-      `${url}/rest/v1/tenants?slug=eq.${encodeURIComponent(slug)}&select=embed_domains`,
+      `${url}/rest/v1/tenants?slug=eq.${encodeURIComponent(slug)}&select=embed_domains,branding`,
       { headers: { apikey: key, authorization: `Bearer ${key}` } },
     );
     if (!response.ok) return [];
 
-    const rows = (await response.json()) as Array<{ embed_domains: string[] }>;
-    const domains = rows[0]?.embed_domains ?? [];
+    const rows = (await response.json()) as Array<{
+      embed_domains: string[];
+      branding: { websiteUrl?: string } | null;
+    }>;
+    // The listed sites, plus the business's own website (lib/embed.ts).
+    const domains = allowedFrameHosts(rows[0]?.embed_domains ?? [], rows[0]?.branding?.websiteUrl);
     cache.set(slug, { domains, expires: Date.now() + TTL_MS });
     return domains;
   } catch {

@@ -9841,3 +9841,64 @@ body:has(.bk-embedded) {
   letter-spacing: 0.02em;
   color: var(--accent);
 }
+
+/* ── Share (/admin/[slug]/share): the link, the code, where to paste it ── */
+.sh {
+  display: grid;
+  gap: 18px;
+  max-width: 860px;
+}
+.sh-card {
+  margin: 0;
+}
+.sh-lead {
+  margin: 4px 0 12px;
+}
+.sh-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+.sh-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.sh-link {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--app-canvas);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.sh-allowed {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.sh-builder {
+  border-top: 1px solid var(--rule);
+  padding: 10px 0;
+}
+.sh-builder:last-of-type {
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 12px;
+}
+.sh-builder > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sh-builder ol {
+  margin: 10px 0 4px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.sh-builder form {
+  margin-top: 10px;
+}

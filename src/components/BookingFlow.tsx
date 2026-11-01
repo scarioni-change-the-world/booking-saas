@@ -42,10 +42,12 @@ interface Props {
   mode?: BookingMode;
   /** A test run from Flow: nothing is saved, held or sent. */
   test?: boolean;
+  /** Start on this service (its web address), from a Share link or embed. */
+  service?: string;
 }
 
-export default function BookingFlow({ slug, mode, test }: Props) {
-  const journey = useBookingJourney(slug, { test });
+export default function BookingFlow({ slug, mode, test, service }: Props) {
+  const journey = useBookingJourney(slug, { test, service });
   useHostHeight();
 
   /**

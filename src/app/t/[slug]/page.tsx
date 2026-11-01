@@ -13,7 +13,7 @@ export default async function ProspectBookingPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ mode?: string; test?: string }>;
+  searchParams: Promise<{ mode?: string; test?: string; service?: string }>;
 }) {
   const { slug } = await params;
   // ?mode=embedded forces the embedded shell for a customer who frames this
@@ -21,6 +21,15 @@ export default async function ProspectBookingPage({
   // Anything else falls through to the component's own detection.
   // ?test=1 is Flow's test run. It changes nothing by itself: the server
   // honours it only for a signed-in admin of this business.
-  const { mode, test } = await searchParams;
-  return <BookingFlow slug={slug} mode={mode === 'embedded' ? 'embedded' : undefined} test={test === '1'} />;
+  // ?service=<its web address> starts on that one service (Share's
+  // one-service link and embed); the list is still one step back.
+  const { mode, test, service } = await searchParams;
+  return (
+    <BookingFlow
+      slug={slug}
+      mode={mode === 'embedded' ? 'embedded' : undefined}
+      test={test === '1'}
+      service={typeof service === 'string' && service ? service : undefined}
+    />
+  );
 }

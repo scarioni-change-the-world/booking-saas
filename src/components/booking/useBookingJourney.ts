@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Phase, StepId } from './journey';
 import { applicableSteps, previousStep, stepIdFor } from './journey';
 import type { DaySlots, PublicConfig, PublicEventType, PublicQuestion } from '../types';
@@ -71,7 +71,7 @@ export interface OtherPath {
   label: string | null;
 }
 
-export function useBookingJourney(slug: string, options: { test?: boolean } = {}) {
+export function useBookingJourney(slug: string, options: { test?: boolean; service?: string } = {}) {
   const test = options.test === true;
   const api = useMemo(
     () => ({
@@ -211,9 +211,23 @@ export function useBookingJourney(slug: string, options: { test?: boolean } = {}
     [base, responseId, api],
   );
 
-  // Auto-skip the service picker when there is only one choice (brief 2.3).
+  // Auto-skip the service picker when there is only one choice (brief 2.3),
+  // or when the link or embed names one (?service=<its web address>, from
+  // Share). The named one is honoured once: going back to the list later
+  // shows every service, not the same choice again. A name that matches
+  // nothing (a paused or renamed service) simply shows the list.
+  const preselect = useRef(options.service ?? null);
   useEffect(() => {
-    if (phase === 'service' && eventTypes.length === 1) {
+    if (phase !== 'service') return;
+    if (preselect.current) {
+      const named = eventTypes.find((t) => t.slug === preselect.current);
+      if (eventTypes.length > 0) preselect.current = null;
+      if (named) {
+        void chooseEventType(named);
+        return;
+      }
+    }
+    if (eventTypes.length === 1) {
       void chooseEventType(eventTypes[0]!);
     }
   }, [phase, eventTypes, chooseEventType]);

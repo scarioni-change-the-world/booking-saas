@@ -2,7 +2,7 @@ import { handleError, ok, readJson } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { BookingError } from '@/lib/booking-service';
 import { replaceTenantEmbedDomains, tenantEmbedDomains } from '@/lib/db/tenants';
-import { MAX_EMBED_DOMAINS, normaliseEmbedDomains } from '@/lib/embed';
+import { MAX_EMBED_DOMAINS, normaliseEmbedDomains, websiteFrameHosts } from '@/lib/embed';
 
 /**
  * Which sites may frame this tenant's booking widget.
@@ -21,7 +21,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
   try {
     const { slug } = await ctx.params;
     const { tenant } = await requireTenantAdmin(request, slug);
-    return ok({ domains: await tenantEmbedDomains(tenant.id) });
+    return ok({
+      domains: await tenantEmbedDomains(tenant.id),
+      // Allowed without being listed: the business's own website.
+      fromWebsite: websiteFrameHosts(tenant.branding?.websiteUrl),
+    });
   } catch (error) {
     return handleError(error);
   }
