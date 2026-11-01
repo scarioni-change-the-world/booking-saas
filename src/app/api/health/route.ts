@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveTenantBySlug } from '@/lib/db';
 import { schemaState, type SchemaState } from '@/lib/db/migrations';
+import { baseUrl } from '@/lib/base-url';
 
 /**
  * Is this deployment configured, and can it reach its database?
@@ -67,6 +68,9 @@ export async function GET() {
     // assistant says so rather than offering an empty draft, and no base URL
     // falls back to the host's own.
     publicBaseUrl: isSet(process.env.PUBLIC_BASE_URL),
+    // The address every emailed and calendar link is built on. Not a secret —
+    // it is in every email — and the one value worth seeing, not just "set".
+    linksUseAddress: baseUrl() || null,
     // Split, because SMTP_HOST alone is what flips the app from logging mail
     // to really sending it — while the other three are what decide whether
     // that send can succeed. One boolean covering all four would have read
