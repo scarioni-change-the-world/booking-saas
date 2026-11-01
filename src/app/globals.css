@@ -8129,6 +8129,19 @@ body:has(.bk-embedded) {
   gap: 8px 24px;
   border-bottom: 1px solid var(--soft-border);
 }
+.bk-masthead-back {
+  padding-left: 24px;
+  border-left: 1px solid var(--soft-border);
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.bk-masthead-back:hover,
+.bk-masthead-back:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .bk-masthead-aside {
   margin-left: auto;
   font-size: 0.88rem;
@@ -8404,21 +8417,25 @@ body:has(.bk-embedded) {
   color: var(--ink);
 }
 
-/* ── Keys: round-ended; the main one an outline in the business's colour ── */
+/* ── Keys: round-ended; the main one filled in the business's colour ──
+   Filled so the way forward is the first thing seen on each step, and in
+   the business's own colour so the page reads as theirs. Soft White on the
+   colour is safe: brand-colour.ts only accepts colours at 4.5:1 or more
+   against white, and contrast works both ways. */
 .bk .btn-primary {
   min-height: 52px;
   padding: 0 32px;
   border: 2px solid var(--accent);
   border-radius: 999px;
-  background: transparent;
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--surface);
   font-weight: 600;
   box-shadow: none;
 }
 .bk .btn-primary:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+  background: var(--accent-ink);
+  color: var(--surface);
 }
 .bk .btn-primary:disabled {
   border-color: var(--stone-border);
@@ -8800,6 +8817,13 @@ body:has(.bk-embedded) {
     margin-left: 0;
     font-size: 0.82rem;
   }
+  /* On a phone it drops under the name, so the divider beside it goes. */
+  .bk-masthead-back {
+    flex-basis: 100%;
+    padding-left: 0;
+    border-left: 0;
+    font-size: 0.82rem;
+  }
   .bk-lamps {
     gap: 8px;
   }
@@ -9035,7 +9059,8 @@ body:has(.bk-embedded) {
   padding: 6px 16px;
   border: 1.5px solid var(--accent);
   border-radius: 999px;
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--surface);
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -9798,4 +9823,14 @@ body:has(.bk-embedded) {
   background: var(--accent-tint);
   color: var(--ink);
   font-size: 0.95rem;
+}
+
+/* Booking page: how many questions, and roughly how long, under the heading
+   of the email step. Small and quiet: it informs, it does not compete. */
+.bk .bk-estimate {
+  margin: -4px 0 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
 }

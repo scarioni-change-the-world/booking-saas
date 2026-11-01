@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { questionsEstimate, questionsLede } from '@/lib/question-estimate';
 import { DateNavigator } from './DateNavigator';
 import { ProgressHeader } from './ProgressHeader';
 import {
@@ -225,9 +226,11 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       {phase === 'email' && (
         <section>
           <h1 className="bk-heading">Before we find a time</h1>
+          {/* How much is coming, said before the most personal ask: the real
+              count for this service, which may be one question or ten. */}
+          {questionsEstimate(questions) && <p className="bk-estimate">{questionsEstimate(questions)}</p>}
           <p className="bk-lede">
-            A few short questions will help {config?.name ?? 'us'} understand what you need.
-            First, where can we reach you?
+            {questionsLede(questions.length, config?.name ?? 'us')} First, where can we reach you?
           </p>
 
           <form onSubmit={submitEmail} className="bk-form">
@@ -258,9 +261,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
       {phase === 'questions' && (
         <section>
           <h1 className="bk-heading">Before we find a time</h1>
-          <p className="bk-lede">
-            A few short questions will help {config?.name ?? 'us'} understand what you need.
-          </p>
+          <p className="bk-lede">{questionsLede(questions.length, config?.name ?? 'us')}</p>
 
           <form onSubmit={submitAnswers} className="bk-form">
             {questions.map((question, i) => {

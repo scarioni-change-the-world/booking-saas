@@ -63,6 +63,16 @@ export default function AccountPage() {
     void load();
   }, [load]);
 
+  // Arriving from Services' "Set up your booking page": the card only exists
+  // once the account has loaded, so the browser's own jump to #booking-page
+  // has nothing to land on. Done once, after the first load.
+  const loaded = account !== null;
+  useEffect(() => {
+    if (loaded && window.location.hash === '#booking-page') {
+      document.getElementById('booking-page')?.scrollIntoView({ block: 'start' });
+    }
+  }, [loaded]);
+
   const a = (path: string) => `/admin/${slug}/${path}`;
 
   return (

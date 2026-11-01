@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { BRAND_PRESETS, DEFAULT_BRAND, brandRefusal, checkBrandColour } from '@/lib/brand-colour';
 import { Nameplate } from '@/components/booking/Nameplate';
@@ -10,6 +10,7 @@ export interface Branding {
   logoUrl: string | null;
   accentColor: string | null;
   nameBesideLogo: boolean;
+  websiteUrl: string | null;
 }
 
 /**
@@ -33,6 +34,9 @@ export function BookingPageCard({
   const [colour, setColour] = useState(saved.accentColor ?? DEFAULT_BRAND);
   const [custom, setCustom] = useState(saved.accentColor ?? '');
   const [nameBeside, setNameBeside] = useState(saved.nameBesideLogo);
+  const [website, setWebsite] = useState(saved.websiteUrl ?? '');
+  // The server tidies what was typed ("mara.studio" → "https://mara.studio"); show what it kept.
+  useEffect(() => setWebsite(saved.websiteUrl ?? ''), [saved.websiteUrl]);
   const [busy, setBusy] = useState<null | 'save' | 'upload' | 'remove'>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -40,7 +44,10 @@ export function BookingPageCard({
 
   const check = checkBrandColour(colour);
   const savedColour = saved.accentColor ?? DEFAULT_BRAND;
-  const dirty = colour.toLowerCase() !== savedColour.toLowerCase() || nameBeside !== saved.nameBesideLogo;
+  const dirty =
+    colour.toLowerCase() !== savedColour.toLowerCase() ||
+    nameBeside !== saved.nameBesideLogo ||
+    website.trim() !== (saved.websiteUrl ?? '');
   const shown = check.ok ? check.hex : DEFAULT_BRAND;
 
   async function run(kind: 'save' | 'upload' | 'remove', request: () => Promise<unknown>) {
@@ -68,6 +75,7 @@ export function BookingPageCard({
         body: JSON.stringify({
           accentColor: check.hex === DEFAULT_BRAND ? null : check.hex,
           nameBesideLogo: nameBeside,
+          websiteUrl: website.trim() || null,
         }),
       }),
     );
@@ -80,7 +88,7 @@ export function BookingPageCard({
   }
 
   return (
-    <form className="card acct-card" onSubmit={save}>
+    <form className="card acct-card" id="booking-page" onSubmit={save}>
       <div className="admin-card-title">Your booking page</div>
       {error && (
         <p className="notice notice-error" role="alert">
@@ -209,6 +217,26 @@ export function BookingPageCard({
               read, can’t be chosen.
             </p>
           </fieldset>
+
+          <div className="field">
+            <label className="bp-label" htmlFor="bp-website">
+              Your website
+            </label>
+            <input
+              id="bp-website"
+              type="text"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="www.yoursite.com"
+              maxLength={200}
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+            <p className="field-note">
+              Your clients usually arrive from your own website. With it here, your booking page shows a “Back to
+              your website” link at the top, so they can always return.
+            </p>
+          </div>
 
           <div className="wk-actions" style={{ marginTop: 0 }}>
             <button type="submit" className="btn-primary" disabled={!dirty || !check.ok || busy !== null}>

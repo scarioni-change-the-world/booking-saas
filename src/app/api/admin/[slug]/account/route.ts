@@ -34,6 +34,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         logoUrl: tenant.branding?.logoUrl ?? null,
         accentColor: tenant.branding?.accentColor ?? null,
         nameBesideLogo: tenant.branding?.nameBesideLogo ?? false,
+        websiteUrl: tenant.branding?.websiteUrl ?? null,
       },
       currency:
         (settings.data as unknown as TenantSettingsRow | null)?.currency ?? DEFAULT_CURRENCY,

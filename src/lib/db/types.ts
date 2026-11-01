@@ -58,6 +58,8 @@ export interface TenantBranding {
    * already carry the name. With no logo the name always shows. */
   nameBesideLogo?: boolean;
   buttonColor?: string;
+  /** The business's own website: the booking page's way back (lib/website.ts). */
+  websiteUrl?: string;
 }
 
 export interface TenantRow {

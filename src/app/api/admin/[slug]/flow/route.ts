@@ -157,6 +157,13 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     return ok({
       ...input,
       timezone: tenant.timezone,
+      // What the booking page still lacks to look like the business's own
+      // (Services nudges towards Account → Your booking page).
+      branding: {
+        logo: Boolean(tenant.branding?.logoUrl),
+        colour: Boolean(tenant.branding?.accentColor),
+        website: Boolean(tenant.branding?.websiteUrl),
+      },
       nextUp: ((nextUp.data ?? []) as unknown as NextUpJoin[]).map((b) => ({
         id: b.id,
         name: b.name,

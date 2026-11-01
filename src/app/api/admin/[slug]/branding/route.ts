@@ -4,6 +4,7 @@ import { brandRefusal, checkBrandColour } from '@/lib/brand-colour';
 import { removeTenantLogo, replaceTenantLogo, updateTenantBranding } from '@/lib/db/branding';
 import { checkLogo } from '@/lib/logo-file';
 import type { TenantBranding } from '@/lib/db/types';
+import { normaliseWebsite } from '@/lib/website';
 
 /**
  * How the business's booking page looks: its logo, whether its name shows
@@ -16,18 +17,22 @@ function view(branding: TenantBranding) {
       logoUrl: branding.logoUrl ?? null,
       accentColor: branding.accentColor ?? null,
       nameBesideLogo: branding.nameBesideLogo ?? false,
+      websiteUrl: branding.websiteUrl ?? null,
     },
   };
 }
 
-/** The colour and the name choice. `accentColor: null` goes back to Mineral. */
+/**
+ * The colour, the name choice and the website. `accentColor: null` goes back
+ * to Mineral; an empty or null `websiteUrl` removes the link.
+ */
 export async function PATCH(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await ctx.params;
     const { tenant } = await requireTenantAdmin(request, slug);
     const body = await readJson(request);
 
-    const patch: { accentColor?: string | null; nameBesideLogo?: boolean } = {};
+    const patch: { accentColor?: string | null; nameBesideLogo?: boolean; websiteUrl?: string | null } = {};
     if ('accentColor' in body) {
       if (body.accentColor === null) {
         patch.accentColor = null;
@@ -37,6 +42,11 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ slug: str
         if (!check.ok) return fail(brandRefusal(check), 400);
         patch.accentColor = check.hex;
       }
+    }
+    if ('websiteUrl' in body) {
+      const site = normaliseWebsite(body.websiteUrl);
+      if (!site.ok) return fail(site.message, 400);
+      patch.websiteUrl = site.url;
     }
     const nameBesideLogo = optionalBoolean(body, 'nameBesideLogo');
     if (nameBesideLogo !== undefined) patch.nameBesideLogo = nameBesideLogo;

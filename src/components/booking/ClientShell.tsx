@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { accentStyle } from '../brand';
 import { Nameplate, type NameplateBranding } from './Nameplate';
+import { normaliseWebsite, websiteLabel } from '@/lib/website';
 
 export interface ShellBusiness {
   name: string;
-  branding?: (NameplateBranding & { accentColor?: string | null }) | null;
+  branding?: (NameplateBranding & { accentColor?: string | null; websiteUrl?: string | null }) | null;
 }
 
 /**
@@ -17,6 +18,12 @@ export interface ShellBusiness {
  * The embedded booking page does not: framed inside the business's own
  * website, their site is already the nameplate.
  */
+/** The business's own site, re-checked here rather than trusted: it becomes a link. */
+function backTo(business: ShellBusiness | null): string | null {
+  const site = normaliseWebsite(business?.branding?.websiteUrl);
+  return site.ok ? site.url : null;
+}
+
 export function ClientShell({
   business,
   aside,
@@ -27,10 +34,17 @@ export function ClientShell({
   aside?: ReactNode;
   children: ReactNode;
 }) {
+  const website = backTo(business);
   return (
     <div className="bk bk-standalone" style={accentStyle(business?.branding?.accentColor)}>
       <header className="bk-masthead">
         {business ? <Nameplate name={business.name} branding={business.branding} /> : <span />}
+        {/* Clients usually arrive from the business's own website: the way back. */}
+        {website && (
+          <a className="bk-masthead-back" href={website}>
+            ← Back to {websiteLabel(website)}
+          </a>
+        )}
         {aside && <div className="bk-masthead-aside">{aside}</div>}
       </header>
       <main className="bk-page">{children}</main>

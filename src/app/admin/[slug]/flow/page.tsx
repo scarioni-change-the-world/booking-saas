@@ -39,6 +39,21 @@ interface NextUp {
 interface Payload extends FlowInput {
   timezone: string;
   nextUp: NextUp[];
+  branding?: { logo: boolean; colour: boolean; website: boolean };
+}
+
+/**
+ * What the booking page still lacks to read as the business's own, in plain
+ * words, or null when it has it all. Clients arrive from the business's own
+ * site; a page with no logo and khloe's default colour feels like leaving it.
+ */
+function brandingGaps(b: Payload['branding']): string | null {
+  if (!b) return null;
+  const missing = [!b.logo && 'your logo', !b.colour && 'your colour', !b.website && 'your website'].filter(
+    Boolean,
+  ) as string[];
+  if (missing.length === 0) return null;
+  return missing.length === 1 ? missing[0]! : `${missing.slice(0, -1).join(', ')} and ${missing.at(-1)}`;
 }
 
 
@@ -304,6 +319,13 @@ export default function FlowPage() {
           ) : undefined
         }
       />
+
+      {data && brandingGaps(data.branding) && (
+        <p className="notice notice-muted fc-brand-nudge" role="status">
+          Make your booking page look like your own site before you share it: add {brandingGaps(data.branding)}.{' '}
+          <a href={`/admin/${slug}/account#booking-page`}>Set up your booking page</a>
+        </p>
+      )}
 
       {deletedNote && (
         <p className="notice notice-muted" role="status">

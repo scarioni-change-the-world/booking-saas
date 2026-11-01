@@ -115,6 +115,13 @@ export default function PrivacyPage() {
             keep only whether it was paid or refunded, never your card details.
           </p>
           <p>
+            <strong>Before you finish booking:</strong> when a business asks questions before showing its
+            times, your email address is asked for first, and it and any answers you have given are kept even
+            if you stop before booking. That lets the business reply to you whatever happens, and see where
+            its booking page loses people. The business may use your address to reply to your enquiry; it
+            may not send you marketing unless you agree to it.
+          </p>
+          <p>
             <strong>After a session:</strong> the business can mark whether it took place. If it has
             chosen to, we send you one short email afterwards asking how it went; the score from one to
             five and any comment you write go to that business. You can ignore the email — nothing
