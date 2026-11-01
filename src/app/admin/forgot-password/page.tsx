@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   // Staff arrive from the console's sign-in; "back" should return them there.
   // Read after mounting, as this page is prerendered without the query.
-  const [backTo, setBackTo] = useState('/admin/login');
+  const [backTo, setBackTo] = useState('/');
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('from') === 'console') {
       setBackTo('/console/login');

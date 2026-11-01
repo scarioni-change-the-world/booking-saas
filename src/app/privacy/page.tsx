@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           <a className="legal-wordmark" href={WEBSITE}>
             khloe
           </a>
-          <a className="legal-key" href="/admin/login">
+          <a className="legal-key" href="/">
             Sign in
           </a>
         </div>

@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
       // The password change stuck either way, so never report this as a
       // failure to change it. Sign-in is where an unlinked account gets the
       // explanation it needs.
-      window.location.href = staff.ok ? '/console' : '/admin/login';
+      window.location.href = staff.ok ? '/console' : '/';
     } catch (cause) {
       setError((cause as Error).message);
       setBusy(false);
@@ -160,7 +160,7 @@ export default function ResetPasswordPage() {
           send us the address you sign in with and we&apos;ll sort it out.
         </p>
         <p className="signin-aside">
-          <a href="/admin/login">Back to sign in</a>
+          <a href="/">Back to sign in</a>
         </p>
       </SignInLayout>
     );

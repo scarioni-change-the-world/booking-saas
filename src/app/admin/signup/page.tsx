@@ -276,7 +276,7 @@ export default function SignupPage() {
       </form>
 
       <p className="signin-aside">
-        Already have an account? <a href="/admin/login">Sign in</a>
+        Already have an account? <a href="/">Sign in</a>
       </p>
     </SignInLayout>
   );

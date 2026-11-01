@@ -49,8 +49,9 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
       `NEXT_PUBLIC_SITE_URL=https://khloe.io`.
 - [x] Supabase → Authentication → URL Configuration: site URL, and the redirect
       URLs `/admin/welcome` and `/admin/reset-password` on the new app address.
-- [ ] Google Cloud (sign-in and Calendar): app name Khloe, homepage and privacy
-      policy on khloe.io, the new redirect URI, then submit for verification.
+- [ ] Google Cloud (Calendar): app name Khloe, homepage `https://khloe.io` (not
+      the app: its `/` is the sign-in page), privacy policy
+      `https://app.khloe.io/privacy`, redirect URI, then submit for verification.
 - [ ] Stripe: rename the business and the product to Khloe; the webhook URL
       moves to the new app address; check the checkout branding.
 - [x] Support address: khloe.bookings@gmail.com (`SUPPORT_EMAIL` in

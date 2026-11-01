@@ -314,13 +314,15 @@ moves the whole grant into a higher scrutiny tier. Verify the tier in the Cloud
 Console scope picker, which is authoritative — third-party write-ups on this are
 frequently wrong.
 
-The consent-screen homepage must be **this app's `/` route**, not a customer's
-site (§6.5). Squarespace's default `robots.txt` blocks `GoogleOther`, so Google's
-branding reviewer could not read the page at all and reported "homepage does not
-explain the purpose of your app" — an error no amount of editing the copy could
-fix, because the copy was never being read. `src/app/page.tsx` is written for
-that reviewer: publicly reachable, no login, and explicit about what the app does
-with calendar data.
+The consent-screen homepage is **the website, https://khloe.io** — a domain we
+control, never a customer's site (§6.5). Squarespace's default `robots.txt`
+blocks `GoogleOther`, so Google's branding reviewer once could not read a
+customer-hosted page at all and reported "homepage does not explain the purpose
+of your app". The app's own `/` is the sign-in page, which a reviewer would
+reject for the same reason (a login form explains nothing), so it is not the
+homepage. The website must stay publicly readable, say what khloe does, name it
+"Khloe" exactly as the consent screen does, and link to the privacy policy
+(https://app.khloe.io/privacy), which describes the calendar data use.
 
 **Start verification before you need it.** It takes days to weeks and blocks
 launch. A multi-tenant app needs External + Production publishing, which makes

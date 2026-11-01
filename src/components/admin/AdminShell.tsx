@@ -64,7 +64,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
 
   async function signOut() {
     await supabaseBrowser().auth.signOut();
-    router.push("/admin/login");
+    router.push("/");
   }
 
   return (

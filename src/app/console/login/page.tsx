@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
 /**
- * Sign in to the company console — a separate login from /admin/login on
+ * Sign in to the company console — a separate login from the business sign-in (/) on
  * purpose. Both authenticate the same way (the same Supabase project, the
  * same email and password), but they check different things afterward: this
  * one checks platform_staff, not any one business's tenant_members, and

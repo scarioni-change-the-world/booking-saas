@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
 
       if (!session.session) {
-        router.replace('/admin/login');
+        router.replace('/');
         return;
       }
 
@@ -90,7 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         // accounts if they meant to.
         if (!cancelled) {
           setCheck({ state: 'denied' });
-          router.replace('/admin/login');
+          router.replace('/');
         }
       }
     })();

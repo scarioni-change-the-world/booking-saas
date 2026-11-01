@@ -79,7 +79,7 @@ export default function WelcomePage() {
             If not, sign up again and we’ll send a fresh link.
           </p>
           <p className="signin-aside">
-            <a href="/admin/login">Sign in</a> · <a href="/admin/signup">Sign up again</a>
+            <a href="/">Sign in</a> · <a href="/signup">Sign up again</a>
           </p>
         </>
       )}
@@ -91,7 +91,7 @@ export default function WelcomePage() {
             {message}
           </p>
           <p className="signin-aside">
-            <a href="/admin/login">Try signing in</a> — that finishes it too.
+            <a href="/">Try signing in</a> — that finishes it too.
           </p>
         </>
       )}

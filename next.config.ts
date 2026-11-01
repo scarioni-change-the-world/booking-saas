@@ -2,6 +2,16 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Sign in and sign up live at / and /signup. The old /admin addresses are
+  // still in emails, bookmarks and the website, so they forward, keeping any
+  // query string. Not permanent: browsers would cache it for good.
+  async redirects() {
+    return [
+      { source: '/admin/login', destination: '/', permanent: false },
+      { source: '/admin/signin', destination: '/', permanent: false },
+      { source: '/admin/signup', destination: '/signup', permanent: false },
+    ];
+  },
   // Per-tenant frame-ancestors is applied in proxy.ts, driven by each
   // tenant's registered embed domains (brief 7.2). No global allowlist here.
   async headers() {
@@ -34,6 +44,14 @@ const config: NextConfig = {
           { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
         ],
       },
+      // Sign in and sign up moved out of /admin; they keep the same protection.
+      ...['/', '/signup'].map((source) => ({
+        source,
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+        ],
+      })),
       {
         source: '/console/:path*',
         headers: [

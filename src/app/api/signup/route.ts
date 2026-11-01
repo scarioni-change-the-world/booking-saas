@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const status =
       started.kind === 'confirm'
         ? await sendSignupConfirmEmail(email, businessName, started.link)
-        : await sendAlreadyRegisteredEmail(email, `${baseUrl()}/admin/login`);
+        : await sendAlreadyRegisteredEmail(email, `${baseUrl()}/`);
     // Logged, never returned: the answer must not differ between the two.
     if (status !== 'sent') console.error(`[signup] email to a new sign-up was not sent: ${status}`);
 
