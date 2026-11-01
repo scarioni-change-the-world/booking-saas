@@ -43,10 +43,10 @@ export function sendSignupConfirmEmail(
   return send(
     email,
     {
-      subject: 'Confirm your email to open {business} on khloe',
+      subject: 'Confirm your email to open {{business}} on khloe',
       body:
         'Welcome to khloe.\n\n' +
-        'Open the link below to confirm this is your address. Your account for {business} is ready the moment you ' +
+        'Open the link below to confirm this is your address. Your account for {{business}} is ready the moment you ' +
         'do, with 7 days free and nothing to pay until you decide to stay.\n\n' +
         'The link works once, for an hour — sign up again for a fresh one. If you did not sign up, ignore this email and nothing is created.',
     },
@@ -89,8 +89,8 @@ export async function sendNewSignupAlert(
   await send(
     to,
     {
-      subject: 'New business on khloe: {business}',
-      body: '{business} (/{slug}) just signed up, as {owner}. It is on a 7-day trial.',
+      subject: 'New business on khloe: {{business}}',
+      body: '{{business}} (/{{slug}}) just signed up, as {{owner}}. It is on a 7-day trial.',
     },
     { business: business.name, slug: business.slug, owner },
   );

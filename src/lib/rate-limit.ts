@@ -107,6 +107,20 @@ export const RATE_LIMITS = {
     windowSeconds: 3600,
     message: 'Too many visits from here just now.',
   },
+  /** embed.js saying where the booking page was put and whether it loaded
+   *  (Share). One report per page load; this only bounds a loop. */
+  embedCheck: {
+    limit: 60,
+    windowSeconds: 3600,
+    message: 'Too many reports from here just now.',
+  },
+  /** Share → "Email these steps". It mails an address the business typed,
+   *  so it is bounded per business, like every send it can aim. */
+  shareEmail: {
+    limit: 10,
+    windowSeconds: 3600,
+    message: 'You have sent these steps a lot in the last hour. Please try again a little later.',
+  },
   signupRequest: {
     limit: 5,
     windowSeconds: 3600,

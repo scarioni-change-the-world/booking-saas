@@ -277,6 +277,15 @@ export interface PageVisitRow {
   surface: VisitSurface;
 }
 
+export interface EmbedSightingRow {
+  id: number;
+  tenant_id: string;
+  host: string;
+  page_url: string;
+  ok: boolean;
+  seen_at: string;
+}
+
 export interface SessionRatingRow {
   id: string;
   tenant_id: string;
@@ -456,6 +465,7 @@ export interface TenantScopedTables {
   email_sends: EmailSendRow;
   payments: PaymentRow;
   page_visits: PageVisitRow;
+  embed_sightings: EmbedSightingRow;
   session_ratings: SessionRatingRow;
   report_summaries: ReportSummaryRow;
 }

@@ -58,6 +58,7 @@ export const EXPECTED_MIGRATIONS = [
   '0031_business_logos',
   '0032_payments',
   '0033_reports',
+  '0034_embed_sightings',
 ] as const;
 
 /**

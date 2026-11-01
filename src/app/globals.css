@@ -9882,29 +9882,174 @@ body:has(.bk-embedded) {
   font-size: 0.9rem;
   overflow-wrap: anywhere;
 }
-.sh-allowed {
+.sh-guide-title {
+  margin: 0 0 18px;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+.sh-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 14px;
+  position: relative;
+  padding-bottom: 26px;
+}
+.sh-step:not(.is-last)::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 34px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--rule);
+}
+.sh-step.is-last {
+  padding-bottom: 0;
+}
+.sh-step-n {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--strong-border);
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+.sh-step-n.is-done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.sh-step-title {
+  margin: 4px 0 10px;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.sh-input {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.sh-full {
+  flex-basis: 100%;
+  margin: 0;
+}
+.sh-website {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  margin: 0;
+}
+.sh-tool {
+  margin: 10px 0 0;
+}
+.admin-app .sh-tool select,
+.sh-tool select {
+  display: inline-block;
+  width: auto;
+  min-height: 0;
+  margin: 0 0 0 4px;
+  font: inherit;
+  color: var(--ink);
+  padding: 6px 10px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.sh-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.sh-method {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.sh-method b {
+  color: var(--ink);
+}
+.sh-method input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.sh-method.is-on {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.sh-method:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sh-steps {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.sh-handoff {
+  margin: 0 0 4px;
+  color: var(--muted);
+}
+.sh-live {
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--rule);
 }
-.sh-builder {
-  border-top: 1px solid var(--rule);
-  padding: 10px 0;
+.sh-live-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
 }
-.sh-builder:last-of-type {
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 12px;
+.sh-live-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 8px;
+  line-height: 1.5;
 }
-.sh-builder > summary {
+.sh-live-row .lamp {
+  margin-top: 7px;
+  flex: none;
+}
+.sh-live-row > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sh-when {
+  color: var(--faint);
+}
+.sh-allow {
+  flex: none;
+}
+.sh-more > summary {
   cursor: pointer;
   font-weight: 600;
   color: var(--ink);
 }
-.sh-builder ol {
-  margin: 10px 0 4px;
-  padding-left: 20px;
-  line-height: 1.6;
+.sh-more-body {
+  margin-top: 12px;
 }
-.sh-builder form {
-  margin-top: 10px;
+@media (max-width: 600px) {
+  .sh-live-row {
+    flex-wrap: wrap;
+  }
+  .sh-allow {
+    margin-left: 20px;
+  }
 }

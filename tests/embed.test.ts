@@ -151,3 +151,27 @@ describe('embedSnippet for one service', () => {
     expect(embedSnippet('https://app.khloe.io', 'mara')).toContain('src="https://app.khloe.io/t/mara"');
   });
 });
+
+describe('hostAllowed', () => {
+  it('matches exactly, or any subdomain for a wildcard', async () => {
+    const { hostAllowed } = await import('@/lib/embed');
+    expect(hostAllowed('www.mara.studio', ['www.mara.studio'])).toBe(true);
+    expect(hostAllowed('mara.studio', ['www.mara.studio'])).toBe(false);
+    expect(hostAllowed('blog.mara.studio', ['*.mara.studio'])).toBe(true);
+    expect(hostAllowed('mara.studio', ['*.mara.studio'])).toBe(false);
+    expect(hostAllowed('evilmara.studio', ['*.mara.studio'])).toBe(false);
+  });
+});
+
+describe('sightingPage', () => {
+  it('keeps the address without query or fragment', async () => {
+    const { sightingPage } = await import('@/lib/embed');
+    expect(sightingPage('https://www.Mara.studio/book?token=secret#x')).toEqual({
+      host: 'www.mara.studio',
+      pageUrl: 'https://www.mara.studio/book',
+    });
+    expect(sightingPage('javascript:alert(1)')).toBeNull();
+    expect(sightingPage('file:///etc/passwd')).toBeNull();
+    expect(sightingPage(42)).toBeNull();
+  });
+});

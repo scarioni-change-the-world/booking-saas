@@ -70,6 +70,17 @@ export class TenantScope {
   delete<T extends TenantScopedTable>(table: T) {
     return this.db.from(table).delete().eq('tenant_id', this.tenantId);
   }
+
+  /**
+   * An insert-or-update on a unique key that includes tenant_id, with this
+   * tenant's id stamped last, as in insert().
+   */
+  upsert<T extends TenantScopedTable>(table: T, values: Partial<TenantScopedTables[T]>, onConflict: string) {
+    return this.db
+      .from(table)
+      .upsert({ ...values, tenant_id: this.tenantId }, { onConflict })
+      .select();
+  }
 }
 
 /**

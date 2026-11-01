@@ -126,6 +126,36 @@ export function allowedFrameHosts(listed: readonly string[], websiteUrl?: string
 }
 
 /**
+ * Whether a host is covered by an allowed list, the way a browser reads
+ * frame-ancestors: an exact match, or "*.example.com" for any subdomain of
+ * example.com (not example.com itself).
+ */
+export function hostAllowed(host: string, allowed: readonly string[]): boolean {
+  const h = host.toLowerCase();
+  return allowed.some((a) => (a.startsWith('*.') ? h.endsWith(a.slice(1)) : h === a));
+}
+
+/**
+ * The page a sighting was reported from, cut to what Share shows: the
+ * address without query or fragment (they can carry anything), http(s)
+ * only, and its host in the shape of an allowed-site entry.
+ */
+export function sightingPage(raw: unknown): { host: string; pageUrl: string } | null {
+  if (typeof raw !== 'string' || raw.length > 2000) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  const host = normaliseEmbedDomain(url.hostname);
+  if (!host || host.startsWith('*.')) return null;
+  const pageUrl = `${url.protocol}//${url.host}${url.pathname}`.slice(0, 300);
+  return { host, pageUrl };
+}
+
+/**
  * The snippet a tenant pastes into their own site.
  *
  * An iframe plus one script tag. The script is what makes the difference
