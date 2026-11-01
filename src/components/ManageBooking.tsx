@@ -82,6 +82,10 @@ export default function ManageBooking({ token }: { token: string }) {
   const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({});
   const [days, setDays] = useState<DaySlots[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  /** The new time picked in the picker, not yet confirmed. */
+  const [chosen, setChosen] = useState<string | null>(null);
+  /** Said once, at the top, after a time is changed: the reassurance the click alone never gave. */
+  const [moved, setMoved] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   /** What happened to the payment when they cancelled, straight from the server. */
   const [refund, setRefund] = useState<RefundResult | null>(null);
@@ -114,6 +118,10 @@ export default function ManageBooking({ token }: { token: string }) {
       };
       if (!response.ok) throw new Error(result.error ?? 'Request failed');
       if (result.refund) setRefund(result.refund);
+      if ((body.action === 'reschedule' || body.action === 'book-replacement') && typeof body.startsAt === 'string') {
+        setMoved(body.startsAt);
+      }
+      setChosen(null);
       setMode('view');
       await load();
     } catch (cause) {
@@ -126,6 +134,8 @@ export default function ManageBooking({ token }: { token: string }) {
   async function openPicker(next: 'reschedule' | 'rebook') {
     if (!payload) return;
     setMode(next);
+    setChosen(null);
+    setMoved(null);
     setBusy(true);
     setError(null);
     try {
@@ -214,6 +224,13 @@ export default function ManageBooking({ token }: { token: string }) {
       {error && (
         <p className="bk-error" role="alert">
           {error}
+        </p>
+      )}
+
+      {moved && booking.status === 'confirmed' && mode === 'view' && (
+        <p className="bk-moved" role="status">
+          Done — your booking is now on {formatInstantDay(moved)} at {formatTime(moved)}. We&apos;ve emailed
+          you the new details.
         </p>
       )}
 
@@ -359,14 +376,10 @@ export default function ManageBooking({ token }: { token: string }) {
                             <button
                               key={iso}
                               type="button"
-                              className="bk-slot"
+                              className={`bk-slot${chosen === iso ? ' is-selected' : ''}`}
+                              aria-pressed={chosen === iso}
                               disabled={busy}
-                              onClick={() =>
-                                act({
-                                  action: mode === 'rebook' ? 'book-replacement' : 'reschedule',
-                                  startsAt: iso,
-                                })
-                              }
+                              onClick={() => setChosen(iso)}
                             >
                               {formatTimeRange(iso)}
                             </button>
@@ -394,8 +407,42 @@ export default function ManageBooking({ token }: { token: string }) {
             </>
           )}
 
+          {/* Choosing a time only selects it; nothing moves until this is pressed,
+              so the client sees exactly what they are agreeing to. */}
+          {chosen && (
+            <div className="bk-confirm-move" role="region" aria-label="Your new time">
+              <p className="bk-lede">
+                {mode === 'rebook' ? 'Book' : 'Move your booking to'}{' '}
+                <b>
+                  {formatInstantDay(chosen)}, {formatTimeRange(chosen)}
+                </b>
+                ?
+              </p>
+              <button
+                type="button"
+                className="btn-primary btn-full"
+                disabled={busy}
+                onClick={() =>
+                  void act({
+                    action: mode === 'rebook' ? 'book-replacement' : 'reschedule',
+                    startsAt: chosen,
+                  })
+                }
+              >
+                {busy ? 'Saving…' : mode === 'rebook' ? 'Confirm this time' : 'Confirm new time'}
+              </button>
+            </div>
+          )}
+
           <p className="bk-after">
-            <button type="button" className="bk-textlink" onClick={() => setMode('view')}>
+            <button
+              type="button"
+              className="bk-textlink"
+              onClick={() => {
+                setChosen(null);
+                setMode('view');
+              }}
+            >
               {mode === 'rebook' ? 'Not now' : 'Keep my current time'}
             </button>
           </p>

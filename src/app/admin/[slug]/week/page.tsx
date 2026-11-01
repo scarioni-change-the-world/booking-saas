@@ -391,6 +391,7 @@ export default function WeekPage() {
 
             <div className="wk-legend" aria-hidden="true">
               <span><i className="wk-lg-open" />Open</span>
+              <span><i className="wk-lg-closed" />Closed</span>
               <span><i className="wk-lg-blocked" />Blocked</span>
               {/* Each service in its own colour, so a week of bookings says
                   what each one is before any of them is opened. Only the
