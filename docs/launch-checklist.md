@@ -31,7 +31,7 @@ checkout, but only when all three of these are in place:
 ## Everything else pending
 
 - [x] Privacy page: operator details filled in (`src/app/privacy/page.tsx`).
-- [ ] Terms of service page (not built yet), linked from signup.
+- [x] Terms of service page (`/terms`), linked from signup and the privacy page.
 - [ ] **Khloe on khloe.io** (renamed in the app; see the next section for what
       is left to do outside the code).
 - [ ] Email plan: sending is through Gmail (about 500 emails a day). Before
@@ -55,7 +55,7 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
 - [x] Google: khloe.io ownership verified in Search Console (TXT record in
       Vercel DNS; keep it, or verification lapses).
 - [x] Google: branding verified (Branding → Verify branding), then Publish branding.
-- [ ] Google: demo video recorded, then scope verification submitted
+- [x] Google: demo video recorded, then scope verification submitted
       (Verification Center). Removes the "unverified app" warning.
 - [ ] Stripe: rename the business and the product to Khloe; the webhook URL
       moves to the new app address; check the checkout branding.

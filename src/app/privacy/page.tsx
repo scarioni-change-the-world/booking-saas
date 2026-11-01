@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { OPERATOR, WEBSITE } from '@/lib/operator';
 
 /**
  * The privacy policy.
@@ -17,7 +18,7 @@ import type { Metadata } from 'next';
  * the OAuth verification homepage.
  *
  * ─────────────────────────────────────────────────────────────────────────
- *  OPERATOR below names who runs khloe. Keep it current: Google's review and
+ *  OPERATOR (src/lib/operator.ts) names who runs khloe. Keep it current: Google's review and
  *  the GDPR both read it. This draft is also not legal advice:
  *  it is an accurate description of what the code actually does, which is
  *  the hard half, but someone qualified should read it before it is relied
@@ -25,20 +26,7 @@ import type { Metadata } from 'next';
  *  section, which have consequences beyond this repository.
  * ─────────────────────────────────────────────────────────────────────────
  */
-const OPERATOR = {
-  legalName: 'Andrés Scarioni',
-  address: 'C/ Adolf Vázquez Humasqué, 3, 1-A, 07015 Palma de Mallorca',
-  contactEmail: 'khloe.bookings@gmail.com',
-  /** The country whose data-protection authority supervises khloe — this is
-   * what a reader needs to know where to complain. */
-  jurisdiction: 'Spain',
-  /** That authority, named and linked, so a complaint does not start with a search. */
-  authority: { name: 'Agencia Española de Protección de Datos (AEPD)', url: 'https://www.aepd.es' },
-  lastUpdated: '1 November 2026',
-};
-
-/** The website this page is linked from. Set at build time; without it, / is the best there is. */
-const WEBSITE = process.env.NEXT_PUBLIC_MARKETING_URL?.replace(/\/+$/, '') || '/';
+const LAST_UPDATED = '1 November 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy policy — khloe',
@@ -73,7 +61,7 @@ export default function PrivacyPage() {
         <h1>Privacy policy</h1>
         <p className="legal-lede">
           What khloe collects, why it collects it, and who else ever sees it. Last updated{' '}
-          {OPERATOR.lastUpdated}.
+          {LAST_UPDATED}.
         </p>
 
         <Section title="Who we are">
@@ -275,6 +263,7 @@ export default function PrivacyPage() {
       <footer className="legal-footer">
         <div className="legal-shell legal-footer-row">
           <a href={WEBSITE}>← Back to khloe</a>
+          <a href="/terms">Terms of service</a>
           <span>Questions about your data: {OPERATOR.contactEmail}</span>
         </div>
       </footer>

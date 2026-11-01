@@ -275,8 +275,8 @@ export default function SignupPage() {
           {busy ? 'Creating your account…' : 'Create account'}
         </button>
         <p className="signin-hint" style={{ textAlign: 'center' }}>
-          By creating an account you agree to how we handle data, set out in our{' '}
-          <a href="/privacy">privacy policy</a>.
+          By creating an account you agree to our <a href="/terms">terms of service</a>, and to how we handle
+          data, set out in our <a href="/privacy">privacy policy</a>.
         </p>
       </form>
 

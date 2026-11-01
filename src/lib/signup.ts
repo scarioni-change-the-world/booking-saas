@@ -47,6 +47,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'stripe',
   'support',
   't',
+  'terms',
   'test',
   'www',
 ]);

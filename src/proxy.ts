@@ -66,7 +66,7 @@ async function embedDomains(slug: string): Promise<string[]> {
  * embeds already pasted into businesses' sites point there.
  * signup.ts's RESERVED_SLUGS keeps every one of these out of reach of a slug.
  */
-const APP_ROUTES = new Set(['admin', 'api', 'console', 'manage', 'privacy', 'rate', 'signup', 't']);
+const APP_ROUTES = new Set(['admin', 'api', 'console', 'manage', 'privacy', 'rate', 'signup', 't', 'terms']);
 
 /**
  * The app has one public address (PUBLIC_BASE_URL, app.khloe.io). Production
