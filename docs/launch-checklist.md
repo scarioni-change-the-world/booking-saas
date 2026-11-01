@@ -57,8 +57,11 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
 - [x] Google: branding verified (Branding → Verify branding), then Publish branding.
 - [x] Google: demo video recorded, then scope verification submitted
       (Verification Center). Removes the "unverified app" warning.
-- [ ] Stripe: rename the business and the product to Khloe; the webhook URL
-      moves to the new app address; check the checkout branding.
+- [ ] Stripe: no account yet. Create it as Khloe and follow `stripe-setup.md`
+      (product at €7, tax-exclusive; webhooks to
+      `https://app.khloe.io/api/stripe/webhook`; four variables in Vercel).
+      Until then a business locks when its 7-day trial ends and cannot
+      subscribe: give testers Free access in the console.
 - [x] Support address: khloe.bookings@gmail.com (`SUPPORT_EMAIL` in
       `src/components/SignInLayout.tsx`).
 - [x] Sending: `SMTP_*` and `EMAIL_FROM_ADDRESS` in Vercel moved to the new
