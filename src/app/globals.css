@@ -2888,7 +2888,10 @@ button.text-action {
  * background, and Ink text on an unknown backdrop is a legibility problem we
  * cannot test for. The surface guarantees contrast on any site.
  */
+html:has(.bk-embedded),
 body:has(.bk-embedded) {
+  /* Both: html paints Warm Chalk too, and showed in the plate's rounded
+     corners on the host page. */
   background: transparent;
 }
 /* All of it, not 680px of it. A panel that stops short inside a full-width
@@ -8721,7 +8724,10 @@ body:has(.bk-embedded) {
    plate carries a hairline so it holds on any background. ── */
 .bk.bk-embedded .bk-panel {
   padding: 28px 32px 32px;
-  box-shadow: 0 0 0 1px var(--stone), var(--plate-shadow);
+  /* The hairline only. A drop shadow spills past the plate, and the frame's
+     square edge cuts it off on the host page — a clipped shadow and corners
+     that look wrong. Flat holds on any background. */
+  box-shadow: 0 0 0 1px var(--stone);
 }
 .bk.bk-embedded .bk-service-name {
   font-size: 1.1rem;
