@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { allowedFrameHosts, frameAncestors } from '@/lib/embed';
+import { allowedFrameHosts, frameAncestors, normaliseEmbedDomains } from '@/lib/embed';
 
 /**
  * Per-tenant frame-ancestors (brief 7.2).
@@ -48,7 +48,9 @@ async function embedDomains(slug: string): Promise<string[]> {
       branding: { websiteUrl?: string } | null;
     }>;
     // The listed sites, plus the business's own website (lib/embed.ts).
-    const domains = allowedFrameHosts(rows[0]?.embed_domains ?? [], rows[0]?.branding?.websiteUrl);
+    // Stored sites are re-checked here too: this is what goes into the header.
+    const listed = normaliseEmbedDomains(rows[0]?.embed_domains ?? []).domains;
+    const domains = allowedFrameHosts(listed, rows[0]?.branding?.websiteUrl);
     cache.set(slug, { domains, expires: Date.now() + TTL_MS });
     return domains;
   } catch {

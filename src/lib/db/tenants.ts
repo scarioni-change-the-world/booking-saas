@@ -1,3 +1,4 @@
+import { normaliseEmbedDomains } from '../embed';
 import { __unsafeServiceClient } from './client';
 import { TenantScope, tenantScope } from './scope';
 import type { BookingRow, TenantRow } from './types';
@@ -84,7 +85,9 @@ export async function replaceTenantEmbedDomains(
     .single();
 
   if (error) throw error;
-  return (data as { embed_domains: string[] }).embed_domains ?? [];
+  // Re-checked on the way out: a value written straight into the database
+  // ("https://example.com", say) is shown as the host it means, or dropped.
+  return normaliseEmbedDomains((data as { embed_domains: string[] }).embed_domains ?? []).domains;
 }
 
 /** Which sites may frame this tenant's widget right now. */
