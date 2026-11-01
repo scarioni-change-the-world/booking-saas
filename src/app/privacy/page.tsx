@@ -17,10 +17,8 @@ import type { Metadata } from 'next';
  * the OAuth verification homepage.
  *
  * ─────────────────────────────────────────────────────────────────────────
- *  BEFORE PUBLISHING: fill in OPERATOR below. The placeholders render
- *  visibly on the live page on purpose — a policy that goes out with
- *  "[[ LEGAL ENTITY NAME ]]" in it should be impossible to miss, and a
- *  failed Google review costs weeks. This draft is also not legal advice:
+ *  OPERATOR below names who runs khloe. Keep it current: Google's review and
+ *  the GDPR both read it. This draft is also not legal advice:
  *  it is an accurate description of what the code actually does, which is
  *  the hard half, but someone qualified should read it before it is relied
  *  on — particularly the controller/processor split and the GDPR rights
@@ -28,13 +26,15 @@ import type { Metadata } from 'next';
  * ─────────────────────────────────────────────────────────────────────────
  */
 const OPERATOR = {
-  legalName: '[[ LEGAL ENTITY NAME ]]',
-  address: '[[ REGISTERED ADDRESS ]]',
-  contactEmail: '[[ PRIVACY CONTACT EMAIL ]]',
-  /** The country whose data-protection authority supervises you, e.g.
-   * "Spain" — this is what a reader needs to know where to complain. */
-  jurisdiction: '[[ COUNTRY OF ESTABLISHMENT ]]',
-  lastUpdated: '29 September 2026',
+  legalName: 'Andrés Scarioni',
+  address: 'C/ Adolf Vázquez Humasqué, 3, 1-A, 07015 Palma de Mallorca',
+  contactEmail: 'khloe.bookings@gmail.com',
+  /** The country whose data-protection authority supervises khloe — this is
+   * what a reader needs to know where to complain. */
+  jurisdiction: 'Spain',
+  /** That authority, named and linked, so a complaint does not start with a search. */
+  authority: { name: 'Agencia Española de Protección de Datos (AEPD)', url: 'https://www.aepd.es' },
+  lastUpdated: '1 November 2026',
 };
 
 /** The website this page is linked from. Set at build time; without it, / is the best there is. */
@@ -80,7 +80,11 @@ export default function PrivacyPage() {
           <p>
             khloe is operated by {OPERATOR.legalName}, {OPERATOR.address}, established in{' '}
             {OPERATOR.jurisdiction}. For anything in this policy, including a request to see or delete
-            your data, write to <strong>{OPERATOR.contactEmail}</strong>.
+            your data, write to{' '}
+            <a href={`mailto:${OPERATOR.contactEmail}`}>
+              <strong>{OPERATOR.contactEmail}</strong>
+            </a>
+            .
           </p>
         </Section>
 
@@ -236,7 +240,9 @@ export default function PrivacyPage() {
           <p>
             If you booked through a business using khloe, that business is the one to ask — see
             &ldquo;Two different relationships&rdquo; above. You can also complain to the data-protection
-            authority in {OPERATOR.jurisdiction} or in the country where you live.
+            authority in {OPERATOR.jurisdiction}, the{' '}
+            <a href={OPERATOR.authority.url}>{OPERATOR.authority.name}</a>, or to the one in the country
+            where you live.
           </p>
         </Section>
 

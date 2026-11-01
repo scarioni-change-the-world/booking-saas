@@ -30,8 +30,7 @@ checkout, but only when all three of these are in place:
 
 ## Everything else pending
 
-- [ ] Privacy page: fill in the four `[[ … ]]` placeholders in
-      `src/app/privacy/page.tsx`.
+- [x] Privacy page: operator details filled in (`src/app/privacy/page.tsx`).
 - [ ] Terms of service page (not built yet), linked from signup.
 - [ ] **Khloe on khloe.io** (renamed in the app; see the next section for what
       is left to do outside the code).
@@ -59,4 +58,4 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
 - [x] Sending: `SMTP_*` and `EMAIL_FROM_ADDRESS` in Vercel moved to the new
       account; `SIGNUP_ALERT_EMAIL` too.
 - [x] Website: `CONTACT_EMAIL` in the site's `lib/config.ts`.
-- [ ] Update the privacy page placeholders, now that the domain exists.
+- [x] Update the privacy page placeholders, now that the domain exists.
