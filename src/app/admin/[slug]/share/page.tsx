@@ -157,8 +157,9 @@ export default function SharePage() {
               </details>
             ))}
             <p className="wk-side-hint">
-              If the box on your site says the page refused to connect, your website tool is showing it from an address
-              of its own. Add that address under “Other sites” above.
+              Still an empty box, or “refused to connect”, on your published site? The address in your browser bar is
+              not one of the sites above (a trial address like yourname.squarespace.com, say). Add that address under
+              “Other sites”, or put it in Account → Your website.
             </p>
           </section>
         </div>
@@ -175,6 +176,7 @@ const BUILDERS: Array<{ name: string; steps: string[] }> = [
       'Edit the page and click + where you want it (or "Add block").',
       'Choose "Code".',
       'Paste the code, make sure "HTML" is selected, then click outside the block and save.',
+      'Check it on your published site in a private window. Inside the Squarespace editor the box stays empty: the editor shows your page from a squarespace.com address, which is not one of your sites.',
     ],
   },
   {
@@ -183,6 +185,7 @@ const BUILDERS: Array<{ name: string; steps: string[] }> = [
       'In the editor, click + (Add Elements) → "Embed Code" → "Embed HTML".',
       'Click "Enter Code", choose "Code", paste the code and click "Update".',
       'Drag the box taller (about 900 px) so the booking page has room, then publish.',
+      'Check it on your published site, not in the editor.',
     ],
   },
   {
