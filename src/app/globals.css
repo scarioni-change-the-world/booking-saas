@@ -150,8 +150,8 @@
 
   /* The marketing site's one material: a limestone grain, almost entirely
      washed out by a Soft White veil over it, so it reads as paper stock
-     rather than as a photograph. Used there on a single band; used here on
-     the company console's sign-in only — see .signin-ground. The business
+     rather than as a photograph. Used here under every client page
+     (.bk.bk-standalone) and the company console's sign-in (.signin-ground). The business
      owner's sign-in carries the site's photograph instead (.signin-split),
      which is the louder half of the same idea, for the screen people
      actually arrive at from the website. */
@@ -8117,7 +8117,14 @@ body:has(.bk-embedded) {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  background: var(--canvas);
+  /* The website's own material under every client page: the same limestone
+     grain, under the same Soft White veil, at the same scale (its
+     .sell-tint uses 760-780px), so arriving here from khloe.io or from a
+     business's site feels like the same paper. The card stays plain Soft
+     White on top of it. */
+  background-color: var(--canvas);
+  background-image: var(--limestone);
+  background-size: auto, 760px auto;
 }
 .bk-masthead {
   min-height: 76px;
