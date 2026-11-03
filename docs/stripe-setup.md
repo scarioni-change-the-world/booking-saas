@@ -2,7 +2,7 @@
 
 khloe uses Stripe for two separate things:
 
-1. **Businesses paying khloe** — the €7 a month subscription. Stripe Billing,
+1. **Businesses paying khloe** — the €15 a month subscription (VAT included). Stripe Billing,
    on your own Stripe account.
 2. **Clients paying businesses** — a session, a deposit or a whole programme,
    paid when booked. Stripe Connect (Standard accounts): each business
@@ -23,8 +23,8 @@ Stripe dashboard), then repeat it in live mode with live keys.
 Stripe dashboard → **Product catalogue** → **Add product**
 
 - Name: `khloe`
-- Recurring, **€7.00 / month**, with **Tax behaviour: Exclusive** — the price is €7 + VAT, so VAT is
-  added on top rather than taken out of the €7
+- Recurring, **€15.00 / month**, with **Tax behaviour: Inclusive** — the price is €15 with VAT
+  included, so checkout shows exactly €15 and Stripe works out the VAT inside it
 - Save, then copy the price's id (`price_…`) → `STRIPE_PRICE_ID`
 
 ## 3. Connect

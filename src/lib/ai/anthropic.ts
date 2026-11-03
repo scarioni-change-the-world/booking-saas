@@ -18,7 +18,7 @@ const API_VERSION = '2023-06-01';
  * well-specified jobs with a fixed JSON shape — a handful of
  * screening questions, a summary of figures handed over as JSON — and a
  * person reads and edits every result before it matters. The largest model
- * cost roughly 6-10 cents a call against about 2 here; at €7 a month per
+ * cost roughly 6-10 cents a call against about 2 here; at €15 a month per
  * business that difference is the margin, and the monthly ceilings in
  * usage.ts bound the rest.
  */

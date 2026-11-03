@@ -6,7 +6,7 @@ import { automaticTax, stripe, stripeConfigured, subscriptionPriceId } from '@/l
 import { canStartSubscription, subscriptionToReplace } from '@/lib/subscription';
 
 /**
- * Start paying khloe: a Stripe Checkout page for the €7 subscription.
+ * Start paying khloe: a Stripe Checkout page for the €15 subscription (VAT included).
  *
  * Open while a business is locked out after its trial (allowGated) — paying
  * is the one thing it must still be able to do. A business still inside its

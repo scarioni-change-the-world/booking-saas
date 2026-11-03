@@ -4,7 +4,7 @@ import type { TenantPlan } from './db/types';
  * A business paying khloe: Stripe's subscription states, read as khloe's own
  * plan. Pure, so the webhook and the Account page agree.
  *
- * One plan exists (€7 a month); in the tenants table it is `starter`.
+ * One plan exists (€15 a month, VAT included); in the tenants table it is `starter`.
  * Stripe keeps retrying a failed card for a while (past_due), and the
  * business keeps working while it does — cutting somebody's booking page
  * off over a card that expired yesterday would punish their clients for it.

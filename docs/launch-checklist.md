@@ -5,22 +5,22 @@ they are done; the details for Stripe are in `stripe-setup.md`.
 
 ## Stripe: VAT on the subscription (saved for later)
 
-The price is **€7 + VAT a month**. The app already asks Stripe to add VAT at
-checkout, but only when all three of these are in place:
+The price is **€15 a month, VAT included**: checkout shows exactly €15. The
+app asks Stripe to work out the VAT, but only when all three of these are in place:
 
 - [ ] **Vercel** (app project): set `STRIPE_AUTOMATIC_TAX` to `1`, then redeploy.
 - [ ] **Stripe → Settings → Tax**: turn on Stripe Tax, add the business address
       and the country where you are registered for VAT.
-- [ ] **Stripe → Product catalogue → khloe → the €7 price**: Tax behaviour
-      **Exclusive**, so VAT is added on top of the €7.
+- [ ] **Stripe → Product catalogue → khloe → the €15 price**: Tax behaviour
+      **Inclusive**, so the VAT is inside the €15, not added on top.
 
 ### Test it (in Stripe test mode first)
 
 - [ ] Subscribe from Account with the test card `4242 4242 4242 4242` and a
-      Spanish address: checkout shows €7 + 21% VAT = €8.47.
+      Spanish address: checkout shows €15.00 in total, of which €2.60 VAT (21%).
 - [ ] Subscribe with an address in another EU country and a valid-format VAT
-      number: checkout shows €7 with VAT reverse-charged (no VAT added).
-- [ ] After paying, Account shows the plan as active and "€7 + VAT a month",
+      number: checkout shows €15.00 with VAT reverse-charged (no VAT inside it).
+- [ ] After paying, Account shows the plan as active and "€15 a month, VAT included",
       and the renewal date is right (the webhook reached `/api/stripe/webhook`).
 - [ ] "Manage billing" opens Stripe's portal; cancelling there shows on
       Account after a refresh.
@@ -58,7 +58,7 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
 - [x] Google: demo video recorded, then scope verification submitted
       (Verification Center). Removes the "unverified app" warning.
 - [ ] Stripe: no account yet. Create it as Khloe and follow `stripe-setup.md`
-      (product at €7, tax-exclusive; webhooks to
+      (product at €15, tax-inclusive; webhooks to
       `https://app.khloe.io/api/stripe/webhook`; four variables in Vercel).
       Until then a business locks when its 7-day trial ends and cannot
       subscribe: give testers Free access in the console.

@@ -6,7 +6,7 @@ import { OPERATOR, WEBSITE } from '@/lib/operator';
  * it. People who book through a business are not party to it; their side
  * is the privacy policy and whatever the business itself tells them.
  *
- * Written to match what the code does (the 7-day trial, €7 + VAT a month
+ * Written to match what the code does (the 7-day trial, €15 a month VAT included
  * through Stripe, the lock rather than deletion when a plan ends, client
  * payments on the business's own Stripe account with no cut taken). Not
  * legal advice: someone qualified should read it, particularly the
@@ -86,7 +86,7 @@ export default function TermsPage() {
               no card is needed to start it.
             </li>
             <li>
-              After that, khloe costs <strong>€7 a month plus VAT</strong>, paid in advance through Stripe. The
+              After that, khloe costs <strong>€15 a month, VAT included</strong>, paid in advance through Stripe. The price you see is the price you pay. The
               subscription renews each month until you cancel it.
             </li>
             <li>

@@ -238,7 +238,7 @@ Six rules every screen follows:
 11. **Self-serve signup and Stripe** — one project. Signup without billing
     means anyone can create a business for free forever.
     **Stripe** — done (migration 0032; setup in `docs/stripe-setup.md`).
-    Businesses subscribe at €7 a month from Account or from the lock screen
+    Businesses subscribe at €15 a month (VAT included) from Account or from the lock screen
     once a trial ends; days left in a trial carry over, a failing card keeps
     the page open while Stripe retries, and Manage billing is Stripe's own
     portal. Businesses connect their own Stripe (Connect, Standard) and each
