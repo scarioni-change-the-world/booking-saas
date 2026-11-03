@@ -26,7 +26,7 @@ import { OPERATOR, WEBSITE } from '@/lib/operator';
  *  section, which have consequences beyond this repository.
  * ─────────────────────────────────────────────────────────────────────────
  */
-const LAST_UPDATED = '1 November 2026';
+const LAST_UPDATED = '3 November 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy policy — khloe',
@@ -157,19 +157,48 @@ export default function PrivacyPage() {
             </li>
           </ul>
           <p>
-            Access and refresh tokens are encrypted before they are stored (AES-256-GCM), so a copy of the
-            database is not a set of usable calendar credentials. Disconnecting a calendar in settings
-            deletes the stored credentials and asks Google to revoke them.
+            <strong>What we access and keep.</strong> We store the connected Google account&apos;s email
+            address, the scopes that were granted, the access and refresh tokens, and, for each booking, the
+            ID of the calendar event khloe created for it, so that event can be moved or removed later. Busy
+            periods are read at the moment someone looks at available times and used straight away to hide
+            taken slots; they are not stored. We do not read, copy or store the titles, descriptions,
+            attendees or any other contents of events khloe did not create, and we do not build aggregated
+            or anonymised data sets from Google user data.
           </p>
           <p>
-            khloe&apos;s use of information received from Google APIs adheres to the{' '}
+            <strong>How we use it.</strong> Only to provide the scheduling features above, to the business
+            that connected the calendar: hiding busy times on its booking page, and keeping one calendar
+            event per booking in step with that booking.
+          </p>
+          <p>
+            <strong>Who it is shared with.</strong> No one, beyond the infrastructure that runs khloe:
+            Supabase stores the encrypted tokens and event IDs, and Vercel runs the code that calls Google.
+            Both act only on our instructions. Google user data is never sold, never shared with other
+            businesses using khloe, advertisers or data brokers, never used for advertising, never sent to
+            the AI assistant described below or to any other AI service, and never used to train any AI or
+            machine-learning model.
+          </p>
+          <p>
+            <strong>How it is protected.</strong> Everything travels over encrypted connections (HTTPS).
+            Access and refresh tokens are encrypted before they are stored (AES-256-GCM), so a copy of the
+            database is not a set of usable calendar credentials, and only the server can decrypt them.
+            Each business&apos;s data is isolated from every other business&apos;s at the database layer.
+          </p>
+          <p>
+            <strong>How long we keep it, and deleting it.</strong> The tokens and account email are kept
+            while the calendar is connected. Disconnecting the calendar in khloe deletes them immediately and
+            asks Google to revoke the access; you can also revoke it yourself at any time from your Google
+            Account (Security → Your connections to third-party apps &amp; services). Event IDs are kept with their bookings, and are
+            deleted with them or when the business&apos;s account is deleted, which you can ask for at{' '}
+            {OPERATOR.contactEmail}. Events khloe created in your calendar belong to you and stay there
+            unless you delete them.
+          </p>
+          <p>
+            khloe&apos;s use and transfer of information received from Google APIs adheres to the{' '}
             <a href="https://developers.google.com/terms/api-services-user-data-policy">
               Google API Services User Data Policy
             </a>
-            , including the Limited Use requirements. Google user data is used only to provide the
-            scheduling features above. It is never sold, never shared with other businesses using khloe,
-            never used for advertising, never sent to the AI assistant described below, and never used to
-            train any model.
+            , including the Limited Use requirements.
           </p>
         </Section>
 
