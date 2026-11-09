@@ -13,6 +13,8 @@ app asks Stripe to work out the VAT, but only when all three of these are in pla
       and the country where you are registered for VAT.
 - [ ] **Stripe → Product catalogue → khloe → the €15 price**: Tax behaviour
       **Inclusive**, so the VAT is inside the €15, not added on top.
+- [ ] **The founding price**: a second price on the same product, €9/month,
+      Inclusive; its id in Vercel as `STRIPE_FOUNDING_PRICE_ID`.
 
 ### Test it (in Stripe test mode first)
 
@@ -29,6 +31,11 @@ app asks Stripe to work out the VAT, but only when all three of these are in pla
       payment with your own card (refund it afterwards).
 
 ## Everything else pending
+
+- [ ] Outlook calendars: register the app in Microsoft Entra and set the three
+      `MICROSOFT_*` variables (`outlook-setup.md`). Later: publisher verification.
+- [x] Trial is 30 days; founding price €9 for the first 100 businesses
+      (migration 0035).
 
 - [x] Privacy page: operator details filled in (`src/app/privacy/page.tsx`).
 - [x] Terms of service page (`/terms`), linked from signup and the privacy page.

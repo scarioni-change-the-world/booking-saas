@@ -374,6 +374,8 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   async updateEvent(eventId: string, input: CalendarEventInput): Promise<CalendarEvent> {
+    // Made while Outlook was connected (microsoft.ts): it lives there, not here.
+    if (eventId.startsWith('ms:')) return { eventId, meetingUrl: null };
     const calendar = encodeURIComponent(this.connection.calendar_id);
 
     // PATCH, not PUT: a full replace would drop the conferenceData created with
@@ -388,6 +390,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
   }
 
   async deleteEvent(eventId: string): Promise<void> {
+    if (eventId.startsWith('ms:')) return;
     const calendar = encodeURIComponent(this.connection.calendar_id);
 
     try {
@@ -415,7 +418,7 @@ export class GoogleCalendarProvider implements CalendarProvider {
    * the only remedy for an affected booking is asking the client to rebook.
    */
   async readMeetingUrl(eventId: string): Promise<string | null> {
-    if (!eventId) return null;
+    if (!eventId || eventId.startsWith('ms:')) return null;
 
     try {
       const event = await this.call<GoogleEvent>(

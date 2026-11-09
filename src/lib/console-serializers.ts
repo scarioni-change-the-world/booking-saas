@@ -12,6 +12,7 @@ export function serializeTenant(row: TenantRow) {
     createdAt: row.created_at,
     trialEndsAt: row.trial_ends_at,
     freeAccess: row.free_access,
+    founding: !!row.founding,
   };
 }
 

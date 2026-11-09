@@ -25,7 +25,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       allowGated: true,
     });
 
-    const price = subscriptionPriceId();
+    const price = subscriptionPriceId(!!tenant.founding);
     if (!stripeConfigured() || !price)
       return fail('Paying online is not set up yet. Get in touch and we will sort it.', 503);
     if (tenant.stripe_subscription_id && !canStartSubscription(tenant.subscription_status)) {

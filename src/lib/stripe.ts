@@ -23,7 +23,14 @@ export function stripe(): Stripe {
   return cached;
 }
 
-export function subscriptionPriceId(): string | null {
+/**
+ * The Stripe price a business subscribes at: the founding price for a
+ * founding business (plans.ts), the standard one for everybody else. A
+ * founding business with no founding price configured gets null — it cannot
+ * subscribe yet — rather than quietly being charged the standard price.
+ */
+export function subscriptionPriceId(founding = false): string | null {
+  if (founding) return process.env.STRIPE_FOUNDING_PRICE_ID || null;
   return process.env.STRIPE_PRICE_ID || null;
 }
 

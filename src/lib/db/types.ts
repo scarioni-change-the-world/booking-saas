@@ -79,6 +79,9 @@ export interface TenantRow {
   /** Permanent override, independent of plan/trial state — see migration
    * 0018 for why this is a separate field from trial_ends_at. */
   free_access: boolean;
+  /** Signed up while the founding offer was open: pays the founding price
+   * for as long as the account exists (migration 0035, plans.ts). */
+  founding?: boolean;
   /** Paying khloe (migration 0032): what Stripe's webhooks last said. */
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;

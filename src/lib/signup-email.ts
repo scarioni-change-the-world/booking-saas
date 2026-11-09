@@ -47,7 +47,7 @@ export function sendSignupConfirmEmail(
       body:
         'Welcome to khloe.\n\n' +
         'Open the link below to confirm this is your address. Your account for {{business}} is ready the moment you ' +
-        'do, with 7 days free and nothing to pay until you decide to stay.\n\n' +
+        'do, with 30 days free and nothing to pay until you decide to stay.\n\n' +
         'The link works once, for an hour — sign up again for a fresh one. If you did not sign up, ignore this email and nothing is created.',
     },
     { business: businessName },
@@ -90,7 +90,7 @@ export async function sendNewSignupAlert(
     to,
     {
       subject: 'New business on khloe: {{business}}',
-      body: '{{business}} (/{{slug}}) just signed up, as {{owner}}. It is on a 7-day trial.',
+      body: '{{business}} (/{{slug}}) just signed up, as {{owner}}. It is on a 30-day trial.',
     },
     { business: business.name, slug: business.slug, owner },
   );

@@ -2,6 +2,7 @@ import { BookingError } from '../booking-service';
 import { __unsafeServiceClient } from './client';
 import type { MemberRole, TenantPlan, TenantRow, TenantStatus } from './types';
 import { classifyError, type TenantFacts } from '../tenant-health';
+import { foundingOfferOpen, trialEndsAt } from '../plans';
 
 /**
  * The console's own data access — every query here is deliberately unscoped,
@@ -101,14 +102,32 @@ export interface CreateTenantInput {
  * If that step fails, the tenant is deleted again rather than left behind
  * with no one able to sign in to it.
  *
- * Every tenant starts on a 7-day trial (trial_ends_at = now + 7 days) — see
- * migration 0018 and billing-gate.ts. Adjustable per-tenant afterwards from
+ * Every tenant starts on a TRIAL_DAYS trial (plans.ts) — see migration 0018
+ * and billing-gate.ts. A business made while the founding offer is open is
+ * marked founding (migration 0035): it pays the founding price for good. Adjustable per-tenant afterwards from
  * the console, same as free_access.
  */
+/**
+ * How many businesses hold the founding price. Before migration 0035 there
+ * is no such column, and the answer is "the offer cannot be given yet" —
+ * counted as full, so creating a business never fails over it.
+ */
+export async function countFoundingTenants(
+  client: ReturnType<typeof __unsafeServiceClient> = __unsafeServiceClient(),
+): Promise<number> {
+  const { count, error } = await client
+    .from('tenants')
+    .select('id', { count: 'exact', head: true })
+    .eq('founding', true);
+  if (error) return Number.MAX_SAFE_INTEGER;
+  return count ?? 0;
+}
+
 export async function createTenant(input: CreateTenantInput): Promise<TenantRow> {
   const client = __unsafeServiceClient();
 
-  const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const trialEnds = trialEndsAt();
+  const founding = foundingOfferOpen(await countFoundingTenants(client));
 
   const { data: tenantData, error: tenantError } = await client
     .from('tenants')
@@ -116,7 +135,8 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
       slug: input.slug,
       name: input.name,
       timezone: input.timezone,
-      trial_ends_at: trialEndsAt,
+      trial_ends_at: trialEnds,
+      ...(founding ? { founding: true } : {}),
     })
     .select()
     .single();
@@ -188,6 +208,8 @@ export interface UpdateTenantInput {
    * tenant with no trial_ends_at is treated as not-yet-expired — see
    * billing-gate.ts). */
   trial_ends_at?: string | null;
+  /** The founding price (plans.ts, migration 0035). */
+  founding?: boolean;
 }
 
 export async function updateTenant(id: string, patch: UpdateTenantInput): Promise<TenantRow> {

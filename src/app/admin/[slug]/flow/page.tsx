@@ -759,10 +759,10 @@ function StepDetail({
         <p className="wk-side-lead">
           Your hours are shared by every service.{' '}
           {data.calendarStatus === 'active'
-            ? 'Google Calendar is connected: busy times there close your hours here, and bookings are added to it.'
+            ? 'Your calendar is connected: busy times there close your hours here, and bookings are added to it.'
             : data.calendarStatus === 'not_connected'
-              ? 'Google Calendar is not connected, so only the hours you set here decide what is free.'
-              : 'Google Calendar needs reconnecting. Until it is, busy times there are not seen here.'}
+              ? 'No calendar is connected, so only the hours you set here decide what is free.'
+              : 'Your calendar needs reconnecting. Until it is, busy times there are not seen here.'}
         </p>
         {data.syncFailures > 0 && (
           <p className="wk-warning">
@@ -774,7 +774,7 @@ function StepDetail({
           <a className="btn-secondary" href={a('week')}>
             Open the Week
           </a>
-          {data.calendarStatus !== 'active' && <a href={a('week#calendar')}>Connect Google Calendar</a>}
+          {data.calendarStatus !== 'active' && <a href={a('week#calendar')}>Connect Google or Outlook</a>}
         </div>
       </div>
     );

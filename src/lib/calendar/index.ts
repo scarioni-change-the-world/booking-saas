@@ -1,6 +1,7 @@
 import { tenantScope } from '../db';
 import type { CalendarConnectionRow } from '../db/types';
 import { GoogleCalendarProvider } from './google';
+import { MicrosoftCalendarProvider } from './microsoft';
 import { NoCalendarProvider } from './none';
 import { CalendarUnavailableError, type CalendarProvider } from './provider';
 
@@ -13,6 +14,15 @@ export {
   exchangeCodeForTokens,
   fetchAccountEmail,
 } from './google';
+export {
+  MicrosoftCalendarProvider,
+  MicrosoftGrantExpiredError,
+  MICROSOFT_SCOPES,
+  MICROSOFT_AUTH_URL,
+  exchangeMicrosoftCode,
+  fetchMicrosoftEmail,
+  microsoftConfigured,
+} from './microsoft';
 
 /**
  * Resolve the calendar provider for a tenant.
@@ -51,10 +61,11 @@ export async function providerForTenant(tenantId: string): Promise<CalendarProvi
   switch (connection.provider) {
     case 'google':
       return new GoogleCalendarProvider(connection, scope);
+    case 'microsoft':
+      return new MicrosoftCalendarProvider(connection, scope);
     default:
-      // Microsoft 365 lands here (brief 7.6). Until then an unknown provider
-      // must not silently behave as "no calendar" for a tenant who believes
-      // theirs is connected.
+      // An unknown provider must not silently behave as "no calendar" for a
+      // tenant who believes theirs is connected.
       throw new Error(`Unsupported calendar provider: ${connection.provider}`);
   }
 }

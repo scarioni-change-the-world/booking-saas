@@ -5,18 +5,25 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 
 type CalendarStatus = 'active' | 'needs_reconnect' | 'revoked';
 
+type ProviderId = 'google' | 'microsoft';
+
 interface CalendarInfo {
   connected: boolean;
   status: 'not_connected' | CalendarStatus;
+  provider: ProviderId | null;
   accountEmail: string | null;
   health: { connected: boolean; error?: string; checkedAt: string } | null;
+  /** Which calendars can be connected here (their keys are set up). */
+  available?: { google: boolean; microsoft: boolean };
 }
+
+const PROVIDER_NAME: Record<ProviderId, string> = { google: 'Google Calendar', microsoft: 'Outlook' };
 
 const STATUS_COPY: Record<CalendarInfo['status'], { label: string; tone: 'live' | 'attention' | 'muted' }> = {
   not_connected: { label: 'Not connected', tone: 'muted' },
   active: { label: 'Connected', tone: 'live' },
   needs_reconnect: { label: 'Needs reconnecting', tone: 'attention' },
-  revoked: { label: 'Disconnected by Google', tone: 'attention' },
+  revoked: { label: 'Disconnected', tone: 'attention' },
 };
 
 function toneStyle(tone: 'live' | 'attention' | 'muted') {
@@ -26,9 +33,9 @@ function toneStyle(tone: 'live' | 'attention' | 'muted') {
 }
 
 /**
- * Google Calendar, on the Week: the screen whose hours it closes and whose
- * bookings it receives. It lived in Settings, a page away from the only
- * picture it changes.
+ * The business's calendar — Google or Outlook, one at a time — on the Week:
+ * the screen whose hours it closes and whose bookings it receives.
+ * Connecting the other one replaces it.
  */
 export function CalendarConnection({ slug }: { slug: string }) {
   const url = `/api/admin/${slug}/calendar`;
@@ -50,11 +57,15 @@ export function CalendarConnection({ slug }: { slug: string }) {
     void load();
   }, [load]);
 
-  async function connect() {
+  async function connect(provider: ProviderId) {
     setBusy(true);
     setError(null);
     try {
-      const result = await adminFetchJson<{ url: string }>(url, { method: 'POST' });
+      const result = await adminFetchJson<{ url: string }>(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      });
       window.location.href = result.url;
     } catch (cause) {
       setError((cause as Error).message);
@@ -79,7 +90,8 @@ export function CalendarConnection({ slug }: { slug: string }) {
   return (
     <div className="cal-conn">
       <p className="wk-side-lead" style={{ marginTop: 0 }}>
-        Busy times there close your hours here, and bookings are added to it with a video link.
+        Busy times there close your hours here, and bookings are added to it. Google adds a Meet link; Outlook
+        adds a Teams link on work or school accounts with Teams.
       </p>
       {error && (
         <p className="notice notice-error" role="alert">
@@ -94,6 +106,7 @@ export function CalendarConnection({ slug }: { slug: string }) {
             <span className="notice" style={{ padding: '3px 10px', margin: 0, ...toneStyle(STATUS_COPY[calendar.status].tone) }}>
               {STATUS_COPY[calendar.status].label}
             </span>
+            {calendar.provider && <b className="cal-conn-which">{PROVIDER_NAME[calendar.provider]}</b>}
             {calendar.accountEmail && <span className="wk-muted">{calendar.accountEmail}</span>}
           </p>
           {calendar.health?.error && <p className="notice notice-error">{calendar.health.error}</p>}
@@ -112,12 +125,32 @@ export function CalendarConnection({ slug }: { slug: string }) {
           ) : (
             <div className="wk-actions">
               {calendar.status === 'not_connected' || calendar.status === 'revoked' ? (
-                <button type="button" className="btn-primary" disabled={busy} onClick={() => void connect()}>
-                  {busy ? 'Connecting…' : 'Connect Google Calendar'}
-                </button>
+                <>
+                  {offered(calendar).map((p, i) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={i === 0 ? 'btn-primary' : 'btn-secondary'}
+                      disabled={busy}
+                      onClick={() => void connect(p)}
+                    >
+                      {busy ? 'Connecting…' : `Connect ${PROVIDER_NAME[p]}`}
+                    </button>
+                  ))}
+                  {offered(calendar).length === 0 && (
+                    <span className="wk-side-hint" style={{ margin: 0 }}>
+                      Calendar connections aren’t switched on yet.
+                    </span>
+                  )}
+                </>
               ) : calendar.status === 'needs_reconnect' ? (
                 <>
-                  <button type="button" className="btn-primary" disabled={busy} onClick={() => void connect()}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy}
+                    onClick={() => void connect(calendar.provider ?? 'google')}
+                  >
                     {busy ? 'Reconnecting…' : 'Reconnect'}
                   </button>
                   <button type="button" className="btn-link" onClick={() => setConfirming(true)}>
@@ -125,9 +158,21 @@ export function CalendarConnection({ slug }: { slug: string }) {
                   </button>
                 </>
               ) : (
-                <button type="button" className="btn-link" onClick={() => setConfirming(true)}>
-                  Disconnect
-                </button>
+                <>
+                  <button type="button" className="btn-link" onClick={() => setConfirming(true)}>
+                    Disconnect
+                  </button>
+                  {calendar.provider && offered(calendar).includes(other(calendar.provider)) && (
+                    <button
+                      type="button"
+                      className="btn-link"
+                      disabled={busy}
+                      onClick={() => void connect(other(calendar.provider!))}
+                    >
+                      Use {PROVIDER_NAME[other(calendar.provider)]} instead
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -135,4 +180,14 @@ export function CalendarConnection({ slug }: { slug: string }) {
       )}
     </div>
   );
+}
+
+function other(p: ProviderId): ProviderId {
+  return p === 'google' ? 'microsoft' : 'google';
+}
+
+/** The calendars this khloe can connect, Google first. Without the list (an older server), Google. */
+function offered(calendar: CalendarInfo): ProviderId[] {
+  if (!calendar.available) return ['google'];
+  return (['google', 'microsoft'] as const).filter((p) => calendar.available![p]);
 }

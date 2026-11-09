@@ -25,6 +25,12 @@ Stripe dashboard → **Product catalogue** → **Add product**
 - Name: `khloe`
 - Recurring, **€15.00 / month**, with **Tax behaviour: Inclusive** — the price is €15 with VAT
   included, so checkout shows exactly €15 and Stripe works out the VAT inside it
+- A **second price on the same product** for the founding offer: recurring
+  **€9.00 / month**, Tax behaviour **Inclusive**. Its id goes in
+  `STRIPE_FOUNDING_PRICE_ID`. Businesses that signed up while the offer was
+  open (the first 100 by default; `FOUNDING_SEATS`, `FOUNDING_UNTIL`) pay
+  it for as long as they keep their account. Without it set, they cannot
+  subscribe at all, rather than being charged €15.
 - Save, then copy the price's id (`price_…`) → `STRIPE_PRICE_ID`
 
 ## 3. Connect

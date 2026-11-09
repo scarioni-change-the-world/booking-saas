@@ -6,7 +6,7 @@ import { OPERATOR, WEBSITE } from '@/lib/operator';
  * it. People who book through a business are not party to it; their side
  * is the privacy policy and whatever the business itself tells them.
  *
- * Written to match what the code does (the 7-day trial, €15 a month VAT included
+ * Written to match what the code does (the 30-day trial, the founding price, €15 a month VAT included
  * through Stripe, the lock rather than deletion when a plan ends, client
  * payments on the business's own Stripe account with no cut taken). Not
  * legal advice: someone qualified should read it, particularly the
@@ -82,11 +82,13 @@ export default function TermsPage() {
         <Section title="Trial, price and payment">
           <ul>
             <li>
-              Every new account starts with <strong>7 days free</strong>. Nothing is charged during the trial, and
+              Every new account starts with <strong>30 days free</strong>. Nothing is charged during the trial, and
               no card is needed to start it.
             </li>
             <li>
-              After that, khloe costs <strong>€15 a month, VAT included</strong>, paid in advance through Stripe. The price you see is the price you pay. The
+              After that, khloe costs <strong>€15 a month, VAT included</strong>, paid in advance through Stripe. The price you see is the price you pay. Businesses that joined while
+              our founding offer was open pay their founding price instead (shown on their Account page), for as long
+              as they keep their account. The
               subscription renews each month until you cancel it.
             </li>
             <li>
@@ -158,7 +160,7 @@ export default function TermsPage() {
 
         <Section title="Other services we connect to">
           <p>
-            khloe works with Google Calendar, Stripe and email providers. When you connect one, its own terms apply
+            khloe works with Google Calendar, Outlook (Microsoft) calendars, Stripe and email providers. When you connect one, its own terms apply
             too. We are not responsible for those services being unavailable or changing how they work, though we
             will do what we reasonably can to keep khloe working with them.
           </p>

@@ -136,7 +136,7 @@ export default function AccountPage() {
             <ul className="acct-moved">
               <li>
                 <a href={a('week')}>Week</a>
-                <span>Your hours, minimum notice, how far ahead people can book, and Google Calendar.</span>
+                <span>Your hours, minimum notice, how far ahead people can book, and your Google or Outlook calendar.</span>
               </li>
               <li>
                 <a href={a('flow?part=page')}>Services → your booking page</a>

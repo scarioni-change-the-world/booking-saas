@@ -26,7 +26,7 @@ import { OPERATOR, WEBSITE } from '@/lib/operator';
  *  section, which have consequences beyond this repository.
  * ─────────────────────────────────────────────────────────────────────────
  */
-const LAST_UPDATED = '3 November 2026';
+const LAST_UPDATED = '9 November 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy policy — khloe',
@@ -202,6 +202,38 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="Outlook (Microsoft) calendar data">
+          <p>
+            This section applies only to a business that chooses to connect an Outlook or Microsoft 365 calendar
+            instead of Google. Nothing here affects people booking appointments.
+          </p>
+          <p>With permission, khloe requests three Microsoft permissions:</p>
+          <ul>
+            <li>
+              <code>Calendars.ReadWrite</code> — to read when the business is busy, so a busy time is never offered to
+              a client, and to create, move and remove one event for each booking (with a Teams link, on work or
+              school accounts that have Teams). To find busy times we ask only for each event&apos;s start, end and
+              whether it is shown as busy; we never read the titles, descriptions or attendees of events khloe did
+              not create.
+            </li>
+            <li>
+              <code>User.Read</code> — to show which Microsoft account is connected.
+            </li>
+            <li>
+              <code>offline_access</code> — so the connection keeps working without signing in again each hour.
+            </li>
+          </ul>
+          <p>
+            What we keep, how it is protected, who it is shared with and how long it is kept are the same as for
+            Google above: the account&apos;s email address, the granted permissions, encrypted tokens and one event ID
+            per booking; busy periods are used straight away and not stored; nothing is sold, shared with other
+            businesses, used for advertising, sent to any AI service or used to train any model. Disconnecting the
+            calendar in khloe deletes the tokens immediately. Microsoft does not let apps revoke access themselves,
+            so you can also remove khloe from your Microsoft account&apos;s app permissions (account.microsoft.com →
+            Privacy → Apps and services, or My Apps for a work account).
+          </p>
+        </Section>
+
         <Section title="Who else processes this data">
           <p>We use a small number of suppliers, each for one job:</p>
           <ul>
@@ -212,7 +244,7 @@ export default function PrivacyPage() {
               <strong>Vercel</strong> — hosts and serves the application.
             </li>
             <li>
-              <strong>Google</strong> — only for businesses that connect a calendar, as described above.
+              <strong>Google</strong> and <strong>Microsoft</strong> — only for businesses that connect a calendar, as described above.
             </li>
             <li>
               <strong>Stripe</strong> — takes subscription payments from businesses, and, for a business

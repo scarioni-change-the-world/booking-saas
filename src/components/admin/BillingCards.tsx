@@ -5,11 +5,14 @@ import { DateTime } from 'luxon';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { Lamp } from '@/components/admin/Instruments';
 import type { BillingState } from '@/lib/subscription';
+import { STANDARD_PRICE, monthlyPrice } from '@/lib/plans';
 
 export interface PlanInfo {
   plan: 'trial' | 'starter' | 'pro' | 'cancelled';
   trialEndsAt: string | null;
   freeAccess: boolean;
+  /** Pays the founding price, for good. */
+  founding?: boolean;
   state: BillingState;
   renewsAt: string | null;
   hasCustomer: boolean;
@@ -52,6 +55,7 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
 
   const subscribe = () => void go(`/api/admin/${slug}/billing/checkout`, setError, setBusy);
   const manage = () => void go(`/api/admin/${slug}/billing/portal`, setError, setBusy);
+  const price = monthlyPrice(!!plan.founding);
   const trialLeft = plan.trialEndsAt ? DateTime.fromISO(plan.trialEndsAt).diffNow('days').days : 0;
 
   return (
@@ -81,9 +85,15 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
             <>
               <div className="wk-actions" style={{ marginTop: 0 }}>
                 <button type="button" className="btn-primary" disabled={busy} onClick={subscribe}>
-                  {busy ? 'Opening Stripe…' : 'Subscribe — €15 a month, VAT included'}
+                  {busy ? 'Opening Stripe…' : `Subscribe — ${price}`}
                 </button>
               </div>
+              {plan.founding && (
+                <p className="acct-line">
+                  You joined early, so your price is <b>{price}</b> instead of {STANDARD_PRICE}, for as
+                  long as you stay. Thank you for trusting khloe.
+                </p>
+              )}
               <p className="field-note">
                 {trialLeft > 2
                   ? 'You won’t be charged until your trial ends. Cancel any time.'
@@ -101,7 +111,8 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
       {plan.state === 'active' && (
         <>
           <p className="acct-line">
-            €15 a month, VAT included
+            {price}
+            {plan.founding ? ' (your founding price, for as long as you stay)' : ''}
             {plan.renewsAt ? ` · renews on ${day(plan.renewsAt)}` : ''}.
           </p>
           {plan.hasCustomer && (
@@ -136,7 +147,7 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
           {plan.canSubscribe && (
             <div className="wk-actions" style={{ marginTop: 0 }}>
               <button type="button" className="btn-primary" disabled={busy} onClick={subscribe}>
-                {busy ? 'Opening Stripe…' : 'Subscribe — €15 a month, VAT included'}
+                {busy ? 'Opening Stripe…' : `Subscribe — ${price}`}
               </button>
             </div>
           )}

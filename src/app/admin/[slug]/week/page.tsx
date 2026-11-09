@@ -105,12 +105,12 @@ export default function WeekPage() {
     if (search.get('view') || search.get('from')) return;
     if (window.matchMedia('(max-width: 760px)').matches) setView('list');
   }, []);
-  /* Google sends people back here after connecting. Success needs no note —
+  /* Google and Microsoft send people back here after connecting. Success needs no note —
      the connection's own badge says so, and a note could contradict it —
      but a failure would otherwise leave no trace. */
   const [calendarNotice] = useState<{ ok: boolean; text: string } | null>(() =>
     search.get('calendar') === 'error'
-      ? { ok: false, text: 'Google Calendar could not be connected. Try again.' }
+      ? { ok: false, text: 'Your calendar could not be connected. Try again.' }
       : null,
   );
   /* ?from= opens a given week — People links each appointment to its own. */
@@ -501,7 +501,7 @@ export default function WeekPage() {
                       <BookingRules slug={slug} />
                     </section>
                     <section className="wk-plate wk-rules" id="calendar">
-                      <p className="wk-side-eyebrow">Google Calendar</p>
+                      <p className="wk-side-eyebrow">Your calendar</p>
                       {calendarNotice && (
                         <p className={`notice ${calendarNotice.ok ? 'notice-muted' : 'notice-error'}`} role="status">
                           {calendarNotice.text}

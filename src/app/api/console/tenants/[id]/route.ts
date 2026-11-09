@@ -73,6 +73,11 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     const freeAccess = optionalBoolean(body, 'freeAccess');
     if (freeAccess !== undefined) patch.free_access = freeAccess;
 
+    // The founding price (plans.ts): given by hand to someone who should have
+    // it, or taken back from an account made by mistake.
+    const founding = optionalBoolean(body, 'founding');
+    if (founding !== undefined) patch.founding = founding;
+
     // The trial-extension lever — a full ISO timestamp so support can push
     // it out by however long is fair, not just whole days. null clears it.
     const trialEndsAt = optionalNullableString(body, 'trialEndsAt', { maxLength: 40 });

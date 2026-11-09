@@ -34,12 +34,13 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
               plan: tenant.plan,
               trialEndsAt: tenant.trial_ends_at,
               freeAccess: tenant.free_access,
+              founding: !!tenant.founding,
               state: billingState(tenant),
               renewsAt: tenant.subscription_current_period_end ?? null,
               hasCustomer: !!tenant.stripe_customer_id,
               canSubscribe:
                 stripeConfigured() &&
-                !!subscriptionPriceId() &&
+                !!subscriptionPriceId(!!tenant.founding) &&
                 canStartSubscription(tenant.subscription_status),
             },
           }

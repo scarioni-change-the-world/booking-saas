@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { exchangeCodeForTokens, fetchAccountEmail, GOOGLE_SCOPES } from '@/lib/calendar';
 import { baseUrl } from '@/lib/base-url';
+import { saveConnection } from '@/lib/calendar/connections';
 import { encryptSecret, verifyState } from '@/lib/crypto';
 import { tenantScope } from '@/lib/db';
 import type { CalendarConnectionRow } from '@/lib/db/types';
@@ -31,12 +32,13 @@ export async function GET(request: Request) {
   const oauthError = params.get('error');
 
   const payload = state
-    ? verifyState<{ tenantId: string; slug: string }>(state)
+    ? verifyState<{ tenantId: string; slug: string; provider?: string }>(state)
     : null;
 
   // An unverifiable state is either a forged callback or one that expired while
   // the admin sat on the consent screen. Neither may write a connection.
-  if (!payload) {
+  // A state signed for another provider's flow is not one for this callback.
+  if (!payload || (payload.provider && payload.provider !== 'google')) {
     return NextResponse.redirect(settingsUrl(null, { calendar: 'error', reason: 'state' }));
   }
 
@@ -94,19 +96,11 @@ export async function GET(request: Request) {
       updated_at: new Date().toISOString(),
     };
 
-    // A reconnect replaces the previous grant. This is the path brief 6.3 says
-    // to take once the OAuth app reaches Production: publishing does NOT extend
-    // an already-issued token, so a tenant connected during Testing must
-    // disconnect and reconnect once to get a durable one.
-    const existing = await scope.select('calendar_connections').eq('provider', 'google').maybeSingle();
-    if (existing.error) throw existing.error;
-
-    const previous = existing.data as unknown as CalendarConnectionRow | null;
-    const { error } = previous
-      ? await scope.update('calendar_connections', row).eq('id', previous.id)
-      : await scope.insert('calendar_connections', row);
-
-    if (error) throw error;
+    // A reconnect replaces the previous grant, and connecting Google replaces
+    // an Outlook connection (one calendar at a time, connections.ts). This is
+    // also the path brief 6.3 says to take once the OAuth app reaches
+    // Production: publishing does NOT extend an already-issued token.
+    await saveConnection(scope, 'google', row);
 
     return NextResponse.redirect(settingsUrl(payload.slug, { calendar: 'connected' }));
   } catch (cause) {

@@ -786,6 +786,18 @@ a.btn-secondary {
   color: var(--faint);
 }
 
+/* Sign-up: the founding offer, a quiet plate under the lede. */
+.signin-founding {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--selected-mineral);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
 /* Sign-up: a hint that needs something from you reads in Ochre ink. */
 .signin-hint.is-need {
   color: var(--emphasis-ink);

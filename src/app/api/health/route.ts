@@ -85,6 +85,10 @@ export async function GET() {
       // as absent, and harder to notice.
       !/@example\.com$/i.test(process.env.EMAIL_FROM_ADDRESS!.trim()),
     google: isSet(process.env.GOOGLE_CLIENT_ID) && isSet(process.env.GOOGLE_CLIENT_SECRET),
+    microsoft:
+      isSet(process.env.MICROSOFT_CLIENT_ID) &&
+      isSet(process.env.MICROSOFT_CLIENT_SECRET) &&
+      isSet(process.env.MICROSOFT_REDIRECT_URI),
     anthropic: isSet(process.env.ANTHROPIC_API_KEY),
     // Without this the reminder endpoint disables itself and answers 503,
     // which is the correct failure but a silent one from the outside: no

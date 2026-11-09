@@ -17,6 +17,7 @@ interface Tenant {
   createdAt: string;
   trialEndsAt: string | null;
   freeAccess: boolean;
+  founding: boolean;
 }
 
 interface Member {
@@ -42,6 +43,7 @@ export default function ConsoleTenantPage() {
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [savingFreeAccess, setSavingFreeAccess] = useState(false);
+  const [savingFounding, setSavingFounding] = useState(false);
   const [trialDateDraft, setTrialDateDraft] = useState('');
   const [savingTrialDate, setSavingTrialDate] = useState(false);
 
@@ -177,6 +179,24 @@ export default function ConsoleTenantPage() {
       setError((cause as Error).message);
     } finally {
       setSavingFreeAccess(false);
+    }
+  }
+
+  async function toggleFounding() {
+    if (!tenant) return;
+    setSavingFounding(true);
+    setError(null);
+    try {
+      const result = await adminFetchJson<{ tenant: Tenant }>(`/api/console/tenants/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ founding: !tenant.founding }),
+      });
+      setTenant(result.tenant);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSavingFounding(false);
     }
   }
 
@@ -393,6 +413,25 @@ export default function ConsoleTenantPage() {
                 Overrides plan and trial entirely — use this to comp an account, e.g. as customer-service
                 compensation. Independent of the trial date above; turn it off any time to go back to
                 whatever the plan and trial date say.
+              </p>
+            </div>
+
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                Founding price
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="fc-state">
+                  <Lamp tone={tenant.founding ? 'live' : 'off'} />
+                  {tenant.founding ? 'Yes: pays the founding price' : 'No: pays the standard price'}
+                </span>
+                <button type="button" className="btn-secondary" disabled={savingFounding} onClick={toggleFounding}>
+                  {savingFounding ? 'Working…' : tenant.founding ? 'Remove it' : 'Give the founding price'}
+                </button>
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                Applies the next time they subscribe. Someone already paying keeps the price they subscribed at
+                until they subscribe again.
               </p>
             </div>
           </div>

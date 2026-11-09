@@ -216,7 +216,7 @@ export function buildFlow(input: FlowInput): FlowModel {
   const confirmed = input.bookings.filter((b) => b.status === 'confirmed');
   const calendarFlag =
     input.calendarStatus === 'needs_reconnect' || input.calendarStatus === 'revoked'
-      ? 'Google Calendar needs reconnecting'
+      ? 'Your calendar needs reconnecting'
       : input.syncFailures > 0
         ? `${input.syncFailures} not in your calendar`
         : null;

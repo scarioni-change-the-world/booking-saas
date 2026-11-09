@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PasswordField } from '@/components/PasswordField';
 import { SignInLayout } from '@/components/SignInLayout';
 import { PASSWORD_MIN, signupProblem, slugFromName } from '@/lib/signup';
+import { FOUNDING_PRICE, STANDARD_PRICE } from '@/lib/plans';
 
 type Address =
   | { state: 'idle' }
@@ -43,6 +44,13 @@ export default function SignupPage() {
   const [changingZone, setChangingZone] = useState(false);
   const [address, setAddress] = useState<Address>({ state: 'idle' });
   const [busy, setBusy] = useState(false);
+  const [founding, setFounding] = useState(false);
+  useEffect(() => {
+    fetch('/api/signup/offer')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body: { founding?: boolean } | null) => setFounding(!!body?.founding))
+      .catch(() => setFounding(false));
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const asked = useRef(0);
@@ -147,8 +155,14 @@ export default function SignupPage() {
       <p className="signin-eyebrow">Create an account</p>
       <h1 className="signin-heading">Start taking bookings.</h1>
       <p className="signin-lede">
-        7 days free. No card needed. Set up your services and share your page today.
+        30 days free. No card needed. Set up your services and share your page today.
       </p>
+      {founding && (
+        <p className="signin-hint signin-founding">
+          Founding offer: join now and your price is {FOUNDING_PRICE} a month instead of {STANDARD_PRICE}, VAT
+          included, for as long as you stay.
+        </p>
+      )}
 
       <form className="signin-form" onSubmit={handleSubmit} noValidate>
         <div className="field">
