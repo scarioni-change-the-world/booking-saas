@@ -27,35 +27,38 @@ export interface PendingBusiness {
  * (app.khloe.io/<slug>, see proxy.ts).
  */
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
-  'admin',
-  'api',
-  'app',
-  'billing',
-  'book',
-  'booking',
-  'console',
-  'demo',
-  'help',
-  'intro',
-  'khloe',
-  'login',
-  'manage',
-  'paid',
-  'privacy',
-  'rate',
-  'signup',
-  'stripe',
-  'support',
-  't',
-  'terms',
-  'test',
-  'www',
+  // The app's own routes (proxy.ts) and pages.
+  'admin', 'api', 'app', 'console', 'embed', 'login', 'logout', 'manage', 'paid', 'privacy', 'rate',
+  'signin', 'sign-in', 'signout', 'sign-out', 'signup', 'sign-up', 'register', 't', 'terms',
+  // What reads as khloe itself, or as a page a visitor would expect from it.
+  'about', 'account', 'accounts', 'assets', 'auth', 'billing', 'blog', 'book', 'booking', 'bookings',
+  'careers', 'cdn', 'contact', 'dashboard', 'demo', 'docs', 'email', 'faq', 'features', 'hello', 'help',
+  'hi', 'home', 'images', 'img', 'intro', 'jobs', 'khloe', 'legal', 'mail', 'news', 'oauth', 'official',
+  'press', 'pricing', 'public', 'robots', 'security', 'settings', 'sitemap', 'static', 'status', 'stripe',
+  'support', 'team', 'test', 'www',
+  // Addresses mail systems and abuse reports expect to belong to the operator.
+  'abuse', 'postmaster', 'root', 'staff', 'webmaster',
 ]);
+
+/**
+ * Addresses that would pass for khloe's own: "khloe" with a word or number
+ * that makes it look official ("khloe-io", "khloe-support", "khloeapp",
+ * "official-khloe", "khloe-2"). A business that happens to share the name
+ * (Khloé is a first name) can still have "khloe-coaching" or
+ * "khloe-smith-photo".
+ */
+const LOOKS_LIKE_KHLOE =
+  /^(?:(?:official|team|support|help|admin|staff|the|get|try|my|hello|hi)-?)?khloe(?:-?(?:io|app|hq|team|official|support|help|admin|staff|billing|bookings?|mail|email|news|blog|status|security|legal|privacy|demo|test|\d+))?$/;
+
+/** Whether an address is kept for khloe itself. */
+export function isReservedSlug(slug: string): boolean {
+  return RESERVED_SLUGS.has(slug) || LOOKS_LIKE_KHLOE.test(slug);
+}
 
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])$/;
 
 export function isValidSlug(slug: string): boolean {
-  return SLUG_PATTERN.test(slug) && !slug.includes('--') && !RESERVED_SLUGS.has(slug);
+  return SLUG_PATTERN.test(slug) && !slug.includes('--') && !isReservedSlug(slug);
 }
 
 /**
@@ -94,7 +97,7 @@ export function signupProblem(form: SignupForm): string | null {
   if (!form.businessName.trim()) return 'What is your business called?';
   if (form.businessName.trim().length > BUSINESS_NAME_MAX) return 'That name is too long.';
   if (!isValidSlug(form.slug)) {
-    return RESERVED_SLUGS.has(form.slug)
+    return isReservedSlug(form.slug)
       ? 'That web address is kept for khloe itself. Choose another.'
       : 'A web address uses lowercase letters, numbers and single dashes, at least 3 characters.';
   }

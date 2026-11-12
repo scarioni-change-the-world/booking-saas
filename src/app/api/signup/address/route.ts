@@ -1,6 +1,6 @@
 import { handleError, ok } from '@/lib/api';
 import { slugTaken } from '@/lib/db/signup';
-import { isValidSlug, RESERVED_SLUGS, slugCandidates, slugFromName } from '@/lib/signup';
+import { isReservedSlug, isValidSlug, slugCandidates, slugFromName } from '@/lib/signup';
 
 /**
  * Is this web address free? For the sign-up form, as somebody types their
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       return ok({
         slug: asked,
         available: false,
-        reason: RESERVED_SLUGS.has(asked) ? 'reserved' : 'invalid',
+        reason: isReservedSlug(asked) ? 'reserved' : 'invalid',
       });
     }
     if (!(await slugTaken(asked))) return ok({ slug: asked, available: true });

@@ -39,6 +39,21 @@ describe('isValidSlug', () => {
   });
 });
 
+describe('addresses kept for khloe', () => {
+  it('refuses khloe and look-alikes', () => {
+    for (const slug of ['khloe', 'khloe-io', 'khloeio', 'khloe-app', 'khloeapp', 'khloe-support', 'khloe-official',
+      'official-khloe', 'the-khloe', 'khloe-hq', 'khloe-2', 'khloe2', 'hello', 'support', 'pricing', 'abuse']) {
+      expect(isValidSlug(slug), slug).toBe(false);
+    }
+  });
+
+  it('lets a business that shares the name have its own address', () => {
+    for (const slug of ['khloe-coaching', 'khloe-smith-photo', 'studio-khloe', 'khloes-weddings']) {
+      expect(isValidSlug(slug), slug).toBe(true);
+    }
+  });
+});
+
 describe('slugCandidates', () => {
   it('numbers the address when it is taken', () => {
     expect(slugCandidates('mara', 3)).toEqual(['mara', 'mara-2', 'mara-3']);
