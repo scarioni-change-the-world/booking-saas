@@ -5,7 +5,10 @@
 export const OPERATOR = {
   legalName: 'Andrés Scarioni',
   address: 'C/ Adolf Vázquez Humasqué, 3, 1-A, 07015 Palma de Mallorca',
-  contactEmail: 'khloe.bookings@gmail.com',
+  /** General questions and support. */
+  contactEmail: 'hello@khloe.io',
+  /** Requests about personal data (see, correct, delete): the privacy page's address. */
+  privacyEmail: 'privacy@khloe.io',
   /** The country whose data-protection authority supervises khloe. */
   jurisdiction: 'Spain',
   /** That authority, named and linked, so a complaint does not start with a search. */

@@ -67,9 +67,11 @@ The app's name is Khloe everywhere in the code. What is left is outside it:
 - [ ] Stripe: no account yet. Create it as Khloe and follow `stripe-setup.md`
       (product at €15, tax-inclusive; webhooks to
       `https://app.khloe.io/api/stripe/webhook`; four variables in Vercel).
-      Until then a business locks when its 7-day trial ends and cannot
+      Until then a business locks when its 30-day trial ends and cannot
       subscribe: give testers Free access in the console.
-- [x] Support address: khloe.bookings@gmail.com (`SUPPORT_EMAIL` in
+- [x] Contact addresses: hello@khloe.io for support and privacy@khloe.io for
+      data requests (Google Workspace aliases; `src/lib/operator.ts`,
+      `SUPPORT_EMAIL` in
       `src/components/SignInLayout.tsx`).
 - [x] Sending: `SMTP_*` and `EMAIL_FROM_ADDRESS` in Vercel moved to the new
       account; `SIGNUP_ALERT_EMAIL` too.

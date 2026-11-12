@@ -26,7 +26,7 @@ import { OPERATOR, WEBSITE } from '@/lib/operator';
  *  section, which have consequences beyond this repository.
  * ─────────────────────────────────────────────────────────────────────────
  */
-const LAST_UPDATED = '9 November 2026';
+const LAST_UPDATED = '12 November 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy policy — khloe',
@@ -69,8 +69,8 @@ export default function PrivacyPage() {
             khloe is operated by {OPERATOR.legalName}, {OPERATOR.address}, established in{' '}
             {OPERATOR.jurisdiction}. For anything in this policy, including a request to see or delete
             your data, write to{' '}
-            <a href={`mailto:${OPERATOR.contactEmail}`}>
-              <strong>{OPERATOR.contactEmail}</strong>
+            <a href={`mailto:${OPERATOR.privacyEmail}`}>
+              <strong>{OPERATOR.privacyEmail}</strong>
             </a>
             .
           </p>
@@ -190,7 +190,7 @@ export default function PrivacyPage() {
             asks Google to revoke the access; you can also revoke it yourself at any time from your Google
             Account (Security → Your connections to third-party apps &amp; services). Event IDs are kept with their bookings, and are
             deleted with them or when the business&apos;s account is deleted, which you can ask for at{' '}
-            {OPERATOR.contactEmail}. Events khloe created in your calendar belong to you and stay there
+            {OPERATOR.privacyEmail}. Events khloe created in your calendar belong to you and stay there
             unless you delete them.
           </p>
           <p>
@@ -291,7 +291,7 @@ export default function PrivacyPage() {
             If you are in the UK or the European Economic Area, you have the right to ask for a copy of
             your data, to have it corrected or deleted, to restrict or object to how it is used, and to
             have it sent to another provider. You can exercise any of these by writing to{' '}
-            {OPERATOR.contactEmail}.
+            {OPERATOR.privacyEmail}.
           </p>
           <p>
             If you booked through a business using khloe, that business is the one to ask — see
@@ -325,7 +325,7 @@ export default function PrivacyPage() {
         <div className="legal-shell legal-footer-row">
           <a href={WEBSITE}>← Back to khloe</a>
           <a href="/terms">Terms of service</a>
-          <span>Questions about your data: {OPERATOR.contactEmail}</span>
+          <span>Questions about your data: {OPERATOR.privacyEmail}</span>
         </div>
       </footer>
     </div>
