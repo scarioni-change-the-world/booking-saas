@@ -15,6 +15,7 @@ interface Service {
   name: string;
   active: boolean;
   availableToProspects: boolean;
+  durationMinutes?: number;
 }
 
 interface Sighting {
@@ -47,6 +48,10 @@ interface ShareState {
  *
  * The list of other allowed sites is still here, folded away: most people
  * never need it, because their website is allowed on its own.
+ *
+ * All of that is the whole booking page. One service (its own link, its
+ * own code) is a panel on the right, "Share one service", so the two never
+ * get mixed up.
  */
 export default function SharePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -97,18 +102,12 @@ export default function SharePage() {
   }, [slug, detect]);
 
   // ?service= may carry a service's web address or its id (Services links by id).
-  const service = services?.find((s) => s.slug === chosen || s.id === chosen) ?? null;
-  const link = origin ? `${origin}/${slug}${serviceQuery(service?.slug, only)}` : '';
-  const code = origin ? embedSnippet(origin, slug, service?.slug, only) : '';
-  const picker = (
-    <ServicePicker
-      services={services ?? []}
-      service={service}
-      only={only}
-      onChoose={setChosen}
-      onOnly={setOnly}
-    />
-  );
+  const service =
+    services?.find((s) => s.slug === chosen || s.id === chosen) ?? services?.[0] ?? null;
+  // The left side is the whole booking page; one service lives in the panel.
+  const link = origin ? `${origin}/${slug}` : '';
+  const code = origin ? embedSnippet(origin, slug) : '';
+  const perService = !!services && services.length > 1;
   const tool = BUILDERS[builder ?? 'other'];
 
   return (
@@ -126,13 +125,26 @@ export default function SharePage() {
       {(!services || !share) && !error && <p className="status">Loading…</p>}
 
       {services && share && (
-        <div className="sh">
-          <section className="card sh-card" aria-labelledby="sh-link">
+        <div className={`sh${perService ? ' has-panel' : ''}`}>
+          {perService && service && (
+            <ServicePanel
+              services={services}
+              service={service}
+              only={only}
+              origin={origin}
+              slug={slug}
+              onChoose={setChosen}
+              onOnly={setOnly}
+            />
+          )}
+
+          <section className="card sh-card sh-main-link" aria-labelledby="sh-link">
             <p className="wk-side-eyebrow" id="sh-link">
               Your link
             </p>
-            <p className="wk-side-hint sh-lead">For your Instagram bio, WhatsApp, emails and your email signature.</p>
-            {picker}
+            <p className="wk-side-hint sh-lead">
+              All your services, in one place. For your Instagram bio, WhatsApp, emails and your email signature.
+            </p>
             <div className="sh-row">
               <code className="sh-link">{link}</code>
               <CopyButton text={link} label="Copy link" />
@@ -182,15 +194,11 @@ export default function SharePage() {
             </Step>
 
             <Step n={2} title="What it shows, and how it looks" done={false}>
-              {services.length > 1 && (
-                <div className="sh-which">
-                  <p className="sh-which-label">Which services</p>
-                  {picker}
-                  <p className="wk-side-hint">
-                    One page per service on your website? Choose each service here in turn and paste its own code on its
-                    page.
-                  </p>
-                </div>
+              {perService && (
+                <p className="wk-side-hint sh-which">
+                  This shows all your services. For a page about one of them, take its code from{' '}
+                  <b>Share one service</b>; the steps below are the same.
+                </p>
               )}
               <div className="sh-methods" role="radiogroup" aria-label="How it should look">
                 <MethodCard
@@ -231,8 +239,8 @@ export default function SharePage() {
                 slug={slug}
                 builder={builder ?? 'other'}
                 method={method}
-                service={service?.slug ?? null}
-                only={only}
+                service={null}
+                only={false}
               />
               {method === 'section' && (
                 <LiveStatus slug={slug} share={share} onChanged={loadShare} />
@@ -251,68 +259,93 @@ export default function SharePage() {
 }
 
 /**
- * What the link and the code open on: every service, or one. A chosen
- * service can stand alone (a page about that service on someone's website)
- * or open first with the others one step back. Shown in "Your link" and
- * again beside the code, sharing one choice, so nobody pastes the
- * every-service code on a page about one service by mistake.
+ * Share one service: pick it from the list, take its link or its code.
+ *
+ * Kept apart from the rest of the page on purpose. The left side is the
+ * whole booking page; this is one service, for a post, an ad or that
+ * service's own page on a website. Mixing the two (one picker driving both)
+ * is how the every-service code ends up on a page about one service.
+ *
+ * A service opens alone by default: someone who clicked a link about
+ * portraits wants portraits. Ticking the box keeps the other services one
+ * step back.
  */
-function ServicePicker({
+function ServicePanel({
   services,
   service,
   only,
+  origin,
+  slug,
   onChoose,
   onOnly,
 }: {
   services: Service[];
-  service: Service | null;
+  service: Service;
   only: boolean;
-  onChoose: (slug: string | null) => void;
+  origin: string;
+  slug: string;
+  onChoose: (slug: string) => void;
   onOnly: (only: boolean) => void;
 }) {
-  if (services.length < 2) return null;
+  const link = origin ? `${origin}/${slug}${serviceQuery(service.slug, only)}` : '';
+  const code = origin ? embedSnippet(origin, slug, service.slug, only) : '';
   return (
-    <div className="sh-picker">
-      <div className="sh-choices" role="group" aria-label="What it opens">
-        <button
-          type="button"
-          className={`filter-chip${!service ? ' active' : ''}`}
-          aria-pressed={!service}
-          onClick={() => onChoose(null)}
-        >
-          All your services
-        </button>
-        {services.map((s) => (
-          <button
-            key={s.slug}
-            type="button"
-            className={`filter-chip${service?.slug === s.slug ? ' active' : ''}`}
-            aria-pressed={service?.slug === s.slug}
-            onClick={() => onChoose(s.slug)}
-          >
-            {s.name}
-          </button>
-        ))}
+    <aside className="card sh-card sh-panel" aria-labelledby="sh-one">
+      <h2 className="sh-panel-title" id="sh-one">
+        Share one service
+      </h2>
+      <p className="wk-side-hint sh-lead">
+        A link or code that opens straight on one service: for a post, an ad, or its own page on your website.
+      </p>
+
+      <div className="sh-svc-list" role="radiogroup" aria-label="Service to share">
+        {services.map((s) => {
+          const on = s.slug === service.slug;
+          return (
+            <label key={s.slug} className={`sh-svc${on ? ' is-on' : ''}`}>
+              <input type="radio" name="sh-svc" checked={on} onChange={() => onChoose(s.slug)} />
+              <span className="sh-svc-name">{s.name}</span>
+              {s.durationMinutes ? <span className="sh-svc-meta">{length(s.durationMinutes)}</span> : null}
+            </label>
+          );
+        })}
       </div>
-      {service && (
-        <div className="sh-only" role="radiogroup" aria-label={`How ${service.name} opens`}>
-          <label className={only ? 'is-on' : ''}>
-            <input type="radio" checked={only} onChange={() => onOnly(true)} />
-            <span>
-              <b>Only {service.name}</b>
-              <small>For a page about this service. People see nothing else.</small>
-            </span>
-          </label>
-          <label className={!only ? 'is-on' : ''}>
-            <input type="radio" checked={!only} onChange={() => onOnly(false)} />
-            <span>
-              <b>{service.name} first</b>
-              <small>Your other services are one step back.</small>
-            </span>
-          </label>
+
+      <label className="sh-also">
+        <input type="checkbox" checked={!only} onChange={(e) => onOnly(!e.target.checked)} />
+        <span>
+          Show your other services too
+          <small>
+            {only
+              ? `People see ${service.name} and nothing else.`
+              : `${service.name} opens first; the rest are one step back.`}
+          </small>
+        </span>
+      </label>
+
+      <div className="sh-out">
+        <p className="sh-out-label">Link</p>
+        <code className="sh-link">{link}</code>
+        <div className="sh-row">
+          <CopyButton text={link} label="Copy link" />
+          <a className="btn-link" href={link} target="_blank" rel="noreferrer">
+            Open
+          </a>
         </div>
-      )}
-    </div>
+      </div>
+
+      <div className="sh-out">
+        <p className="sh-out-label">On your website</p>
+        <p className="wk-side-hint">Paste it on the page about {service.name}, following the steps in “Add khloe to your website”.</p>
+        <div className="sh-row">
+          <CopyButton text={code} label="Copy code" />
+        </div>
+        <details className="sh-peek">
+          <summary>See the code</summary>
+          <pre className="embed-snippet">{code}</pre>
+        </details>
+      </div>
+    </aside>
   );
 }
 
@@ -665,6 +698,14 @@ function LiveStatus({
       </button>
     </div>
   );
+}
+
+/** 20 min, 1 h 30, 8 h. */
+function length(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {

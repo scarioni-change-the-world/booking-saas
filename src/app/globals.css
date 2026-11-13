@@ -9960,12 +9960,6 @@ body:has(.bk-embedded) {
 .sh-lead {
   margin: 4px 0 12px;
 }
-.sh-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 10px;
-}
 .sh-row {
   display: flex;
   flex-wrap: wrap;
@@ -10302,51 +10296,146 @@ body:has(.bk-embedded) {
   }
 }
 
-/* Share: which services the link and code open on */
-.sh-which {
-  margin: 0 0 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--rule);
+/* Share: the whole page on the left, one service in a panel on the right.
+   On a narrow screen the panel follows "Your link", before the long guide. */
+.sh.has-panel {
+  max-width: 1180px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas:
+    'link panel'
+    'guide panel'
+    'more panel';
+  grid-template-rows: auto auto 1fr;
+  gap: 18px 28px;
+  align-items: start;
 }
-.sh-which-label {
-  margin: 0 0 2px;
-  font-size: 0.85rem;
-  font-weight: 600;
+.sh.has-panel .sh-main-link {
+  grid-area: link;
+}
+.sh.has-panel .sh-guide {
+  grid-area: guide;
+}
+.sh.has-panel .sh-more {
+  grid-area: more;
+}
+.sh.has-panel > .sh-card {
+  margin: 0;
+}
+.sh-panel {
+  grid-area: panel;
+}
+.sh-panel-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
   color: var(--ink);
 }
-.sh-only {
+.sh-svc-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
-  margin: 2px 0 10px;
+  gap: 6px;
+  margin: 4px 0 12px;
 }
-.sh-only label {
+.sh-svc {
   display: flex;
+  align-items: center;
   gap: 10px;
-  align-items: flex-start;
   padding: 10px 12px;
   border: 1px solid var(--soft-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   cursor: pointer;
 }
-.sh-only label.is-on {
+.sh-svc:hover {
+  border-color: #c9c6bf;
+}
+.sh-svc.is-on {
   border-color: var(--accent);
   background: var(--selected-mineral);
 }
-.sh-only input {
+.sh-svc:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sh-svc input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+.sh-svc-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sh-svc-meta {
+  font-size: 0.8rem;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.sh-also {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.sh-also input {
   margin-top: 3px;
   accent-color: var(--accent);
 }
-.sh-only b {
-  display: block;
-  font-size: 0.88rem;
-  color: var(--ink);
-}
-.sh-only small {
+.sh-also small {
   display: block;
   font-size: 0.8rem;
   color: var(--faint);
+}
+.sh-out {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+.sh-out-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.sh-out .wk-side-hint {
+  margin: 0;
+}
+.sh-out .sh-link {
+  flex: none;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+}
+.sh-peek > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--faint);
+}
+.sh-peek .embed-snippet {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow-x: auto;
+}
+.sh-which {
+  margin: 0 0 12px;
+}
+@media (max-width: 1100px) {
+  .sh.has-panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'link' 'panel' 'guide' 'more';
+    grid-template-rows: none;
+    max-width: 860px;
+  }
 }
 
 /* Six places on a phone: spread across the width, a touch smaller, so the
