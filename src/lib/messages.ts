@@ -26,7 +26,7 @@ export interface Moment {
 
 /** In the order a client meets them. */
 export const MOMENTS: Moment[] = [
-  { id: 'elsewhere', title: 'Sent elsewhere', tone: 'elsewhere', messages: ['next_steps'] },
+  { id: 'elsewhere', title: 'Before booking', tone: 'elsewhere', messages: ['next_steps'] },
   {
     id: 'books',
     title: 'Books',
@@ -35,9 +35,20 @@ export const MOMENTS: Moment[] = [
   },
   { id: 'day-before', title: 'Day before', tone: 'on', messages: ['booking_reminder'] },
   { id: 'changes', title: 'Changes plans', tone: 'on', messages: ['booking_rescheduled', 'booking_cancelled'] },
-  { id: 'after', title: 'After the session', tone: 'booked', messages: ['session_rating'] },
-  { id: 'link', title: 'Gets their own link', tone: 'booked', messages: ['client_invite'] },
+  { id: 'after', title: 'After', tone: 'booked', messages: ['session_rating'] },
+  { id: 'link', title: 'Sent by you', tone: 'booked', messages: ['client_invite'] },
 ];
+
+/** The automatic journey, in order: what the Messages switch moves along. */
+export const JOURNEY: Moment[] = MOMENTS.filter((m) => m.id !== 'link');
+
+/** Emails the business sends by hand (from People), apart from the journey. */
+export const SENT_BY_YOU: Moment = MOMENTS.find((m) => m.id === 'link')!;
+
+/** The moment a message belongs to. */
+export function momentOf(id: MessageId): Moment {
+  return MOMENTS.find((m) => m.messages.includes(id)) ?? MOMENTS[1]!;
+}
 
 export interface MessageInfo {
   label: string;

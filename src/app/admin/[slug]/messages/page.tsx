@@ -8,8 +8,11 @@ import { EmailAddresses } from '@/components/admin/EmailAddresses';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { TEMPLATE_TOKENS } from '@/lib/email/templates';
 import {
+  JOURNEY,
   MESSAGES,
   MOMENTS,
+  SENT_BY_YOU,
+  momentOf,
   describeTally,
   previewEmail,
   reminderLocalTime,
@@ -137,7 +140,7 @@ export default function MessagesPage() {
     <>
       <PageHeader
         title="What people are told, and when"
-        description="Every email people get, at the moment it is sent. Choose one to change it. Counts are the last 30 days."
+        description="Every email is ready and goes out on its own. Choose a moment to read or change what people are told."
       />
 
       {error && (
@@ -171,42 +174,64 @@ export default function MessagesPage() {
           </div>
 
           <div className="ms-journey-wrap">
-            <ol className="ms-journey" aria-label="The client's journey">
-              {MOMENTS.map((moment) => (
-                <li key={moment.id} className={`ms-moment tone-${moment.tone}`}>
-                  <span className="ms-pin" aria-hidden="true" />
-                  <h3>{moment.title}</h3>
-                  {moment.messages.map((id) => {
-                    const info = MESSAGES[id];
-                    const tally = id === 'next_steps' ? null : data.tallies[id];
-                    const warn = !!tally && tally.failed > 0;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        className={`ms-card${warn ? ' is-warn' : ''}${info.to === 'you' ? ' is-yours' : ''}`}
-                        aria-pressed={selected === id}
-                        onClick={() => setSelected(id)}
-                      >
-                        <b>
-                          {info.label}
-                          {isDirty(id) && <span className="ms-dirty" title="Not saved yet"> ●</span>}
-                        </b>
-                        <small>
-                          {id === 'next_steps'
-                            ? `${data.shownElsewhere} shown`
-                            : id === 'owner_notification' && !data.notificationEmail
-                              ? 'Off: no address set'
-                              : id === 'session_rating' && data.ratingEmails === false
-                                ? 'Off'
-                                : describeTally(tally!)}
-                        </small>
-                      </button>
-                    );
-                  })}
-                </li>
+            <MomentSwitch
+              moments={JOURNEY}
+              current={momentOf(selected).id}
+              onChange={(id) => setSelected(MOMENTS.find((m) => m.id === id)!.messages[0]!)}
+              warn={(m) => m.messages.some((id) => id !== 'next_steps' && (data.tallies[id]?.failed ?? 0) > 0)}
+            />
+
+            <div className="ms-cards" role="group" aria-label={`Messages: ${momentOf(selected).title}`}>
+              {momentOf(selected).messages.map((id) => {
+                const info = MESSAGES[id];
+                const tally = id === 'next_steps' ? null : data.tallies[id];
+                const warn = !!tally && tally.failed > 0;
+                const status =
+                  id === 'next_steps'
+                    ? data.shownElsewhere > 0
+                      ? `Shown ${data.shownElsewhere} ${data.shownElsewhere === 1 ? 'time' : 'times'}`
+                      : 'Ready'
+                    : id === 'owner_notification' && !data.notificationEmail
+                      ? 'Off: no address set'
+                      : id === 'session_rating' && data.ratingEmails === false
+                        ? 'Off'
+                        : tally && tally.sent === 0 && tally.failed === 0 && tally.notSent === 0
+                          ? 'Ready'
+                          : describeTally(tally!);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`ms-card${warn ? ' is-warn' : ''}${info.to === 'you' ? ' is-yours' : ''}`}
+                    aria-pressed={selected === id}
+                    onClick={() => setSelected(id)}
+                  >
+                    <b>
+                      {info.label}
+                      {isDirty(id) && <span className="ms-dirty" title="Not saved yet"> ●</span>}
+                    </b>
+                    <small>{status}</small>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Not part of the journey: sent by hand from People. */}
+            <p className="ms-by-you">
+              <span>{SENT_BY_YOU.title}:</span>
+              {SENT_BY_YOU.messages.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="btn-link"
+                  aria-pressed={selected === id}
+                  onClick={() => setSelected(id)}
+                >
+                  {MESSAGES[id].label}
+                  {isDirty(id) && <span className="ms-dirty" title="Not saved yet"> ●</span>}
+                </button>
               ))}
-            </ol>
+            </p>
           </div>
 
           {selected === 'next_steps' ? (
@@ -240,6 +265,69 @@ export default function MessagesPage() {
         </>
       )}
     </>
+  );
+}
+
+/* ── The switch: one moment of the journey at a time ────────────────────── */
+
+/**
+ * The five moments a client passes through, as stops on one rail, with a
+ * knob on the chosen one: the same physical idea as the notice switch, laid
+ * along time. Only that moment's messages show below it, rather than nine
+ * cards at once. Arrow keys move along it, like any radio group.
+ */
+function MomentSwitch({
+  moments,
+  current,
+  onChange,
+  warn,
+}: {
+  moments: typeof JOURNEY;
+  current: string;
+  onChange: (id: string) => void;
+  warn: (moment: (typeof JOURNEY)[number]) => boolean;
+}) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const index = Math.max(0, moments.findIndex((m) => m.id === current));
+
+  function move(to: number) {
+    const next = (to + moments.length) % moments.length;
+    onChange(moments[next]!.id);
+    refs.current[next]?.focus();
+  }
+
+  return (
+    <div className="ms-switch" role="radiogroup" aria-label="When people are told">
+      <span className="ms-switch-rail" aria-hidden="true">
+        <span className="ms-switch-fill" style={{ width: `${(index / (moments.length - 1)) * 100}%` }} />
+      </span>
+      {moments.map((m, i) => (
+        <button
+          key={m.id}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          type="button"
+          role="radio"
+          aria-checked={i === index}
+          tabIndex={i === index ? 0 : -1}
+          className={`ms-stop${i === index ? ' is-on' : ''}${i < index ? ' is-past' : ''}${warn(m) ? ' is-warn' : ''}`}
+          onClick={() => onChange(m.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              move(i + 1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              move(i - 1);
+            }
+          }}
+        >
+          <span className="ms-stop-dot" aria-hidden="true" />
+          <span className="ms-stop-label">{m.title}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
