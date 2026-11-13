@@ -178,6 +178,7 @@ export default function MessagesPage() {
                 its messages beside it. */}
             <div className="ms-scale">
               <p className="wk-side-eyebrow">When</p>
+              <p className="ms-scale-hint">Choose a moment to see the emails sent then.</p>
               <SlideScale
                 stops={MOMENTS.map((m, i) => ({
                   value: i,
@@ -225,6 +226,13 @@ export default function MessagesPage() {
                 );
               })}
             </div>
+
+            {momentOf(selected).about && (
+              <p className="ms-about">
+                <b>{momentOf(selected).title}</b>
+                {momentOf(selected).about}
+              </p>
+            )}
 
           </div>
 

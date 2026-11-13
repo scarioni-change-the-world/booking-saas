@@ -10246,18 +10246,37 @@ body:has(.bk-embedded) {
 /* ── Messages: the moments on a slide scale, their messages beside it ── */
 .admin-app .ms-journey-wrap:has(.ms-scale) {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 18px 32px;
-  align-items: start;
+  grid-template-columns: 230px minmax(0, 420px) minmax(0, 1fr);
+  gap: 18px 36px;
+  align-items: center;
 }
 .ms-scale .wk-side-eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
+}
+.ms-scale-hint {
+  margin: 0 0 14px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--faint);
+}
+/* What happens at the chosen moment, in the room to the right. */
+.ms-about {
+  margin: 0;
+  padding-left: 20px;
+  border-left: 1px solid var(--rule);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.ms-about b {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
 }
 .ms-cards {
   display: grid;
   gap: 10px;
-  align-content: start;
-  padding-top: 30px;
+  align-content: center;
 }
 .ms-cards .ms-card {
   width: 100%;
@@ -10270,6 +10289,10 @@ body:has(.bk-embedded) {
 @media (max-width: 600px) {
   .admin-app .ms-journey-wrap:has(.ms-scale) {
     grid-template-columns: 1fr;
+  }
+  .ms-about {
+    padding-left: 0;
+    border-left: 0;
   }
   .ms-cards {
     padding-top: 0;

@@ -19,6 +19,8 @@ export type MessageId = EmailTemplateKind | 'next_steps';
 export interface Moment {
   id: string;
   title: string;
+  /** What happens at this moment, in a sentence, beside its messages. */
+  about?: string;
   /** Where the journey goes from here: the calendar, somewhere else, or on. */
   tone: 'on' | 'booked' | 'elsewhere';
   messages: MessageId[];
@@ -26,17 +28,17 @@ export interface Moment {
 
 /** In the order a client meets them. */
 export const MOMENTS: Moment[] = [
-  { id: 'elsewhere', title: 'Before booking', tone: 'elsewhere', messages: ['next_steps'] },
+  { id: 'elsewhere', title: 'Before booking', about: 'When someone’s answers mean a meeting is not the next step, this is shown on screen instead of your calendar.', tone: 'elsewhere', messages: ['next_steps'] },
   {
-    id: 'books',
+    id: 'books', about: 'Straight after someone books: their confirmation, and your alert.',
     title: 'Books',
     tone: 'booked',
     messages: ['booking_confirmed', 'booking_pack_confirmed', 'owner_notification'],
   },
-  { id: 'day-before', title: 'Day before', tone: 'on', messages: ['booking_reminder'] },
-  { id: 'changes', title: 'Changes plans', tone: 'on', messages: ['booking_rescheduled', 'booking_cancelled'] },
-  { id: 'after', title: 'After', tone: 'booked', messages: ['session_rating'] },
-  { id: 'link', title: 'Invitations', tone: 'booked', messages: ['client_invite'] },
+  { id: 'day-before', title: 'Day before', about: 'Each morning, a reminder for every appointment the next day.', tone: 'on', messages: ['booking_reminder'] },
+  { id: 'changes', title: 'Changes plans', about: 'When a booking is moved or cancelled, by the client or by you.', tone: 'on', messages: ['booking_rescheduled', 'booking_cancelled'] },
+  { id: 'after', title: 'After', about: 'The morning after a session, one question: how was it? You can turn it off.', tone: 'booked', messages: ['session_rating'] },
+  { id: 'link', title: 'Invitations', about: 'Only when you press “Send link” on a client in People.', tone: 'booked', messages: ['client_invite'] },
 ];
 
 /** The automatic journey, in order: what the Messages switch moves along. */
