@@ -8,10 +8,8 @@ import { EmailAddresses } from '@/components/admin/EmailAddresses';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { TEMPLATE_TOKENS } from '@/lib/email/templates';
 import {
-  JOURNEY,
   MESSAGES,
   MOMENTS,
-  SENT_BY_YOU,
   momentOf,
   describeTally,
   previewEmail,
@@ -174,12 +172,40 @@ export default function MessagesPage() {
           </div>
 
           <div className="ms-journey-wrap">
-            <MomentSwitch
-              moments={JOURNEY}
-              current={momentOf(selected).id}
-              onChange={(id) => setSelected(MOMENTS.find((m) => m.id === id)!.messages[0]!)}
-              warn={(m) => m.messages.some((id) => id !== 'next_steps' && (data.tallies[id]?.failed ?? 0) > 0)}
-            />
+            {/* A plain selector, like Week's "Look · Paint": choose a moment,
+                see only its messages. */}
+            <div className="wk-mode ms-moments" role="group" aria-label="When people are told">
+              {MOMENTS.map((m) => {
+                const failed = m.messages.some((id) => id !== 'next_steps' && (data.tallies[id]?.failed ?? 0) > 0);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="filter-chip"
+                    aria-pressed={momentOf(selected).id === m.id}
+                    onClick={() => setSelected(m.messages[0]!)}
+                  >
+                    {m.title}
+                    {failed && <span className="ms-dirty" title="An email here did not arrive"> •</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* On a phone the six do not fit in one row: a plain dropdown. */}
+            <label className="ms-moments-select">
+              <span className="sr-only">When people are told</span>
+              <select
+                value={momentOf(selected).id}
+                onChange={(e) => setSelected(MOMENTS.find((m) => m.id === e.target.value)!.messages[0]!)}
+              >
+                {MOMENTS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <div className="ms-cards" role="group" aria-label={`Messages: ${momentOf(selected).title}`}>
               {momentOf(selected).messages.map((id) => {
@@ -216,23 +242,6 @@ export default function MessagesPage() {
               })}
             </div>
 
-            {/* Not part of the journey: sent only when the business gives a
-                client their own link, from People. */}
-            <p className="ms-by-you">
-              <span>Sent only when you give a client their own booking link, from People:</span>
-              {SENT_BY_YOU.messages.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className="btn-link"
-                  aria-pressed={selected === id}
-                  onClick={() => setSelected(id)}
-                >
-                  {MESSAGES[id].label}
-                  {isDirty(id) && <span className="ms-dirty" title="Not saved yet"> ●</span>}
-                </button>
-              ))}
-            </p>
           </div>
 
           {selected === 'next_steps' ? (
@@ -266,70 +275,6 @@ export default function MessagesPage() {
         </>
       )}
     </>
-  );
-}
-
-/* ── The switch: one moment of the journey at a time ────────────────────── */
-
-/**
- * The five moments a client passes through, as stops on one rail, with a
- * knob on the chosen one: the same physical idea as the notice switch, laid
- * along time. Only that moment's messages show below it, rather than nine
- * cards at once. Arrow keys move along it, like any radio group.
- */
-function MomentSwitch({
-  moments,
-  current,
-  onChange,
-  warn,
-}: {
-  moments: typeof JOURNEY;
-  current: string;
-  onChange: (id: string) => void;
-  warn: (moment: (typeof JOURNEY)[number]) => boolean;
-}) {
-  const refs = useRef<Array<HTMLButtonElement | null>>([]);
-  const index = Math.max(0, moments.findIndex((m) => m.id === current));
-
-  function move(to: number) {
-    const next = (to + moments.length) % moments.length;
-    onChange(moments[next]!.id);
-    refs.current[next]?.focus();
-  }
-
-  return (
-    <div className="ms-switch" role="radiogroup" aria-label="When people are told">
-      {/* A plain line: the moments happen in this order, but nothing here
-          is a step to complete, so nothing fills up as it would in a
-          progress bar. */}
-      <span className="ms-switch-rail" aria-hidden="true" />
-      {moments.map((m, i) => (
-        <button
-          key={m.id}
-          ref={(el) => {
-            refs.current[i] = el;
-          }}
-          type="button"
-          role="radio"
-          aria-checked={i === index}
-          tabIndex={i === index ? 0 : -1}
-          className={`ms-stop${i === index ? ' is-on' : ''}${warn(m) ? ' is-warn' : ''}`}
-          onClick={() => onChange(m.id)}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-              e.preventDefault();
-              move(i + 1);
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-              e.preventDefault();
-              move(i - 1);
-            }
-          }}
-        >
-          <span className="ms-stop-dot" aria-hidden="true" />
-          <span className="ms-stop-label">{m.title}</span>
-        </button>
-      ))}
-    </div>
   );
 }
 

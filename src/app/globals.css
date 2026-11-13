@@ -10243,81 +10243,29 @@ body:has(.bk-embedded) {
   }
 }
 
-/* ── Messages: the moment switch ──
-   Five stops on one rail, a pill knob on the chosen one (the notice
-   switch's idea, laid along time), and only that moment's messages below. */
-.ms-switch {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin: 2px 0 20px;
+/* ── Messages: one moment at a time, chosen from a plain selector ── */
+.ms-moments-select {
+  display: none;
 }
-.ms-switch-rail {
-  position: absolute;
-  top: 16px;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--stone-border, #bfbdb5);
+@media (max-width: 700px) {
+  .ms-moments {
+    display: none;
+  }
+  .ms-moments-select {
+    display: block;
+    margin: 0 0 14px;
+  }
 }
-.ms-stop {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  align-self: start;
-  gap: 8px;
-  min-height: 0;
-  padding: 0 4px;
-  border: 0;
-  background: none;
-  box-shadow: none;
-  color: var(--faint);
-  font: inherit;
-  cursor: pointer;
+.ms-moments {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.admin-app .ms-stop:hover {
-  background: none;
-  color: var(--ink);
-}
-.ms-stop-dot {
-  width: 14px;
-  height: 14px;
-  margin: 10px 0 4px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: inset 0 0 0 2px var(--stone-border, #bfbdb5);
-  transition: all 0.2s ease;
-}
-.ms-stop.is-on .ms-stop-dot {
-  width: 38px;
-  height: 24px;
-  margin: 5px 0 -1px;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: 0 0 0 1.5px var(--accent), 0 3px 8px rgba(32, 34, 33, 0.16);
-}
-.ms-stop-label {
-  font-size: 0.85rem;
-  text-align: center;
-  line-height: 1.25;
-}
-.ms-stop.is-on .ms-stop-label {
-  color: var(--ink);
-  font-weight: 600;
-}
-.ms-stop.is-warn .ms-stop-label::after {
-  content: ' •';
-  color: var(--emphasis);
-}
-.ms-stop:focus-visible {
-  outline: none;
-}
-.ms-stop:focus-visible .ms-stop-dot {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+.ms-moments .filter-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .ms-cards {
   display: flex;
@@ -10335,26 +10283,7 @@ body:has(.bk-embedded) {
   font-weight: 400;
   color: var(--faint);
 }
-.ms-by-you {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin: 16px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--rule);
-  font-size: 0.85rem;
-  color: var(--faint);
-}
-.ms-by-you button[aria-pressed='true'] {
-  color: var(--ink);
-  font-weight: 600;
-  text-decoration: none;
-}
 @media (max-width: 600px) {
-  .ms-stop-label {
-    font-size: 0.72rem;
-  }
   .ms-cards .ms-card {
     flex: 1 1 100%;
     max-width: none;
