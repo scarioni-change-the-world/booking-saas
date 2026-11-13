@@ -10323,6 +10323,35 @@ body:has(.bk-embedded) {
 }
 .sh-panel {
   grid-area: panel;
+  min-width: 0;
+}
+.sh-peek {
+  min-width: 0;
+}
+.sh-qr {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.sh-qr-img {
+  flex: none;
+  display: block;
+  width: 112px;
+  height: 112px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+  background: #fcfbf8;
+}
+.sh-qr-side {
+  min-width: 0;
+}
+.sh-qr-side .wk-side-hint {
+  margin: 0 0 6px;
+}
+.sh-qr-get {
+  display: flex;
+  gap: 14px;
+  margin: 0;
 }
 .sh-panel-title {
   margin: 0;
@@ -10410,6 +10439,9 @@ body:has(.bk-embedded) {
 }
 .sh-out {
   display: grid;
+  /* One column the card's width: without minmax(0, …) the code's longest
+     line sets the column, and every text in the section runs past the card. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 16px;
   padding-top: 14px;

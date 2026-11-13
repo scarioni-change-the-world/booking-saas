@@ -368,6 +368,11 @@ function ServicePanel({
           </div>
 
           <div className="sh-out">
+            <p className="sh-out-label">QR code</p>
+            <QrCode text={link} name={`${slug}-${service.slug}`} label={service.name} />
+          </div>
+
+          <div className="sh-out">
             <p className="sh-out-label">On your website</p>
             <p className="wk-side-hint">Paste it on the page about {service.name}, following the steps in “Add khloe to your website”.</p>
             <div className="sh-row">
@@ -731,6 +736,61 @@ function LiveStatus({
       <button type="button" className="btn-link" onClick={() => void refresh()} disabled={checking}>
         {checking ? 'Checking…' : 'Check again'}
       </button>
+    </div>
+  );
+}
+
+/**
+ * The link as a QR code, for flyers, business cards and a sign in the
+ * studio: drawn in Ink on Soft White, downloadable as PNG (print shops,
+ * Canva) and SVG (sharp at any size). The library is loaded on demand so
+ * pages without it never carry it.
+ */
+function QrCode({ text, name, label }: { text: string; name: string; label: string }) {
+  const [svg, setSvg] = useState('');
+  const [png, setPng] = useState('');
+
+  useEffect(() => {
+    if (!text) return;
+    let gone = false;
+    void (async () => {
+      const QR = await import('qrcode');
+      const colors = { dark: '#202221', light: '#FCFBF8' };
+      const [nextSvg, nextPng] = await Promise.all([
+        QR.toString(text, { type: 'svg', margin: 2, color: colors, errorCorrectionLevel: 'M' }),
+        QR.toDataURL(text, { width: 1200, margin: 2, color: colors, errorCorrectionLevel: 'M' }),
+      ]);
+      if (!gone) {
+        setSvg(nextSvg);
+        setPng(nextPng);
+      }
+    })();
+    return () => {
+      gone = true;
+    };
+  }, [text]);
+
+  const svgHref = svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : '';
+  return (
+    <div className="sh-qr">
+      {png ? (
+        // A data URL drawn here, not a remote image: next/image adds nothing.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="sh-qr-img" src={png} alt={`QR code that opens ${label}`} width={112} height={112} />
+      ) : (
+        <span className="sh-qr-img" aria-hidden="true" />
+      )}
+      <div className="sh-qr-side">
+        <p className="wk-side-hint">For flyers, business cards or a sign: a phone camera opens {label}.</p>
+        <p className="sh-qr-get">
+          <a className="btn-link" href={png || undefined} download={`${name}-qr.png`} aria-disabled={!png}>
+            Download PNG
+          </a>
+          <a className="btn-link" href={svgHref || undefined} download={`${name}-qr.svg`} aria-disabled={!svg}>
+            SVG
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
