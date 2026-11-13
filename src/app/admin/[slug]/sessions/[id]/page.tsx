@@ -130,6 +130,7 @@ export default function ServicePage() {
   const stages = setupStages(facts);
   const live = service.availableToProspects || service.availableToExistingClients;
   const outstanding = stages.filter((s) => !s.done).length;
+  const needed = stages.filter((s) => !s.done && s.blocking).length;
 
   async function patch(body: Record<string, unknown>) {
     await adminFetchJson(`${base}/event-types/${id}`, {
@@ -152,7 +153,9 @@ export default function ServicePage() {
         description={
           outstanding === 0
             ? 'Everything is decided. Any of it can still be changed.'
-            : 'Work through these in any order. Nothing is lost if you leave and come back.'
+            : needed === 0
+              ? 'Ready to book. The steps marked optional make it better, in any order, whenever you like.'
+              : 'Work through these in any order. Nothing is lost if you leave and come back.'
         }
         actions={
           <a className="btn-secondary" href={`/admin/${slug}/flow?part=service:${service.id}`}>
@@ -287,11 +290,21 @@ function StageRow({
   return (
     <li className={`setup-stage ${tone}`}>
       <div className="setup-stage-head">
+        {/* Three kinds, said by the mark and a word, not by a number: a
+            numbered step without a tick read as unfinished, even when the
+            service works and the step only makes it better. */}
         <span className="setup-stage-n" aria-hidden="true">
-          {stage.done ? '✓' : index}
+          {stage.done ? '✓' : stage.blocking ? '!' : '+'}
         </span>
         <div className="setup-stage-main">
-          <p className="setup-stage-label">{stage.label}</p>
+          <p className="setup-stage-label">
+            {stage.label}
+            {!stage.done && (
+              <span className={`setup-stage-tag${stage.blocking ? ' is-needed' : ''}`}>
+                {stage.blocking ? 'Needed' : 'Optional'}
+              </span>
+            )}
+          </p>
           <p className="setup-stage-purpose">{stage.purpose}</p>
           {stage.note && <p className="setup-stage-note">{stage.note}</p>}
         </div>
@@ -300,11 +313,11 @@ function StageRow({
             /* Out to the screen that already does this job, rather than a
                second copy of it living here and drifting from the first. */
             <a className="btn-secondary" href={`/admin/${slug}/${stage.href}`}>
-              {stage.done ? 'Review' : 'Set up'}
+              {stage.done ? 'Review' : stage.blocking ? 'Set up' : 'Add'}
             </a>
           ) : (
             <button type="button" className="btn-secondary" onClick={onToggle} aria-expanded={open}>
-              {open ? 'Close' : stage.done ? 'Change' : 'Set up'}
+              {open ? 'Close' : stage.done ? 'Change' : stage.blocking ? 'Set up' : 'Add'}
             </button>
           )}
         </div>
