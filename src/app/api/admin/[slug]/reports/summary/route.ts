@@ -22,6 +22,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const period = resolvePeriod(typeof body.preset === 'string' ? body.preset : null, today, {
       from: typeof body.from === 'string' ? body.from : null,
       to: typeof body.to === 'string' ? body.to : null,
+      at: typeof body.at === 'string' ? body.at : null,
     });
     if ('error' in period) return fail(period.error, 400);
 

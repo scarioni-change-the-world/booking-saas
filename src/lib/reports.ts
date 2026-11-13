@@ -862,6 +862,26 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
   }
 
   // When.
+  //
+  // Nothing booked at all is one note, not three: "Thursday mornings: 20
+  // hours, nothing booked" and "Only 0% was taken" both say it, and neither
+  // says what to do about it. When nobody booked, the likelier problem is
+  // that too few people found the page, so the note points to Share.
+  const nothingBooked = r.headline.hoursBooked.value === 0 && r.headline.hoursOpen.value >= 10;
+  if (nothingBooked) {
+    const hours = Math.round(r.headline.hoursOpen.value);
+    need.push({
+      id: 'nothing-booked',
+      tone: 'need',
+      title: 'Nothing booked in this period',
+      detail:
+        (visited
+          ? `${visited} ${visited === 1 ? 'person' : 'people'} visited your page, and nobody booked.`
+          : `Your ${hours} open hours were all free.`) +
+        ' More people need to find you: share your link, or put booking on your website.',
+      action: { label: 'Share your booking page', href: 'share' },
+    });
+  }
   const full = r.demand.full[0];
   if (full) {
     good.push({
@@ -874,7 +894,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
     });
   }
   const quiet = r.demand.quiet[0];
-  if (quiet) {
+  if (quiet && !nothingBooked) {
     need.push({
       id: 'band-quiet',
       tone: 'need',
@@ -885,7 +905,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
     });
   }
   const utilisation = r.headline.utilisation.value;
-  if (utilisation !== null && r.headline.hoursOpen.value >= 10) {
+  if (utilisation !== null && r.headline.hoursOpen.value >= 10 && !nothingBooked) {
     if (utilisation >= 0.85) {
       good.push({
         id: 'nearly-full',
@@ -900,7 +920,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
         id: 'mostly-empty',
         tone: 'need',
         title: `${Math.round(r.headline.hoursOpen.value - r.headline.hoursBooked.value)} open hours went unbooked`,
-        detail: `Only ${pct(utilisation)} of the time you offered was taken. Fewer, better-placed hours make a page look in demand.`,
+        detail: `${utilisation < 0.01 ? 'Less than 1%' : `Only ${pct(utilisation)}`} of the time you offered was taken. Fewer, better-placed hours make a page look in demand.`,
         action: { label: 'Look at your week', href: 'week' },
       });
     }

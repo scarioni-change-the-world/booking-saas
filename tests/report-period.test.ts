@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { datesIn, previousPeriod, rangeBounds, rangeLabel, resolvePeriod } from '../src/lib/report-period';
+import { datesIn, previousPeriod, rangeBounds, rangeLabel, resolvePeriod, unitPeriod } from '../src/lib/report-period';
 
 const today = '2026-09-27';
 
@@ -7,7 +7,7 @@ describe('resolvePeriod', () => {
   it('reads the usual periods, ending today', () => {
     expect(resolvePeriod('7d', today)).toMatchObject({ from: '2026-09-21', to: '2026-09-27', days: 7 });
     expect(resolvePeriod('30d', today)).toMatchObject({ from: '2026-08-29', to: '2026-09-27', days: 30 });
-    expect(resolvePeriod('month', today)).toMatchObject({ from: '2026-09-01', to: '2026-09-27' });
+    expect(resolvePeriod('month', today)).toMatchObject({ from: '2026-09-01', to: '2026-09-27', soFar: true });
     expect(resolvePeriod('last-month', today)).toMatchObject({
       from: '2026-08-01',
       to: '2026-08-31',
@@ -33,6 +33,53 @@ describe('resolvePeriod', () => {
       error: expect.stringMatching(/at most 366/),
     });
     expect(resolvePeriod('custom', today, {})).toMatchObject({ error: expect.stringMatching(/Choose/) });
+  });
+});
+
+describe('calendar periods', () => {
+  // 27 September 2026 is a Sunday.
+  it('reads the current week, month, quarter and year so far, with no next one', () => {
+    expect(unitPeriod('week', today)).toMatchObject({ from: '2026-09-21', to: '2026-09-27', soFar: true, next: null });
+    expect(unitPeriod('month', today)).toMatchObject({ label: 'September', prev: '2026-08-01', next: null });
+    expect(unitPeriod('quarter', today)).toMatchObject({ from: '2026-07-01', label: 'July – September' });
+    expect(unitPeriod('year', today)).toMatchObject({ from: '2026-01-01', to: '2026-09-27', label: '2026' });
+  });
+
+  it('reads any earlier one whole, and steps both ways', () => {
+    const feb = unitPeriod('month', today, '2025-02-14');
+    expect(feb).toMatchObject({
+      from: '2025-02-01',
+      to: '2025-02-28',
+      soFar: false,
+      label: 'February 2025',
+      prev: '2025-01-01',
+      next: '2025-03-01',
+    });
+    expect(unitPeriod('quarter', today, '2025-11-30')).toMatchObject({
+      from: '2025-10-01',
+      to: '2025-12-31',
+      label: 'October – December 2025',
+    });
+    expect(unitPeriod('month', today, '2026-10-01')).toEqual({ error: 'That period has not started yet.' });
+  });
+
+  it('compares a running period with the same stretch of the one before', () => {
+    const now = unitPeriod('month', '2026-11-13');
+    if ('error' in now) throw new Error(now.error);
+    expect(previousPeriod(now)).toEqual({ from: '2026-10-01', to: '2026-10-13' });
+    // 31 March so far, against February: it cannot run past February's end.
+    const march = unitPeriod('month', '2026-03-31');
+    if ('error' in march) throw new Error(march.error);
+    expect(previousPeriod(march)).toEqual({ from: '2026-02-01', to: '2026-02-28' });
+  });
+
+  it('compares a whole period with the whole one before, whatever its length', () => {
+    const aug = unitPeriod('month', today, '2026-08-10');
+    if ('error' in aug) throw new Error(aug.error);
+    expect(previousPeriod(aug)).toEqual({ from: '2026-07-01', to: '2026-07-31' });
+    const march = unitPeriod('month', today, '2026-03-05');
+    if ('error' in march) throw new Error(march.error);
+    expect(previousPeriod(march)).toEqual({ from: '2026-02-01', to: '2026-02-28' });
   });
 });
 

@@ -2,11 +2,12 @@ import { DateTime } from 'luxon';
 import { fail, handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { loadReportInput } from '@/lib/report-data';
-import { previousPeriod, rangeLabel, resolvePeriod } from '@/lib/report-period';
+import { previousPeriod, rangeLabel, resolvePeriod, unitLabel } from '@/lib/report-period';
 import { buildReport } from '@/lib/reports';
 
 /**
- * A report for one period: ?preset=7d|30d|month|last-month|90d|year, or
+ * A report for one period: ?preset=week|month|quarter|year (with &at=yyyy-MM-dd
+ * for any one of them, not only the current one), 7d|30d|last-month|90d, or
  * ?preset=custom&from=yyyy-MM-dd&to=yyyy-MM-dd. With the period before it
  * for comparison, and the summary when one was already generated — plus the
  * most recent summaries for any period, so one made on "Last 30 days" can be
@@ -24,6 +25,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     const period = resolvePeriod(params.get('preset'), today, {
       from: params.get('from'),
       to: params.get('to'),
+      at: params.get('at'),
     });
     if ('error' in period) return fail(period.error, 400);
     const previous = previousPeriod(period);
@@ -53,7 +55,14 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     return ok({
       today,
       period,
-      previous: { ...previous, label: rangeLabel(previous.from, previous.to, today) },
+      previous: {
+        ...previous,
+        // A whole earlier month reads "October"; a stretch of one, "1–13 October".
+        label:
+          period.unit && !period.soFar
+            ? unitLabel(period.unit, previous.from, today)
+            : rangeLabel(previous.from, previous.to, today),
+      },
       currency,
       timezone: tenant.timezone,
       visitsSince,

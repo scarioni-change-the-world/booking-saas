@@ -6,7 +6,7 @@ import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { Bars, JourneyBars, WeekHeat } from '@/components/admin/ReportCharts';
-import { PRESETS, type Period, type PeriodPreset } from '@/lib/report-period';
+import { UNITS, type Period, type PeriodUnit } from '@/lib/report-period';
 import { bandName, formatMinor, weekdayName, type Figure, type Report } from '@/lib/reports';
 import type { ReportSummary, SummaryPlace } from '@/lib/ai/provider';
 import { MONTHLY_LIMITS } from '@/lib/ai/limits';
@@ -47,64 +47,70 @@ const PLACE: Record<SummaryPlace, { label: string; href: string } | null> = {
  * Built to be used, not admired. It opens on the few things worth acting on
  * (the notes, and a written summary on request), then the figures that
  * support them, section by section, each with a way to the place where the
- * change is made. Any period — the usual ones, or any two dates — and always
- * compared with the stretch of the same length before it.
+ * change is made.
+ *
+ * The period is two questions, asked separately: how long (a switch: week,
+ * month, quarter, year) and which one (arrows, back as far as you like;
+ * it opens on the current one, so far). Any two dates are one link away.
+ * Always compared with the one before: for a period still running, the
+ * same stretch of the one before (1–13 November against 1–13 October).
  */
 export default function ReportsPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [preset, setPreset] = useState<PeriodPreset>('30d');
+  const [sel, setSel] = useState<Selection>({ kind: 'unit', unit: 'month', at: null });
   const [custom, setCustom] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [editingCustom, setEditingCustom] = useState(false);
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const query = useCallback(
-    (p: PeriodPreset, c: { from: string; to: string }) =>
-      p === 'custom' ? `preset=custom&from=${c.from}&to=${c.to}` : `preset=${p}`,
-    [],
-  );
-
   const load = useCallback(
-    async (p: PeriodPreset, c: { from: string; to: string }) => {
+    async (next: Selection) => {
+      setSel(next);
       setLoading(true);
       setError(null);
+      const query =
+        next.kind === 'custom'
+          ? `preset=custom&from=${next.from}&to=${next.to}`
+          : `preset=${next.unit}${next.at ? `&at=${next.at}` : ''}`;
       try {
-        setData(await adminFetchJson<Payload>(`/api/admin/${slug}/reports?${query(p, c)}`));
+        setData(await adminFetchJson<Payload>(`/api/admin/${slug}/reports?${query}`));
       } catch (cause) {
         setError((cause as Error).message);
       } finally {
         setLoading(false);
       }
     },
-    [slug, query],
+    [slug],
   );
 
   useEffect(() => {
-    void load('30d', { from: '', to: '' });
+    void load({ kind: 'unit', unit: 'month', at: null });
   }, [load]);
 
-  function choose(p: PeriodPreset) {
-    setPreset(p);
-    if (p === 'custom') {
-      setEditingCustom(true);
-      if (!custom.from && data) setCustom({ from: data.period.from, to: data.period.to });
-      return;
-    }
+  /** Another length, at the same point in time as the period on screen. */
+  function chooseUnit(unit: PeriodUnit) {
     setEditingCustom(false);
-    void load(p, custom);
+    const at = sel.kind === 'unit' ? sel.at : data && data.period.to !== data.today ? data.period.to : null;
+    void load({ kind: 'unit', unit, at });
+  }
+
+  function chooseDates() {
+    if (!custom.from && data) setCustom({ from: data.period.from, to: data.period.to });
+    setEditingCustom(true);
   }
 
   /** Open a past summary: its exact dates, as a chosen period, where it is saved. */
   function openPast(from: string, to: string) {
-    setPreset('custom');
     setCustom({ from, to });
     setEditingCustom(false);
-    void load('custom', { from, to });
+    void load({ kind: 'custom', from, to });
   }
 
   const r = data?.report;
   const money = (minor: number) => formatMinor(minor, data?.currency ?? 'EUR');
+  const period = data?.period;
+  const unitName = sel.kind === 'unit' ? UNITS.find((u) => u.id === sel.unit)!.label.toLowerCase() : '';
 
   return (
     <>
@@ -113,35 +119,71 @@ export default function ReportsPage() {
         description="How your practice is going, and what to change. Every figure is for the period you choose, next to the one before it."
       />
 
-      <div className="rep-period" role="group" aria-label="Period">
-        <div className="rep-presets">
-          {PRESETS.map((p) => (
+      <div className="rep-period">
+        <div className="wk-mode" role="group" aria-label="Length of the period">
+          {UNITS.map((u) => (
             <button
-              key={p.id}
+              key={u.id}
               type="button"
               className="filter-chip"
-              aria-pressed={preset === p.id}
-              onClick={() => choose(p.id)}
+              aria-pressed={sel.kind === 'unit' && sel.unit === u.id}
+              onClick={() => chooseUnit(u.id)}
             >
-              {p.label}
+              {u.label}
             </button>
           ))}
-          <button
-            type="button"
-            className="filter-chip"
-            aria-pressed={preset === 'custom'}
-            onClick={() => choose('custom')}
-          >
-            Choose dates
-          </button>
         </div>
+
+        {sel.kind === 'unit' && period?.unit && (
+          <div className="wk-nav rep-nav">
+            <button
+              type="button"
+              className="btn-secondary"
+              aria-label={`Previous ${unitName}`}
+              disabled={loading || !period.prev}
+              onClick={() => void load({ kind: 'unit', unit: sel.unit, at: period.prev! })}
+            >
+              ‹
+            </button>
+            <span className="wk-range rep-range" aria-live="polite">
+              {period.label}
+            </span>
+            <button
+              type="button"
+              className="btn-secondary"
+              aria-label={`Next ${unitName}`}
+              disabled={loading || !period.next}
+              onClick={() => void load({ kind: 'unit', unit: sel.unit, at: period.next! })}
+            >
+              ›
+            </button>
+            {!period.soFar && (
+              <button
+                type="button"
+                className="btn-link rep-now"
+                onClick={() => void load({ kind: 'unit', unit: sel.unit, at: null })}
+              >
+                This {unitName}
+              </button>
+            )}
+          </div>
+        )}
+        {sel.kind === 'custom' && period && !editingCustom && (
+          <span className="wk-range rep-range">{period.label}</span>
+        )}
+
+        {!editingCustom && (
+          <button type="button" className="btn-link rep-choose" onClick={chooseDates}>
+            {sel.kind === 'custom' ? 'Change dates' : 'Choose dates'}
+          </button>
+        )}
         {editingCustom && (
           <form
             className="rep-custom"
             onSubmit={(e) => {
               e.preventDefault();
               setEditingCustom(false);
-              void load('custom', custom);
+              void load({ kind: 'custom', ...custom });
             }}
           >
             <label>
@@ -168,19 +210,19 @@ export default function ReportsPage() {
             <button type="submit" className="btn-primary" disabled={!custom.from || !custom.to}>
               Show
             </button>
+            <button type="button" className="btn-link" onClick={() => setEditingCustom(false)}>
+              Cancel
+            </button>
           </form>
         )}
-        {data && !editingCustom && (
-          <p className="rep-compare">
-            <b>
-              {data.period.preset === 'custom'
-                ? data.period.label
-                : rangeText(data.period.from, data.period.to)}
-            </b>
-            <span className="wk-muted"> · compared with {data.previous.label}</span>
-          </p>
-        )}
       </div>
+      {data && period && (
+        <p className="rep-compare">
+          {rangeText(period.from, period.to)}
+          {period.soFar ? ' so far' : ''}
+          <span className="wk-muted"> · compared with {data.previous.label}</span>
+        </p>
+      )}
 
       {error && (
         <p className="notice notice-error" role="alert">
@@ -228,7 +270,6 @@ export default function ReportsPage() {
             <SummaryPlate
               slug={slug}
               data={data}
-              preset={preset}
               onDone={(s) =>
                 setData({
                   ...data,
@@ -652,6 +693,10 @@ export default function ReportsPage() {
 
 const pct = (share: number) => `${Math.round(share * 100)}%`;
 
+type Selection =
+  | { kind: 'unit'; unit: PeriodUnit; at: string | null }
+  | { kind: 'custom'; from: string; to: string };
+
 function rangeText(from: string, to: string): string {
   const a = DateTime.fromISO(from);
   const b = DateTime.fromISO(to);
@@ -758,13 +803,11 @@ function Headline({ data }: { data: Payload }) {
 function SummaryPlate({
   slug,
   data,
-  preset,
   onDone,
   onOpen,
 }: {
   slug: string;
   data: Payload;
-  preset: PeriodPreset;
   onDone: (s: Payload['summary']) => void;
   onOpen: (from: string, to: string) => void;
 }) {
@@ -781,8 +824,14 @@ function SummaryPlate({
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
+          // The same period the page shows, asked for the same way, so the
+          // summary compares with what the page compares with.
           body: JSON.stringify(
-            preset === 'custom' ? { preset, from: data.period.from, to: data.period.to } : { preset },
+            data.period.unit
+              ? { preset: data.period.unit, at: data.period.from }
+              : data.period.preset === 'custom'
+                ? { preset: 'custom', from: data.period.from, to: data.period.to }
+                : { preset: data.period.preset },
           ),
         },
       );

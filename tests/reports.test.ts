@@ -114,6 +114,17 @@ describe('buildReport', () => {
     expect(r.findings.find((f) => f.id === 'band-quiet')!.tone).toBe('need');
   });
 
+  it('says "nothing booked" once, with the way to Share, instead of 0% and a quiet band', () => {
+    const r = buildReport(input([], { visits: [] }));
+    const ids = r.findings.map((f) => f.id);
+    expect(ids).toContain('nothing-booked');
+    expect(ids).not.toContain('band-quiet');
+    expect(ids).not.toContain('mostly-empty');
+    const note = r.findings.find((f) => f.id === 'nothing-booked')!;
+    expect(note.action?.href).toBe('share');
+    expect(note.detail).not.toMatch(/0%/);
+  });
+
   it('compares services by what an hour of your time earns', () => {
     const r = buildReport(input(tuesdays));
     const coach = r.services.find((s) => s.id === 'coach')!;

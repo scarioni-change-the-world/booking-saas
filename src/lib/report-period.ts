@@ -10,7 +10,25 @@ import { DateTime } from 'luxon';
  * included. Pure, so the screen and the route agree on every edge.
  */
 
-export type PeriodPreset = '7d' | '30d' | 'month' | 'last-month' | '90d' | 'year' | 'custom';
+export type PeriodPreset = '7d' | '30d' | 'week' | 'month' | 'quarter' | 'last-month' | '90d' | 'year' | 'custom';
+
+/**
+ * The lengths Reports moves through with its arrows: a calendar week
+ * (Monday to Sunday), month, quarter or year, any one of them, not only the
+ * current one. The current one runs to today ("so far").
+ */
+export type PeriodUnit = 'week' | 'month' | 'quarter' | 'year';
+
+export const UNITS: Array<{ id: PeriodUnit; label: string }> = [
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
+  { id: 'quarter', label: 'Quarter' },
+  { id: 'year', label: 'Year' },
+];
+
+export function isUnit(value: unknown): value is PeriodUnit {
+  return value === 'week' || value === 'month' || value === 'quarter' || value === 'year';
+}
 
 export const PRESETS: Array<{ id: Exclude<PeriodPreset, 'custom'>; label: string }> = [
   { id: '7d', label: 'Last 7 days' },
@@ -30,11 +48,20 @@ export interface Period {
   to: string;
   days: number;
   label: string;
+  /** For a calendar week, month, quarter or year: which, and whether it is still running. */
+  unit?: PeriodUnit;
+  soFar?: boolean;
+  /** The day the next one of the same length starts, unless that is after today. */
+  next?: string | null;
+  /** The day the one before starts. */
+  prev?: string;
 }
 
 export interface DateRange {
   from: string;
   to: string;
+  unit?: PeriodUnit;
+  soFar?: boolean;
 }
 
 function days(from: string, to: string): number {
@@ -52,6 +79,50 @@ export function rangeLabel(from: string, to: string, today: string): string {
   return `${a.toFormat('d LLLL yyyy')} – ${b.toFormat('d LLLL yyyy')}`;
 }
 
+/** "9–15 November", "November", "October – December 2025", "2026". */
+export function unitLabel(unit: PeriodUnit, start: string, today: string): string {
+  const a = DateTime.fromISO(start);
+  const year = a.year === DateTime.fromISO(today).year ? '' : ` ${a.year}`;
+  switch (unit) {
+    case 'week':
+      return rangeLabel(start, a.endOf('week').toISODate()!, today);
+    case 'month':
+      return `${a.toFormat('LLLL')}${year}`;
+    case 'quarter':
+      return `${a.toFormat('LLLL')} – ${a.endOf('quarter').toFormat('LLLL')}${year}`;
+    case 'year':
+      return String(a.year);
+  }
+}
+
+/**
+ * The calendar week, month, quarter or year that holds `at` (today when
+ * absent). The current one ends today; one that has not begun cannot be read.
+ */
+export function unitPeriod(unit: PeriodUnit, today: string, at?: string | null): Period | { error: string } {
+  const t = DateTime.fromISO(today);
+  const anchor = at ? DateTime.fromISO(at) : t;
+  if (!anchor.isValid) return { error: 'That date is not one we can read.' };
+  const start = anchor.startOf(unit);
+  if (start > t) return { error: 'That period has not started yet.' };
+  const end = anchor.endOf(unit).startOf('day');
+  const soFar = end >= t;
+  const from = start.toISODate()!;
+  const to = (soFar ? t : end).toISODate()!;
+  const nextStart = end.plus({ days: 1 });
+  return {
+    preset: unit,
+    unit,
+    soFar,
+    from,
+    to,
+    days: days(from, to),
+    label: unitLabel(unit, from, today),
+    next: nextStart > t ? null : nextStart.toISODate()!,
+    prev: start.minus({ [`${unit}s`]: 1 }).toISODate()!,
+  };
+}
+
 /**
  * The period asked for, or why it cannot be. A custom period may not end
  * after today — there is nothing to report on yet — nor run backwards, nor
@@ -60,8 +131,10 @@ export function rangeLabel(from: string, to: string, today: string): string {
 export function resolvePeriod(
   preset: string | null | undefined,
   today: string,
-  custom?: { from?: string | null; to?: string | null },
+  custom?: { from?: string | null; to?: string | null; at?: string | null },
 ): Period | { error: string } {
+  // A calendar length: this one (so far), or the one holding `at`.
+  if (isUnit(preset)) return unitPeriod(preset, today, custom?.at);
   const t = DateTime.fromISO(today);
   const make = (p: PeriodPreset, from: DateTime, to: DateTime): Period => {
     const f = from.toISODate()!;
@@ -77,14 +150,10 @@ export function resolvePeriod(
       return make('30d', t.minus({ days: 29 }), t);
     case '90d':
       return make('90d', t.minus({ days: 89 }), t);
-    case 'month':
-      return make('month', t.startOf('month'), t);
     case 'last-month': {
       const start = t.minus({ months: 1 }).startOf('month');
       return make('last-month', start, start.endOf('month'));
     }
-    case 'year':
-      return make('year', t.startOf('year'), t);
     case 'custom': {
       const from = custom?.from ? DateTime.fromISO(custom.from) : null;
       const to = custom?.to ? DateTime.fromISO(custom.to) : null;
@@ -101,8 +170,25 @@ export function resolvePeriod(
   }
 }
 
-/** The stretch of the same length that ends the day before this one starts. */
+/**
+ * What a period is compared with.
+ *
+ * A calendar month, quarter, week or year: the one before. While it is
+ * still running, the same stretch of the one before, so 1–13 November is
+ * set against 1–13 October rather than against a whole October it has not
+ * had the days to match.
+ *
+ * Anything else: the stretch of the same length that ends the day before
+ * this one starts.
+ */
 export function previousPeriod(period: DateRange): DateRange {
+  if (period.unit) {
+    const start = DateTime.fromISO(period.from).minus({ [`${period.unit}s`]: 1 }).startOf(period.unit);
+    const whole = start.endOf(period.unit).startOf('day');
+    const span = start.plus({ days: days(period.from, period.to) - 1 });
+    const to = period.soFar && span < whole ? span : whole;
+    return { from: start.toISODate()!, to: to.toISODate()! };
+  }
   const length = days(period.from, period.to);
   const to = DateTime.fromISO(period.from).minus({ days: 1 });
   return { from: to.minus({ days: length - 1 }).toISODate()!, to: to.toISODate()! };
