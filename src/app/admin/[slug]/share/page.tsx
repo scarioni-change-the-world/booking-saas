@@ -16,6 +16,7 @@ interface Service {
   active: boolean;
   availableToProspects: boolean;
   durationMinutes?: number;
+  availableToExistingClients?: boolean;
 }
 
 interface Sighting {
@@ -92,7 +93,7 @@ export default function SharePage() {
           adminFetchJson<{ eventTypes: Service[] }>(`/api/admin/${slug}/event-types`),
           adminFetchJson<ShareState>(`/api/admin/${slug}/share`),
         ]);
-        setServices(types.eventTypes.filter((s) => s.active && s.availableToProspects));
+        setServices(types.eventTypes.filter((s) => s.active));
         setShare(state);
         if (state.website) void detect();
       } catch (cause) {
@@ -101,13 +102,16 @@ export default function SharePage() {
     })();
   }, [slug, detect]);
 
+  // Only services open to new clients are on the public page; the others are
+  // booked from each client's own link, so they cannot be shared here.
+  const open = services?.filter((s) => s.availableToProspects) ?? [];
+  const clientsOnly = services?.filter((s) => !s.availableToProspects && s.availableToExistingClients) ?? [];
   // ?service= may carry a service's web address or its id (Services links by id).
-  const service =
-    services?.find((s) => s.slug === chosen || s.id === chosen) ?? services?.[0] ?? null;
+  const service = open.find((s) => s.slug === chosen || s.id === chosen) ?? open[0] ?? null;
   // The left side is the whole booking page; one service lives in the panel.
   const link = origin ? `${origin}/${slug}` : '';
   const code = origin ? embedSnippet(origin, slug) : '';
-  const perService = !!services && services.length > 1;
+  const perService = open.length > 1;
   const tool = BUILDERS[builder ?? 'other'];
 
   return (
@@ -125,18 +129,18 @@ export default function SharePage() {
       {(!services || !share) && !error && <p className="status">Loading…</p>}
 
       {services && share && (
-        <div className={`sh${perService ? ' has-panel' : ''}`}>
-          {perService && service && (
-            <ServicePanel
-              services={services}
-              service={service}
-              only={only}
-              origin={origin}
-              slug={slug}
-              onChoose={setChosen}
-              onOnly={setOnly}
-            />
-          )}
+        <div className="sh has-panel">
+          <ServicePanel
+            services={open}
+            clientsOnly={clientsOnly}
+            servicesHref={`/admin/${slug}/flow`}
+            service={service}
+            only={only}
+            origin={origin}
+            slug={slug}
+            onChoose={setChosen}
+            onOnly={setOnly}
+          />
 
           <section className="card sh-card sh-main-link" aria-labelledby="sh-link">
             <p className="wk-side-eyebrow" id="sh-link">
@@ -272,6 +276,8 @@ export default function SharePage() {
  */
 function ServicePanel({
   services,
+  clientsOnly,
+  servicesHref,
   service,
   only,
   origin,
@@ -280,15 +286,19 @@ function ServicePanel({
   onOnly,
 }: {
   services: Service[];
-  service: Service;
+  clientsOnly: Service[];
+  servicesHref: string;
+  service: Service | null;
   only: boolean;
   origin: string;
   slug: string;
   onChoose: (slug: string) => void;
   onOnly: (only: boolean) => void;
 }) {
-  const link = origin ? `${origin}/${slug}${serviceQuery(service.slug, only)}` : '';
-  const code = origin ? embedSnippet(origin, slug, service.slug, only) : '';
+  // With one service there is nothing else to show alongside it.
+  const alone = only || services.length < 2;
+  const link = service && origin ? `${origin}/${slug}${serviceQuery(service.slug, alone)}` : '';
+  const code = service && origin ? embedSnippet(origin, slug, service.slug, alone) : '';
   return (
     <aside className="card sh-card sh-panel" aria-labelledby="sh-one">
       <h2 className="sh-panel-title" id="sh-one">
@@ -298,9 +308,16 @@ function ServicePanel({
         A link or code that opens straight on one service: for a post, an ad, or its own page on your website.
       </p>
 
+      {!service && (
+        <p className="notice notice-muted sh-none">
+          None of your services is open to new clients yet, so there is nothing to share. Open one to new clients in{' '}
+          <a href={servicesHref}>Services</a>.
+        </p>
+      )}
+
       <div className="sh-svc-list" role="radiogroup" aria-label="Service to share">
         {services.map((s) => {
-          const on = s.slug === service.slug;
+          const on = s.slug === service?.slug;
           return (
             <label key={s.slug} className={`sh-svc${on ? ' is-on' : ''}`}>
               <input type="radio" name="sh-svc" checked={on} onChange={() => onChoose(s.slug)} />
@@ -309,42 +326,60 @@ function ServicePanel({
             </label>
           );
         })}
+        {clientsOnly.map((s) => (
+          <div key={s.slug} className="sh-svc is-off" aria-disabled="true">
+            <span className="sh-svc-name">{s.name}</span>
+            <span className="sh-svc-meta">Your clients only</span>
+          </div>
+        ))}
       </div>
+      {clientsOnly.length > 0 && (
+        <p className="wk-side-hint sh-svc-note">
+          Services for your clients only have no public link: each client books them from their own, sent from{' '}
+          <b>People</b>.
+        </p>
+      )}
 
-      <label className="sh-also">
-        <input type="checkbox" checked={!only} onChange={(e) => onOnly(!e.target.checked)} />
-        <span>
-          Show your other services too
-          <small>
-            {only
-              ? `People see ${service.name} and nothing else.`
-              : `${service.name} opens first; the rest are one step back.`}
-          </small>
-        </span>
-      </label>
+      {service && (
+        <>
+          {services.length > 1 && (
+            <label className="sh-also">
+              <input type="checkbox" checked={!only} onChange={(e) => onOnly(!e.target.checked)} />
+              <span>
+                Show your other services too
+                <small>
+                  {only
+                    ? `People see ${service.name} and nothing else.`
+                    : `${service.name} opens first; the rest are one step back.`}
+                </small>
+              </span>
+            </label>
+          )}
 
-      <div className="sh-out">
-        <p className="sh-out-label">Link</p>
-        <code className="sh-link">{link}</code>
-        <div className="sh-row">
-          <CopyButton text={link} label="Copy link" />
-          <a className="btn-link" href={link} target="_blank" rel="noreferrer">
-            Open
-          </a>
-        </div>
-      </div>
+          <div className="sh-out">
+            <p className="sh-out-label">Link</p>
+            <code className="sh-link">{link}</code>
+            <div className="sh-row">
+              <CopyButton text={link} label="Copy link" />
+              <a className="btn-link" href={link} target="_blank" rel="noreferrer">
+                Open
+              </a>
+            </div>
+          </div>
 
-      <div className="sh-out">
-        <p className="sh-out-label">On your website</p>
-        <p className="wk-side-hint">Paste it on the page about {service.name}, following the steps in “Add khloe to your website”.</p>
-        <div className="sh-row">
-          <CopyButton text={code} label="Copy code" />
-        </div>
-        <details className="sh-peek">
-          <summary>See the code</summary>
-          <pre className="embed-snippet">{code}</pre>
-        </details>
-      </div>
+          <div className="sh-out">
+            <p className="sh-out-label">On your website</p>
+            <p className="wk-side-hint">Paste it on the page about {service.name}, following the steps in “Add khloe to your website”.</p>
+            <div className="sh-row">
+              <CopyButton text={code} label="Copy code" />
+            </div>
+            <details className="sh-peek">
+              <summary>See the code</summary>
+              <pre className="embed-snippet">{code}</pre>
+            </details>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

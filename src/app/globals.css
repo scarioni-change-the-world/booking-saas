@@ -10367,6 +10367,24 @@ body:has(.bk-embedded) {
   font-weight: 600;
   color: var(--ink);
 }
+.sh-svc.is-off {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+.sh-svc.is-off .sh-svc-name {
+  font-weight: 500;
+  color: var(--faint);
+}
+.sh-svc.is-off:hover {
+  border-color: var(--soft-border);
+}
+.sh-svc-note {
+  margin: -4px 0 12px;
+}
+.sh-none {
+  margin: 4px 0 12px;
+}
 .sh-svc-meta {
   font-size: 0.8rem;
   color: var(--faint);
