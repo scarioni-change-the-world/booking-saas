@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { accentStyle } from '../brand';
+import { KhloeCredit } from './KhloeCredit';
 import { Nameplate, type NameplateBranding } from './Nameplate';
 import { normaliseWebsite, websiteLabel } from '@/lib/website';
 
@@ -49,9 +50,7 @@ export function ClientShell({
       </header>
       <main className="bk-page">{children}</main>
       {/* The only place khloe speaks on these pages, and it speaks quietly. */}
-      <p className="bk-credit">
-        Powered by <span className="bk-wordmark">khloe</span>
-      </p>
+      <KhloeCredit />
     </div>
   );
 }

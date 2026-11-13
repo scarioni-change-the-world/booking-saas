@@ -6,6 +6,7 @@ import { ServiceSummary } from './booking/ServiceSummary';
 import { useBookingJourney } from './booking/useBookingJourney';
 import { useHostHeight } from './booking/useHostHeight';
 import { ClientShell } from './booking/ClientShell';
+import { KhloeCredit } from './booking/KhloeCredit';
 import { accentStyle } from './brand';
 
 /**
@@ -108,7 +109,8 @@ export default function BookingFlow({ slug, mode, test, service }: Props) {
 
   if (resolved === 'embedded') {
     return (
-      /* No page background, no outer margins, no credit, no two columns.
+      /* No page background, no outer margins, no two columns, and the
+         credit kept to one small line under the panel.
          The host page supplies all of that, and anything added here reads as
          a box somebody dropped into their layout.
          
@@ -122,6 +124,7 @@ export default function BookingFlow({ slug, mode, test, service }: Props) {
           {summary}
           <BookingExperience journey={journey} />
         </div>
+        <KhloeCredit />
       </div>
     );
   }
