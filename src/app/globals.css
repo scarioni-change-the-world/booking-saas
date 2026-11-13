@@ -10254,19 +10254,12 @@ body:has(.bk-embedded) {
 }
 .ms-switch-rail {
   position: absolute;
-  top: 14px;
+  top: 16px;
   left: 10%;
   right: 10%;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--stone, #ebe8e1);
-}
-.ms-switch-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--accent);
-  transition: width 0.25s ease;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--stone-border, #bfbdb5);
 }
 .ms-stop {
   position: relative;
@@ -10297,10 +10290,6 @@ body:has(.bk-embedded) {
   background: var(--surface);
   box-shadow: inset 0 0 0 2px var(--stone-border, #bfbdb5);
   transition: all 0.2s ease;
-}
-.ms-stop.is-past .ms-stop-dot {
-  background: var(--accent);
-  box-shadow: none;
 }
 .ms-stop.is-on .ms-stop-dot {
   width: 38px;
@@ -10369,5 +10358,66 @@ body:has(.bk-embedded) {
   .ms-cards .ms-card {
     flex: 1 1 100%;
     max-width: none;
+  }
+}
+
+/* Share: which services the link and code open on */
+.sh-which {
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.sh-which-label {
+  margin: 0 0 2px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sh-only {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+.sh-only label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.sh-only label.is-on {
+  border-color: var(--accent);
+  background: var(--selected-mineral);
+}
+.sh-only input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+.sh-only b {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+.sh-only small {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--faint);
+}
+
+/* Six places on a phone: spread across the width, a touch smaller, so the
+   last one is not cut off. */
+@media (max-width: 860px) {
+  .admin-app .shell-places {
+    gap: 0;
+    justify-content: space-between;
+  }
+  .admin-app .shell-place {
+    flex: 0 1 auto;
+    padding: 8px 2px 12px;
+    font-size: 0.82rem;
   }
 }

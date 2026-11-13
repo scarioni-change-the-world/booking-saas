@@ -164,9 +164,18 @@ export function sightingPage(raw: unknown): { host: string; pageUrl: string } | 
  * and picking a time, and a fixed-height frame either scrolls inside itself
  * — miserable on a phone — or cuts the confirmation off.
  */
-export function embedSnippet(baseUrl: string, slug: string, service?: string | null): string {
-  // One service only (Share's picker): the page starts on it, list one step back.
-  const src = `${baseUrl}/t/${slug}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
+/**
+ * The query that starts the booking page on one service: with `only`, that
+ * service alone; without, the list one step back.
+ */
+export function serviceQuery(service?: string | null, only?: boolean): string {
+  if (!service) return '';
+  return `?service=${encodeURIComponent(service)}${only ? '&only=1' : ''}`;
+}
+
+export function embedSnippet(baseUrl: string, slug: string, service?: string | null, only?: boolean): string {
+  // One service (Share's picker): the page starts on it; `only` drops the list.
+  const src = `${baseUrl}/t/${slug}${serviceQuery(service, only)}`;
   return [
     `<iframe`,
     `  src="${src}"`,

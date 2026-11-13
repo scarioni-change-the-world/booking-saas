@@ -175,3 +175,15 @@ describe('sightingPage', () => {
     expect(sightingPage(42)).toBeNull();
   });
 });
+
+describe('one service on its own', () => {
+  it('adds only=1 when the service should stand alone', async () => {
+    const { embedSnippet, serviceQuery } = await import('@/lib/embed');
+    expect(serviceQuery('portraits', true)).toBe('?service=portraits&only=1');
+    expect(serviceQuery('portraits', false)).toBe('?service=portraits');
+    expect(serviceQuery(null, true)).toBe('');
+    expect(embedSnippet('https://app.khloe.io', 'mara', 'portraits', true)).toContain(
+      'src="https://app.khloe.io/t/mara?service=portraits&only=1"',
+    );
+  });
+});

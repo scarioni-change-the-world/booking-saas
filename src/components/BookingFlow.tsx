@@ -45,10 +45,12 @@ interface Props {
   test?: boolean;
   /** Start on this service (its web address), from a Share link or embed. */
   service?: string;
+  /** With service: that service alone, no list to go back to. */
+  only?: boolean;
 }
 
-export default function BookingFlow({ slug, mode, test, service }: Props) {
-  const journey = useBookingJourney(slug, { test, service });
+export default function BookingFlow({ slug, mode, test, service, only }: Props) {
+  const journey = useBookingJourney(slug, { test, service, only });
   useHostHeight();
 
   /**

@@ -35,6 +35,7 @@ const PLACES = [
   { href: "people", label: "People" },
   { href: "messages", label: "Messages" },
   { href: "reports", label: "Reports" },
+  { href: "share", label: "Share" },
 ];
 
 /** Routes that are parts of the flow, opened from it. */

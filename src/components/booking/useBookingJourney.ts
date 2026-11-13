@@ -71,7 +71,10 @@ export interface OtherPath {
   label: string | null;
 }
 
-export function useBookingJourney(slug: string, options: { test?: boolean; service?: string } = {}) {
+export function useBookingJourney(
+  slug: string,
+  options: { test?: boolean; service?: string; only?: boolean } = {},
+) {
   const test = options.test === true;
   const api = useMemo(
     () => ({
@@ -166,7 +169,13 @@ export function useBookingJourney(slug: string, options: { test?: boolean; servi
         if (cancelled) return;
 
         setConfig(cfg);
-        setEventTypes(types.eventTypes);
+        // ?only=1 with ?service=: a page for one service shows that service
+        // alone, with no list to go back to. A name that matches nothing
+        // (paused, renamed) falls back to every service rather than none.
+        const just = options.only && options.service
+          ? types.eventTypes.filter((t) => t.slug === options.service)
+          : [];
+        setEventTypes(just.length > 0 ? just : types.eventTypes);
         // Which service is being booked decides which questions apply
         // (migration 0016), so that has to come first — see chooseEventType.
         setPhase('service');

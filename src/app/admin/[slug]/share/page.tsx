@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/ui';
 import { Lamp } from '@/components/admin/Instruments';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { BUILDERS, BUILDER_ORDER, type BuilderId, type ShareMethod } from '@/lib/builders';
-import { embedSnippet } from '@/lib/embed';
+import { embedSnippet, serviceQuery } from '@/lib/embed';
 import { websiteLabel } from '@/lib/website';
 
 interface Service {
@@ -54,6 +54,8 @@ export default function SharePage() {
   const [services, setServices] = useState<Service[] | null>(null);
   const [share, setShare] = useState<ShareState | null>(null);
   const [chosen, setChosen] = useState<string | null>(startOn);
+  // A page about one service usually wants that service alone.
+  const [only, setOnly] = useState(true);
   const [method, setMethod] = useState<ShareMethod>('section');
   const [builder, setBuilder] = useState<BuilderId | null>(null);
   const [detecting, setDetecting] = useState(false);
@@ -96,8 +98,17 @@ export default function SharePage() {
 
   // ?service= may carry a service's web address or its id (Services links by id).
   const service = services?.find((s) => s.slug === chosen || s.id === chosen) ?? null;
-  const link = origin ? `${origin}/${slug}${service ? `?service=${encodeURIComponent(service.slug)}` : ''}` : '';
-  const code = origin ? embedSnippet(origin, slug, service?.slug) : '';
+  const link = origin ? `${origin}/${slug}${serviceQuery(service?.slug, only)}` : '';
+  const code = origin ? embedSnippet(origin, slug, service?.slug, only) : '';
+  const picker = (
+    <ServicePicker
+      services={services ?? []}
+      service={service}
+      only={only}
+      onChoose={setChosen}
+      onOnly={setOnly}
+    />
+  );
   const tool = BUILDERS[builder ?? 'other'];
 
   return (
@@ -121,29 +132,7 @@ export default function SharePage() {
               Your link
             </p>
             <p className="wk-side-hint sh-lead">For your Instagram bio, WhatsApp, emails and your email signature.</p>
-            {services.length > 1 && (
-              <div className="sh-choices" role="group" aria-label="What it opens">
-                <button
-                  type="button"
-                  className={`filter-chip${!service ? ' active' : ''}`}
-                  aria-pressed={!service}
-                  onClick={() => setChosen(null)}
-                >
-                  All your services
-                </button>
-                {services.map((s) => (
-                  <button
-                    key={s.slug}
-                    type="button"
-                    className={`filter-chip${service?.slug === s.slug ? ' active' : ''}`}
-                    aria-pressed={service?.slug === s.slug}
-                    onClick={() => setChosen(s.slug)}
-                  >
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            {picker}
             <div className="sh-row">
               <code className="sh-link">{link}</code>
               <CopyButton text={link} label="Copy link" />
@@ -151,12 +140,6 @@ export default function SharePage() {
                 Open
               </a>
             </div>
-            {service && (
-              <p className="wk-side-hint">
-                Opens straight on {service.name}. People can still go back and see your other services. This choice
-                applies to your website too.
-              </p>
-            )}
           </section>
 
           <section className="card sh-card sh-guide" aria-labelledby="sh-guide">
@@ -198,7 +181,17 @@ export default function SharePage() {
               )}
             </Step>
 
-            <Step n={2} title="How it should look" done={false}>
+            <Step n={2} title="What it shows, and how it looks" done={false}>
+              {services.length > 1 && (
+                <div className="sh-which">
+                  <p className="sh-which-label">Which services</p>
+                  {picker}
+                  <p className="wk-side-hint">
+                    One page per service on your website? Choose each service here in turn and paste its own code on its
+                    page.
+                  </p>
+                </div>
+              )}
               <div className="sh-methods" role="radiogroup" aria-label="How it should look">
                 <MethodCard
                   checked={method === 'button'}
@@ -234,7 +227,13 @@ export default function SharePage() {
                   <li key={step}>{step}</li>
                 ))}
               </ol>
-              <EmailSteps slug={slug} builder={builder ?? 'other'} method={method} service={service?.slug ?? null} />
+              <EmailSteps
+                slug={slug}
+                builder={builder ?? 'other'}
+                method={method}
+                service={service?.slug ?? null}
+                only={only}
+              />
               {method === 'section' && (
                 <LiveStatus slug={slug} share={share} onChanged={loadShare} />
               )}
@@ -248,6 +247,72 @@ export default function SharePage() {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * What the link and the code open on: every service, or one. A chosen
+ * service can stand alone (a page about that service on someone's website)
+ * or open first with the others one step back. Shown in "Your link" and
+ * again beside the code, sharing one choice, so nobody pastes the
+ * every-service code on a page about one service by mistake.
+ */
+function ServicePicker({
+  services,
+  service,
+  only,
+  onChoose,
+  onOnly,
+}: {
+  services: Service[];
+  service: Service | null;
+  only: boolean;
+  onChoose: (slug: string | null) => void;
+  onOnly: (only: boolean) => void;
+}) {
+  if (services.length < 2) return null;
+  return (
+    <div className="sh-picker">
+      <div className="sh-choices" role="group" aria-label="What it opens">
+        <button
+          type="button"
+          className={`filter-chip${!service ? ' active' : ''}`}
+          aria-pressed={!service}
+          onClick={() => onChoose(null)}
+        >
+          All your services
+        </button>
+        {services.map((s) => (
+          <button
+            key={s.slug}
+            type="button"
+            className={`filter-chip${service?.slug === s.slug ? ' active' : ''}`}
+            aria-pressed={service?.slug === s.slug}
+            onClick={() => onChoose(s.slug)}
+          >
+            {s.name}
+          </button>
+        ))}
+      </div>
+      {service && (
+        <div className="sh-only" role="radiogroup" aria-label={`How ${service.name} opens`}>
+          <label className={only ? 'is-on' : ''}>
+            <input type="radio" checked={only} onChange={() => onOnly(true)} />
+            <span>
+              <b>Only {service.name}</b>
+              <small>For a page about this service. People see nothing else.</small>
+            </span>
+          </label>
+          <label className={!only ? 'is-on' : ''}>
+            <input type="radio" checked={!only} onChange={() => onOnly(false)} />
+            <span>
+              <b>{service.name} first</b>
+              <small>Your other services are one step back.</small>
+            </span>
+          </label>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -393,11 +458,13 @@ function EmailSteps({
   builder,
   method,
   service,
+  only,
 }: {
   slug: string;
   builder: BuilderId;
   method: ShareMethod;
   service: string | null;
+  only: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [to, setTo] = useState('');
@@ -412,7 +479,7 @@ function EmailSteps({
       const result = await adminFetchJson<{ sent: boolean }>(`/api/admin/${slug}/share/email`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ to, builder, method, service }),
+        body: JSON.stringify({ to, builder, method, service, only }),
       });
       setNote(
         result.sent

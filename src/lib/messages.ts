@@ -123,7 +123,7 @@ export const MESSAGES: Record<MessageId, MessageInfo> = {
     alwaysAdded: ['A link to rate it, one to five, with room for a comment'],
   },
   client_invite: {
-    label: 'Their own link',
+    label: 'Their own booking link',
     to: 'client',
     channel: 'email',
     when: 'When you give someone their own link, or send it again from People.',

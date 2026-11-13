@@ -216,9 +216,10 @@ export default function MessagesPage() {
               })}
             </div>
 
-            {/* Not part of the journey: sent by hand from People. */}
+            {/* Not part of the journey: sent only when the business gives a
+                client their own link, from People. */}
             <p className="ms-by-you">
-              <span>{SENT_BY_YOU.title}:</span>
+              <span>Sent only when you give a client their own booking link, from People:</span>
               {SENT_BY_YOU.messages.map((id) => (
                 <button
                   key={id}
@@ -298,9 +299,10 @@ function MomentSwitch({
 
   return (
     <div className="ms-switch" role="radiogroup" aria-label="When people are told">
-      <span className="ms-switch-rail" aria-hidden="true">
-        <span className="ms-switch-fill" style={{ width: `${(index / (moments.length - 1)) * 100}%` }} />
-      </span>
+      {/* A plain line: the moments happen in this order, but nothing here
+          is a step to complete, so nothing fills up as it would in a
+          progress bar. */}
+      <span className="ms-switch-rail" aria-hidden="true" />
       {moments.map((m, i) => (
         <button
           key={m.id}
@@ -311,7 +313,7 @@ function MomentSwitch({
           role="radio"
           aria-checked={i === index}
           tabIndex={i === index ? 0 : -1}
-          className={`ms-stop${i === index ? ' is-on' : ''}${i < index ? ' is-past' : ''}${warn(m) ? ' is-warn' : ''}`}
+          className={`ms-stop${i === index ? ' is-on' : ''}${warn(m) ? ' is-warn' : ''}`}
           onClick={() => onChange(m.id)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {

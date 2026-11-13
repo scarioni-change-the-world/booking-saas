@@ -142,8 +142,8 @@ export default function AccountPage() {
                 <span>Days off and one-off hours, minimum notice, how far ahead people can book, and your Google or Outlook calendar.</span>
               </li>
               <li>
-                <a href={a('flow?part=page')}>Services → your booking page</a>
-                <span>Your booking link, and the code to put it on your own website.</span>
+                <a href={a('share')}>Share</a>
+                <span>Your booking link, and the code to put it on your own website, for every service or one.</span>
               </li>
               <li>
                 <a href={a('messages')}>Messages</a>

@@ -3,7 +3,7 @@ import { requireTenantAdmin } from '@/lib/auth';
 import { baseUrl } from '@/lib/base-url';
 import { BookingError } from '@/lib/booking-service';
 import { BUILDERS, isBuilderId, stepsAsText } from '@/lib/builders';
-import { embedSnippet } from '@/lib/embed';
+import { embedSnippet, serviceQuery } from '@/lib/embed';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { sendShareStepsEmail } from '@/lib/share-email';
 
@@ -21,10 +21,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     const builder = isBuilderId(body.builder) ? body.builder : 'other';
     const method = body.method === 'button' ? 'button' : 'section';
     const service = typeof body.service === 'string' && /^[a-z0-9-]{1,80}$/.test(body.service) ? body.service : null;
+    const only = body.only === true;
 
     const origin = baseUrl() || new URL(request.url).origin;
-    const link = `${origin}/${slug}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
-    const paste = method === 'button' ? link : embedSnippet(origin, slug, service);
+    const link = `${origin}/${slug}${serviceQuery(service, only)}`;
+    const paste = method === 'button' ? link : embedSnippet(origin, slug, service, only);
 
     await enforceRateLimit(request, tenant.id, 'shareEmail', { subject: 'business' });
 

@@ -13,7 +13,7 @@ export default async function ProspectBookingPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ mode?: string; test?: string; service?: string }>;
+  searchParams: Promise<{ mode?: string; test?: string; service?: string; only?: string }>;
 }) {
   const { slug } = await params;
   // ?mode=embedded forces the embedded shell for a customer who frames this
@@ -23,13 +23,15 @@ export default async function ProspectBookingPage({
   // honours it only for a signed-in admin of this business.
   // ?service=<its web address> starts on that one service (Share's
   // one-service link and embed); the list is still one step back.
-  const { mode, test, service } = await searchParams;
+  // ?only=1 with ?service=: that service alone, without the list behind it.
+  const { mode, test, service, only } = await searchParams;
   return (
     <BookingFlow
       slug={slug}
       mode={mode === 'embedded' ? 'embedded' : undefined}
       test={test === '1'}
       service={typeof service === 'string' && service ? service : undefined}
+      only={only === '1'}
     />
   );
 }
