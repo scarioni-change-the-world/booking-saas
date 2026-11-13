@@ -86,6 +86,14 @@
   function watch(frame) {
     if (frame.__khloeWatched) return;
     frame.__khloeWatched = true;
+    // Older code named the frame with title="…", which browsers show as a
+    // tooltip over the booking page. Keep the name for screen readers, drop
+    // the tooltip.
+    var title = frame.getAttribute('title');
+    if (title) {
+      if (!frame.getAttribute('aria-label')) frame.setAttribute('aria-label', title);
+      frame.removeAttribute('title');
+    }
     var start = function () {
       window.setTimeout(function () {
         report(frame, false);

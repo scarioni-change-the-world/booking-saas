@@ -15,6 +15,7 @@ import { formatMoney } from '@/lib/money';
 import { LOCATION_LABELS, describeLocation } from '@/lib/service-location';
 import { mapUrl, preferredMapService } from '@/lib/maps';
 import { groupSlots } from './slots';
+import { zoneCity, zoneNote } from './zone-note';
 import type { BookingJourney } from './useBookingJourney';
 
 /**
@@ -473,7 +474,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
             </>
           )}
 
-          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+          <p className="bk-zone">{zoneNote(viewerZone, config?.timezone, config?.name)}</p>
 
           {isPack && (
             /* Sticky at the foot of the panel: choosing ten dates means
@@ -639,7 +640,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
                 >
                   Change
                 </button>
-                <span className="bk-review-sub">{viewerZone}</span>
+                <span className="bk-review-sub">Your time ({zoneCity(viewerZone)})</span>
               </dd>
             </div>
             <div className="bk-review-row">

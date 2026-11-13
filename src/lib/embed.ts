@@ -170,7 +170,9 @@ export function embedSnippet(baseUrl: string, slug: string, service?: string | n
   return [
     `<iframe`,
     `  src="${src}"`,
-    `  title="Book an appointment"`,
+    // aria-label, not title: a title shows as a tooltip over the booking
+    // page whenever the mouse rests on it. Screen readers read either.
+    `  aria-label="Book an appointment"`,
     `  style="width:100%;border:0;min-height:520px"`,
     `  loading="lazy"`,
     `></iframe>`,

@@ -13,6 +13,7 @@ import {
   type CalendarEvent,
 } from './booking/calendar-actions';
 import { groupSlots } from './booking/slots';
+import { zoneNote } from './booking/zone-note';
 import { ClientShell } from './booking/ClientShell';
 import type { NameplateBranding } from './booking/Nameplate';
 import type { DaySlots } from './types';
@@ -641,7 +642,7 @@ export default function ClientBooking({ slug, token }: Props) {
             />
           )}
 
-          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+          <p className="bk-zone">{zoneNote(viewerZone, undefined, undefined)}</p>
 
           <div className="bk-pack-bar">
             <div>
@@ -753,7 +754,7 @@ export default function ClientBooking({ slug, token }: Props) {
             />
           )}
 
-          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+          <p className="bk-zone">{zoneNote(viewerZone, undefined, undefined)}</p>
 
           {/* Sticky at the foot, for the same reason the public pack step
               has one: picking several sessions means scrolling, and a count
@@ -984,7 +985,7 @@ export default function ClientBooking({ slug, token }: Props) {
             />
           )}
 
-          <p className="bk-zone">Times are shown in your timezone: {viewerZone}.</p>
+          <p className="bk-zone">{zoneNote(viewerZone, undefined, undefined)}</p>
 
           <button
             type="button"
