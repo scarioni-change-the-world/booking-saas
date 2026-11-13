@@ -35,7 +35,10 @@ describe('dependencies', () => {
   it('keeps the runtime dependency list small', () => {
     // The reference implementation ran on four runtime dependencies. Adding one
     // should be a decision, not an accident.
-    expect(Object.keys(pkg.dependencies ?? {}).length).toBeLessThanOrEqual(8);
+    //
+    // 9: qrcode, for Share's per-service QR codes. Browser-only, loaded on
+    // demand when the panel draws one, so it never touches a server cold start.
+    expect(Object.keys(pkg.dependencies ?? {}).length).toBeLessThanOrEqual(9);
   });
 });
 
