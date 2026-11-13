@@ -140,6 +140,7 @@ export default function ReportsPage() {
               type="button"
               className="btn-secondary"
               aria-label={`Previous ${unitName}`}
+              title={`Previous ${unitName}`}
               disabled={loading || !period.prev}
               onClick={() => void load({ kind: 'unit', unit: sel.unit, at: period.prev! })}
             >
@@ -152,6 +153,7 @@ export default function ReportsPage() {
               type="button"
               className="btn-secondary"
               aria-label={`Next ${unitName}`}
+              title={`Next ${unitName}`}
               disabled={loading || !period.next}
               onClick={() => void load({ kind: 'unit', unit: sel.unit, at: period.next! })}
             >

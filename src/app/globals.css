@@ -9342,7 +9342,7 @@ body:has(.bk-embedded) {
   margin-left: 4px;
 }
 .rep-choose {
-  margin-left: auto;
+  margin-left: 6px;
 }
 .rep-custom {
   display: flex;
