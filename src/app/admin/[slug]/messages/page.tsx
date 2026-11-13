@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
 import { EmailAddresses } from '@/components/admin/EmailAddresses';
+import { SlideScale } from '@/components/admin/Instruments';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { TEMPLATE_TOKENS } from '@/lib/email/templates';
 import {
@@ -172,40 +173,23 @@ export default function MessagesPage() {
           </div>
 
           <div className="ms-journey-wrap">
-            {/* A plain selector, like Week's "Look · Paint": choose a moment,
-                see only its messages. */}
-            <div className="wk-mode ms-moments" role="group" aria-label="When people are told">
-              {MOMENTS.map((m) => {
-                const failed = m.messages.some((id) => id !== 'next_steps' && (data.tallies[id]?.failed ?? 0) > 0);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className="filter-chip"
-                    aria-pressed={momentOf(selected).id === m.id}
-                    onClick={() => setSelected(m.messages[0]!)}
-                  >
-                    {m.title}
-                    {failed && <span className="ms-dirty" title="An email here did not arrive"> •</span>}
-                  </button>
-                );
-              })}
+            {/* The same slide scale as "Notice people must give": the moments
+                down the side, the slider resting on the one chosen, and only
+                its messages beside it. */}
+            <div className="ms-scale">
+              <p className="wk-side-eyebrow">When</p>
+              <SlideScale
+                stops={MOMENTS.map((m, i) => ({
+                  value: i,
+                  label:
+                    m.title +
+                    (m.messages.some((id) => id !== 'next_steps' && (data.tallies[id]?.failed ?? 0) > 0) ? ' •' : ''),
+                }))}
+                current={MOMENTS.findIndex((m) => m.id === momentOf(selected).id)}
+                label="When people are told"
+                onChoose={(i) => setSelected(MOMENTS[i]!.messages[0]!)}
+              />
             </div>
-
-            {/* On a phone the six do not fit in one row: a plain dropdown. */}
-            <label className="ms-moments-select">
-              <span className="sr-only">When people are told</span>
-              <select
-                value={momentOf(selected).id}
-                onChange={(e) => setSelected(MOMENTS.find((m) => m.id === e.target.value)!.messages[0]!)}
-              >
-                {MOMENTS.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             <div className="ms-cards" role="group" aria-label={`Messages: ${momentOf(selected).title}`}>
               {momentOf(selected).messages.map((id) => {
