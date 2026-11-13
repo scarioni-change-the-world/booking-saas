@@ -161,7 +161,7 @@ export default function SharePage() {
 
           <section className="card sh-card sh-guide" aria-labelledby="sh-guide">
             <h2 className="sh-guide-title" id="sh-guide">
-              Add booking to your website
+              Add <b className="sh-khloe">khloe</b> to your website
             </h2>
 
             <Step n={1} title="Your website" done={!!share.website}>
