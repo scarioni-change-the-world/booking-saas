@@ -411,6 +411,12 @@ export default function WeekPage() {
           {week && (
             <div className="wk-layout">
               <div className="wk-grid-wrap">
+                {painting && (
+                  <p className="wk-paint-tip" role="status">
+                    <b>Click and drag</b> across the hours to open them, or over open hours to close them. Then{' '}
+                    <b>Save</b>.
+                  </p>
+                )}
                 <WeekGrid
                   week={week}
                   dates={dates}
@@ -650,7 +656,9 @@ function WeekGrid({
         return (
           <div
             key={date}
-            className={`wk-col${past ? ' is-past' : ''}${date === today ? ' is-today' : ''}`}
+            // Painting edits the week that repeats, not these dates: no
+            // faded past, no today.
+            className={`wk-col${!painting && past ? ' is-past' : ''}${!painting && date === today ? ' is-today' : ''}`}
             style={{ height }}
           >
             {hours.map((m) => (

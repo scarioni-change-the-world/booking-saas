@@ -4882,7 +4882,7 @@ body:has(.bk-embedded) {
   border-bottom: 1px solid var(--rule);
   border-radius: 0;
   background: transparent;
-  cursor: crosshair;
+  cursor: pointer;
 }
 .wk-cell.is-on {
   background: var(--selected-mineral);
@@ -7463,6 +7463,16 @@ body:has(.bk-embedded) {
 .admin-app .wk-dayhead.is-selected {
   box-shadow: none;
 }
+/* Painting: the instruction sits on the grid itself, where the hand is. */
+.wk-paint-tip {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--selected-mineral);
+  color: var(--ink);
+  font-size: 0.9rem;
+}
 /* Closed time is a plain, slightly deeper tint; open hours are a clear
    plate over it. (It used to be ruled like a speaker grille — every 12px,
    lines that meant nothing on their own read as noise.) */
@@ -7478,7 +7488,9 @@ body:has(.bk-embedded) {
   background: var(--surface);
 }
 .admin-app .wk-col.is-today .wk-open {
-  background: var(--selected-mineral);
+  /* Open is open, today too: a pale mineral read as closed beside the Stone
+     of closed time. Today is marked by its date and the line for now. */
+  background: var(--surface);
 }
 .admin-app .wk-blocked {
   left: 6px;
