@@ -10065,3 +10065,85 @@ body:has(.bk-embedded) {
     margin-left: 20px;
   }
 }
+
+/* ── Account → Opening hours: the usual week as a plain form ── */
+.oh {
+  display: grid;
+  margin: 6px 0 14px;
+  border-top: 1px solid var(--rule);
+}
+.oh-day {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 8px 16px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.oh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.oh-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.oh-day.is-closed .oh-toggle {
+  color: var(--faint);
+  font-weight: 400;
+}
+.oh-windows {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.oh-closed {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  color: var(--faint);
+}
+.oh-window {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin-app .oh-window input[type='time'],
+.oh-window input[type='time'] {
+  width: auto;
+  min-height: 40px;
+  padding: 6px 10px;
+}
+.oh-add {
+  font-size: 0.85rem;
+}
+.oh-problem {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--emphasis-ink);
+}
+@media (max-width: 600px) {
+  .oh-day {
+    grid-template-columns: 1fr;
+  }
+  .oh-day.is-closed {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+  }
+  .oh-window {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  .admin-app .oh-window input[type='time'],
+  .oh-window input[type='time'] {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

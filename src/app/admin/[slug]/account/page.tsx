@@ -6,6 +6,7 @@ import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { BookingPageCard, type Branding } from '@/components/admin/BookingPageCard';
+import { OpeningHoursCard } from '@/components/admin/OpeningHoursCard';
 import { GettingPaidCard, PlanCard, type PaymentsInfo, type PlanInfo } from '@/components/admin/BillingCards';
 
 interface Account {
@@ -68,8 +69,9 @@ export default function AccountPage() {
   // has nothing to land on. Done once, after the first load.
   const loaded = account !== null;
   useEffect(() => {
-    if (loaded && window.location.hash === '#booking-page') {
-      document.getElementById('booking-page')?.scrollIntoView({ block: 'start' });
+    const target = window.location.hash.slice(1);
+    if (loaded && (target === 'booking-page' || target === 'opening-hours')) {
+      document.getElementById(target)?.scrollIntoView({ block: 'start' });
     }
   }, [loaded]);
 
@@ -93,6 +95,7 @@ export default function AccountPage() {
         <div className="acct">
           <div className="acct-main">
             <BusinessCard slug={slug} account={account} onSaved={load} />
+            <OpeningHoursCard slug={slug} timezone={account.business.timezone} weekHref={a('week')} />
             <BookingPageCard
               slug={slug}
               businessName={account.business.name}
@@ -136,7 +139,7 @@ export default function AccountPage() {
             <ul className="acct-moved">
               <li>
                 <a href={a('week')}>Week</a>
-                <span>Your hours, minimum notice, how far ahead people can book, and your Google or Outlook calendar.</span>
+                <span>Days off and one-off hours, minimum notice, how far ahead people can book, and your Google or Outlook calendar.</span>
               </li>
               <li>
                 <a href={a('flow?part=page')}>Services → your booking page</a>

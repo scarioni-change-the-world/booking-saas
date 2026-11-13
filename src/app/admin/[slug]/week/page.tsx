@@ -792,8 +792,8 @@ function WeekSummary({
       <p className="wk-reading-sub">{also.join(' · ')}</p>
       {openMinutes === 0 && (
         <p className="wk-warning">
-          No hours are open this week, so your booking page offers nothing. Choose Paint usual hours
-          to set some.
+          No hours are open this week, so your booking page offers nothing. Set your opening hours in{' '}
+          <a href={`/admin/${slug}/account#opening-hours`}>Account</a>, or choose Paint usual hours.
         </p>
       )}
       {/* Somebody owed a session has no time on the grid to point at, so
