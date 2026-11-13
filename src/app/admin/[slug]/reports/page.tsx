@@ -175,7 +175,7 @@ export default function ReportsPage() {
         )}
 
         {!editingCustom && (
-          <button type="button" className="btn-link rep-choose" onClick={chooseDates}>
+          <button type="button" className="btn-primary rep-choose" onClick={chooseDates}>
             {sel.kind === 'custom' ? 'Change dates' : 'Choose dates'}
           </button>
         )}
