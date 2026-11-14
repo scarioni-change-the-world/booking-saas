@@ -57,7 +57,12 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
       }
 
       try {
-        const me = await adminFetchJson<{ role: PlatformRole }>('/api/console/me');
+        const me = await adminFetchJson<{ role: PlatformRole; twoStepNeeded?: boolean }>('/api/console/me');
+        // An owner signed in with the password only: the code comes first.
+        if (me.twoStepNeeded) {
+          if (!cancelled) router.replace('/console/login');
+          return;
+        }
         if (!cancelled) setCheck({ state: 'ok', role: me.role });
       } catch {
         if (!cancelled) {

@@ -133,6 +133,8 @@ export async function requireTenantAdmin(
 export interface AuthenticatedStaff {
   userId: string;
   role: PlatformRole;
+  /** 'aal2' when this sign-in included the authenticator-app code. */
+  aal: 'aal1' | 'aal2';
 }
 
 const PLATFORM_ROLE_RANK: Record<PlatformRole, number> = {
@@ -155,9 +157,29 @@ const PLATFORM_ROLE_RANK: Record<PlatformRole, number> = {
  * requireTenantAdmin's tenant lookups, which stay silent about which tenants
  * exist.
  */
+/**
+ * The assurance level a sign-in token carries: 'aal2' once the person has
+ * also entered a code from their authenticator app (Supabase MFA), else
+ * 'aal1'. Read from the token's own payload; the token itself has already
+ * been verified by getUser before this is trusted.
+ */
+export function tokenAal(token: string): 'aal1' | 'aal2' {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8')) as { aal?: string };
+    return payload.aal === 'aal2' ? 'aal2' : 'aal1';
+  } catch {
+    return 'aal1';
+  }
+}
+
+/** The message a console owner's request gets without the second step. The console reads it to ask for the code. */
+export const TWO_STEP_REQUIRED = 'Two-step sign-in required';
+
 export async function requirePlatformStaff(
   request: Request,
   minRole: PlatformRole = 'support',
+  /** Only for /api/console/me, which the sign-in page asks before the code is entered. */
+  options: { allowOneStep?: boolean } = {},
 ): Promise<AuthenticatedStaff> {
   const token = bearerToken(request);
 
@@ -177,7 +199,16 @@ export async function requirePlatformStaff(
     throw new AuthError('You do not have permission to do this', 403);
   }
 
-  return { userId: data.user.id, role };
+  // A console owner can delete businesses and change anyone's access, so a
+  // password alone is not enough: every request needs the token that the
+  // authenticator-app code produces. Enforced here, on the server, not
+  // only by the sign-in screen.
+  const aal = tokenAal(token);
+  if (role === 'owner' && aal !== 'aal2' && !options.allowOneStep) {
+    throw new AuthError(TWO_STEP_REQUIRED, 401);
+  }
+
+  return { userId: data.user.id, role, aal };
 }
 
 /**

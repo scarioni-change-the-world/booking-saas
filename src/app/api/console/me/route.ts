@@ -10,8 +10,10 @@ import { requirePlatformStaff } from '@/lib/auth';
  */
 export async function GET(request: Request) {
   try {
-    const { role } = await requirePlatformStaff(request);
-    return ok({ role });
+    // Answers before the second step too: the sign-in page asks this to
+    // learn that an owner still has a code to enter.
+    const { role, aal } = await requirePlatformStaff(request, 'support', { allowOneStep: true });
+    return ok({ role, aal, twoStepNeeded: role === 'owner' && aal !== 'aal2' });
   } catch (error) {
     return handleError(error);
   }

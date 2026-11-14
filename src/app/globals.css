@@ -11020,3 +11020,29 @@ body:has(.bk-embedded) {
     flex: 1 1 100%;
   }
 }
+
+/* Console sign-in: setting up the authenticator app */
+.mfa-enrol {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mfa-enrol .signin-lede,
+.mfa-step {
+  margin: 0;
+}
+.mfa-step {
+  font-weight: 600;
+  color: var(--ink);
+}
+.mfa-qr {
+  justify-self: center;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--soft-border);
+}
+.mfa-secret code {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
