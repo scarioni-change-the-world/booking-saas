@@ -10,6 +10,32 @@ import type { BookingRow, CalendarConnectionRow, TenantRow } from './db/types';
 import { stripe, stripeConfigured } from './stripe';
 import { CLOSING_REASON, type BusinessDeletionFacts } from './business-deletion';
 import { sendBusinessDeletedEmail } from './business-deletion-email';
+import { schemaState } from './db/migrations';
+
+/**
+ * A deletion that stopped part-way, naming the step. The console is
+ * staff-only, so the cause is shown as it is: a generic "something went
+ * wrong" there only hides what needs fixing.
+ */
+export class BusinessDeletionError extends Error {
+  constructor(
+    readonly step: string,
+    cause: unknown,
+  ) {
+    const detail = cause instanceof Error ? cause.message : (cause as { message?: string })?.message ?? String(cause);
+    super(`Deleting stopped while ${step}: ${detail}`);
+    this.name = 'BusinessDeletionError';
+  }
+}
+
+async function during<T>(step: string, work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (cause) {
+    console.error(`[business-deletion] failed while ${step}:`, cause);
+    throw new BusinessDeletionError(step, cause);
+  }
+}
 
 interface Login {
   userId: string;
@@ -42,7 +68,7 @@ async function teamLogins(tenantId: string): Promise<Login[]> {
 export async function loadBusinessDeletionFacts(tenant: TenantRow): Promise<BusinessDeletionFacts> {
   const scope = tenantScope(tenant.id);
   const now = new Date().toISOString();
-  const [upcoming, past, owed, clients, services, calendar, logins] = await Promise.all([
+  const [upcoming, past, owed, clients, services, calendar, logins, schema] = await Promise.all([
     scope
       .select('bookings', 'starts_at, payment_id')
       .eq('status', 'confirmed')
@@ -54,6 +80,7 @@ export async function loadBusinessDeletionFacts(tenant: TenantRow): Promise<Busi
     scope.select('event_types', 'id, deleted_at'),
     scope.select('calendar_connections', 'id').maybeSingle(),
     teamLogins(tenant.id),
+    schemaState(),
   ]);
   for (const result of [upcoming, past, owed, clients, services]) if (result.error) throw result.error;
 
@@ -79,6 +106,7 @@ export async function loadBusinessDeletionFacts(tenant: TenantRow): Promise<Busi
     calendarConnected: !calendar.error && !!calendar.data,
     subscription:
       !!tenant.stripe_subscription_id && !['canceled', 'incomplete_expired'].includes(tenant.subscription_status ?? ''),
+    databaseReady: !schema.error && !schema.pending.includes('0037_delete_business'),
   };
 }
 
@@ -112,7 +140,7 @@ export async function deleteBusiness(tenant: TenantRow): Promise<BusinessDeletio
   const scope = tenantScope(tenant.id);
 
   // Who to tell and which logins go: read before anything is removed.
-  const logins = await teamLogins(tenant.id);
+  const logins = await during('reading the team', () => teamLogins(tenant.id));
 
   // 1. Appointments still to come.
   const { data, error } = await scope
@@ -123,7 +151,7 @@ export async function deleteBusiness(tenant: TenantRow): Promise<BusinessDeletio
   let cancelled = 0;
   let refunded = 0;
   for (const booking of (data ?? []) as unknown as BookingRow[]) {
-    await cancelBooking(tenant, scope, booking, CLOSING_REASON, 'business');
+    await during('cancelling an appointment', () => cancelBooking(tenant, scope, booking, CLOSING_REASON, 'business'));
     cancelled += 1;
     const refund = await refundOnCancel(scope, booking, 'business').catch((cause) => {
       console.error('[business-deletion] refund failed for a cancelled appointment:', cause);
@@ -134,12 +162,15 @@ export async function deleteBusiness(tenant: TenantRow): Promise<BusinessDeletio
 
   // 2. The khloe subscription.
   if (stripeConfigured() && tenant.stripe_subscription_id && tenant.subscription_status !== 'canceled') {
-    try {
-      await stripe().subscriptions.cancel(tenant.stripe_subscription_id);
-    } catch (cause) {
-      // Already gone at Stripe is fine; anything else stops the deletion.
-      if ((cause as { code?: string }).code !== 'resource_missing') throw cause;
-    }
+    const subscription = tenant.stripe_subscription_id;
+    await during('cancelling the khloe subscription', async () => {
+      try {
+        await stripe().subscriptions.cancel(subscription);
+      } catch (cause) {
+        // Already gone at Stripe is fine; anything else stops the deletion.
+        if ((cause as { code?: string }).code !== 'resource_missing') throw cause;
+      }
+    });
   }
 
   // 3. Outside the database, best effort.
@@ -148,8 +179,10 @@ export async function deleteBusiness(tenant: TenantRow): Promise<BusinessDeletio
   await removeTenantLogo(tenant.id).catch((cause) => console.error('[business-deletion] logo not removed:', cause));
 
   // 4. Everything in the database, at once.
-  const removed = await client.rpc('delete_tenant', { p_tenant: tenant.id });
-  if (removed.error) throw removed.error;
+  await during('deleting its data', async () => {
+    const removed = await client.rpc('delete_tenant', { p_tenant: tenant.id });
+    if (removed.error) throw removed.error;
+  });
 
   // 5. Logins on no other business, then the owners' confirmation.
   let loginsDeleted = 0;

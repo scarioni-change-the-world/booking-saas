@@ -41,11 +41,18 @@ export interface BusinessDeletionFacts {
   loginsKept: number;
   calendarConnected: boolean;
   subscription: boolean;
+  /** Migration 0037 (the delete_tenant function) is in the database. Checked
+   *  before anything is touched, so a missing migration stops it at the
+   *  start, not after appointments were already cancelled. */
+  databaseReady: boolean;
 }
 
 /** Why it cannot be deleted yet, each with what clears it. Empty when it can. */
 export function businessDeletionBlockers(facts: BusinessDeletionFacts, staffRole: string): string[] {
   const reasons: string[] = [];
+  if (!facts.databaseReady) {
+    reasons.push('The database is missing migration 0037 (delete_business). Run it in Supabase, then try again.');
+  }
   if (staffRole !== 'owner') reasons.push('Only a console owner can delete a business.');
   if (facts.status === 'active') {
     reasons.push('It is still active. Suspend it first: that stops its page and locks its team out, and can be undone.');

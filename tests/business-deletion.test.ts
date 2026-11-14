@@ -22,11 +22,16 @@ const base: BusinessDeletionFacts = {
   loginsKept: 0,
   calendarConnected: false,
   subscription: false,
+  databaseReady: true,
 };
 
 describe('who may delete a business, and when', () => {
   it('lets a console owner delete a suspended business that owes nothing', () => {
     expect(businessDeletionBlockers(base, 'owner')).toEqual([]);
+  });
+
+  it('stops before anything is touched when the database is not ready', () => {
+    expect(businessDeletionBlockers({ ...base, databaseReady: false }, 'owner')[0]).toMatch(/migration 0037/);
   });
 
   it('refuses anyone but a console owner', () => {

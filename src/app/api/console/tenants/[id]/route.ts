@@ -14,7 +14,7 @@ import { getTenantById, updateTenant, type UpdateTenantInput } from '@/lib/db/co
 import { serializeTenant } from '@/lib/console-serializers';
 import type { TenantPlan, TenantStatus } from '@/lib/db/types';
 import { businessDeletionBlockers, slugConfirmed } from '@/lib/business-deletion';
-import { deleteBusiness, loadBusinessDeletionFacts } from '@/lib/business-deletion-server';
+import { BusinessDeletionError, deleteBusiness, loadBusinessDeletionFacts } from '@/lib/business-deletion-server';
 
 const STATUSES: TenantStatus[] = ['active', 'suspended', 'deleted'];
 const PLANS: TenantPlan[] = ['trial', 'starter', 'pro', 'cancelled'];
@@ -124,6 +124,7 @@ export async function DELETE(request: Request, ctx: { params: Promise<{ id: stri
     const result = await deleteBusiness(tenant);
     return ok({ deleted: true, ...result });
   } catch (error) {
+    if (error instanceof BusinessDeletionError) return fail(error.message, 500);
     return handleError(error);
   }
 }
