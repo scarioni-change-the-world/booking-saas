@@ -6,7 +6,7 @@ const sent: string[] = [];
 
 vi.mock('@/lib/db/signup', () => ({
   slugTaken: async () => taken,
-  beginSignup: async () => (existing ? { kind: 'exists' } : { kind: 'confirm', link: 'https://x/verify' }),
+  beginSignup: async () => (existing ? { kind: 'exists', businesses: ['Mara Studio'] } : { kind: 'confirm', link: 'https://x/verify' }),
 }));
 vi.mock('@/lib/signup-email', () => ({
   sendSignupConfirmEmail: async (to: string) => {

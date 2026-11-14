@@ -26,8 +26,9 @@ export async function slugTaken(slug: string): Promise<boolean> {
 export type SignupStart =
   /** A link to open, for a new address — or one that never finished signing up. */
   | { kind: 'confirm'; link: string }
-  /** The address already has a working login. Nothing is created or changed. */
-  | { kind: 'exists' };
+  /** The address already has a working login. Nothing is created or changed.
+   *  `businesses` are the names it opens, for the email to its owner (never the form). */
+  | { kind: 'exists'; businesses: string[] };
 
 /**
  * The form was sent. Create a login that cannot be used until the address is
@@ -55,7 +56,20 @@ export async function beginSignup(input: {
   if (existingId) {
     const { data: found, error } = await client.auth.admin.getUserById(existingId as string);
     if (error) throw error;
-    if (found.user?.email_confirmed_at) return { kind: 'exists' };
+    if (found.user?.email_confirmed_at) {
+      // Named in the email that goes to this address only: a message that
+      // says which business it is about reads as genuine, where "somebody
+      // tried to sign up, sign in here" reads like phishing.
+      const owned = await client
+        .from('tenant_members')
+        .select('tenants(name)')
+        .eq('user_id', existingId as string)
+        .limit(3);
+      const businesses = ((owned.data ?? []) as unknown as Array<{ tenants: { name: string } | null }>)
+        .map((m) => m.tenants?.name)
+        .filter((n): n is string => !!n);
+      return { kind: 'exists', businesses };
+    }
 
     const updated = await client.auth.admin.updateUserById(existingId as string, {
       password: input.password,

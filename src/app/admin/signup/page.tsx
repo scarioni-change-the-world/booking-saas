@@ -137,8 +137,15 @@ export default function SignupPage() {
           We’ve sent a link to <b>{sentTo}</b>. Open it to confirm your address and {businessName.trim()} is
           ready. It works once, for an hour.
         </p>
+        {/* Said to everyone, because the form must not say which addresses
+            already have an account (api/signup/route.ts): the email is
+            where that person finds out, so the screen tells them to expect it. */}
         <p className="signin-aside">
-          Nothing arrived after a few minutes? Check spam, or{' '}
+          Already have a khloe account with this address? Then the email says so instead, and nothing new is
+          made. <a href="/">Sign in</a>
+        </p>
+        <p className="signin-aside">
+          Nothing arrived after a few minutes? Look in spam, and if it is there, mark it “Not spam”. Or{' '}
           <button type="button" className="signin-textbutton" onClick={() => setSentTo(null)}>
             go back and check the address
           </button>

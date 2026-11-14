@@ -1,6 +1,7 @@
 import { emailProvider } from './email';
 import { renderTemplate, type TemplateLink } from './email/templates';
 import type { EmailStatus } from './db/types';
+import { OPERATOR } from './operator';
 
 /**
  * The emails signing up sends — khloe writing on its own behalf, like the
@@ -23,6 +24,9 @@ async function send(
     await provider.send({
       to: { email: to },
       fromName: 'khloe',
+      // A real address that a person answers. A message whose replies go
+      // nowhere is one more thing that looks like bulk mail to a filter.
+      replyTo: OPERATOR.contactEmail,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
@@ -58,21 +62,33 @@ export function sendSignupConfirmEmail(
 /**
  * Somebody tried to sign up with an address that already has an account.
  * The form answered exactly as for a new address — it must not say which
- * addresses are customers — so the owner of the address hears it here.
+ * addresses are customers — and says this email explains instead.
+ *
+ * Written to read as what it is, not like the phishing it resembles: it
+ * names the business the account opens (only the owner of this inbox sees
+ * it), says plainly that nothing changed, gives the password reset as its
+ * own link, and asks for nothing.
  */
-export function sendAlreadyRegisteredEmail(email: string, signInUrl: string): Promise<SendStatus> {
+export function sendAlreadyRegisteredEmail(
+  email: string,
+  links: { signInUrl: string; resetUrl: string; businesses: string[] },
+): Promise<SendStatus> {
+  const which = links.businesses.length
+    ? ` It opens ${links.businesses.length === 1 ? links.businesses[0] : links.businesses.join(', ')}.`
+    : '';
   return send(
     email,
     {
-      subject: 'You already have a khloe account',
+      subject: 'Your khloe account already exists',
       body:
-        'Somebody — probably you — tried to sign up to khloe with this address. It already has an account, so ' +
-        'nothing new was created.\n\n' +
-        'Sign in with the link below. If you have forgotten your password, the sign-in page can send you a new one. ' +
-        'If this was not you, you can ignore this email.',
+        `You asked to create a khloe account with this address, but it already has one.{{which}} ` +
+        'Nothing new was created and nothing was changed.\n\n' +
+        'Sign in with your usual password using the button below. Forgotten it? Set a new one here: {{reset}}\n\n' +
+        'If you did not ask for this, ignore this email: your account is unaffected. Questions? Reply to this ' +
+        'email.',
     },
-    {},
-    { label: 'Sign in to khloe', url: signInUrl },
+    { which, reset: links.resetUrl },
+    { label: 'Sign in to khloe', url: links.signInUrl },
   );
 }
 
