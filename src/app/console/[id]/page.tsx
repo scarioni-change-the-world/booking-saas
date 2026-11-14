@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { MiniFlow } from '@/components/console/MiniFlow';
 import { Lamp } from '@/components/admin/Instruments';
+import { DeleteBusiness } from '@/components/console/DeleteBusiness';
 import type { Finding, MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
 
 interface Tenant {
@@ -555,6 +556,12 @@ export default function ConsoleTenantPage() {
               </div>
             )}
           </div>
+
+          <DeleteBusiness
+            id={id}
+            name={tenant.name}
+            onDeleted={(note) => window.location.assign(`/console?deleted=${encodeURIComponent(note)}`)}
+          />
         </>
       )}
     </div>

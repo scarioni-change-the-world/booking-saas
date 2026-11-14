@@ -13,6 +13,8 @@ import { requirePlatformStaff } from '@/lib/auth';
 import { getTenantById, updateTenant, type UpdateTenantInput } from '@/lib/db/console';
 import { serializeTenant } from '@/lib/console-serializers';
 import type { TenantPlan, TenantStatus } from '@/lib/db/types';
+import { businessDeletionBlockers, slugConfirmed } from '@/lib/business-deletion';
+import { deleteBusiness, loadBusinessDeletionFacts } from '@/lib/business-deletion-server';
 
 const STATUSES: TenantStatus[] = ['active', 'suspended', 'deleted'];
 const PLANS: TenantPlan[] = ['trial', 'starter', 'pro', 'cancelled'];
@@ -90,6 +92,37 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
     const tenant = await updateTenant(id, patch);
     return ok({ tenant: serializeTenant(tenant) });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/**
+ * Delete a business for good (business-deletion.ts). Console owners only;
+ * the business must be suspended, owe no paid sessions, and its web
+ * address must be typed back as `confirmSlug`. Every one of those is
+ * checked here again, whatever the panel showed.
+ */
+export async function DELETE(request: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await ctx.params;
+    const staff = await requirePlatformStaff(request, 'owner');
+    const body = await readJson(request);
+
+    const tenant = await getTenantById(id);
+    if (!tenant) return fail('Not found', 404);
+
+    const typed = typeof body.confirmSlug === 'string' ? body.confirmSlug : '';
+    if (!slugConfirmed(typed, tenant.slug)) {
+      return fail(`Type the business’s web address, ${tenant.slug}, to delete it.`, 400);
+    }
+
+    const facts = await loadBusinessDeletionFacts(tenant);
+    const blockers = businessDeletionBlockers(facts, staff.role);
+    if (blockers.length > 0) return fail(blockers.join(' '), 409);
+
+    const result = await deleteBusiness(tenant);
+    return ok({ deleted: true, ...result });
   } catch (error) {
     return handleError(error);
   }

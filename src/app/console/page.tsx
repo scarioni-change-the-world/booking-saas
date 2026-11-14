@@ -76,6 +76,7 @@ export default function ConsolePage() {
   // render below falls back to a plain text field for.
   const [zones, setZones] = useState<string[]>([]);
   const [localZone, setLocalZone] = useState('');
+  const [deletedNote, setDeletedNote] = useState<string | null>(null);
 
   useEffect(() => {
     let supported: string[] = [];
@@ -114,6 +115,12 @@ export default function ConsolePage() {
 
   useEffect(() => {
     void load();
+    // Back from deleting a business: say what was done, once.
+    const note = new URLSearchParams(window.location.search).get('deleted');
+    if (note) {
+      setDeletedNote(note);
+      window.history.replaceState(null, '', '/console');
+    }
   }, []);
 
   async function submitCreate(event: React.FormEvent) {
@@ -149,6 +156,12 @@ export default function ConsolePage() {
           </button>
         )}
       </div>
+
+      {deletedNote && (
+        <p className="notice notice-muted" role="status">
+          {deletedNote}
+        </p>
+      )}
 
       {error && (
         <div className="notice notice-error" role="alert">
