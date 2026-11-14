@@ -305,6 +305,23 @@ export default function FlowPage() {
     );
   }
 
+  /**
+   * "Add a service": the first one goes through the step-by-step setup,
+   * where it is guided (and can be read from the business's website);
+   * after that, the quick form on this page.
+   */
+  function addService() {
+    if (data && data.services.length === 0) {
+      window.location.assign(`/admin/${slug}/start`);
+      return;
+    }
+    setAdding(true);
+    window.setTimeout(
+      () => document.getElementById('add-service')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      50,
+    );
+  }
+
   // What is left before people can book; null once nothing is.
   const checklist = useMemo(() => {
     if (!data?.setup || !data.branding) return null;
@@ -330,7 +347,7 @@ export default function FlowPage() {
               <a className="btn-secondary" href={`/admin/${slug}/share`}>
                 Share your page
               </a>
-              <button type="button" className="btn-primary btn-add" onClick={() => setAdding(true)}>
+              <button type="button" className="btn-primary btn-add" onClick={addService}>
                 <span className="btn-add-plus" aria-hidden="true">
                   +
                 </span>
@@ -345,10 +362,7 @@ export default function FlowPage() {
         <SetupChecklist
           slug={slug}
           items={checklist}
-          onAddService={() => {
-            setAdding(true);
-            window.setTimeout(() => document.getElementById('add-service')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
-          }}
+          onAddService={addService}
         />
       )}
 

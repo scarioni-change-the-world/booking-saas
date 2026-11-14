@@ -76,7 +76,7 @@ export function SetupChecklist({
           {needed > 0 && (
             /* The one Ochre key on the card: the quickest way through what is left. */
             <a className="btn-secondary is-need" href={`/admin/${slug}/start`}>
-              Set up step by step
+              Start step-by-step setup
             </a>
           )}
           <button type="button" className="btn-link" onClick={() => fold(true)}>
