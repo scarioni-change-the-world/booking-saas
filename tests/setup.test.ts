@@ -119,3 +119,21 @@ describe('setup checklist', () => {
     expect(broken.find((i) => i.id === 'calendar')!.state).toBe('needed');
   });
 });
+
+describe('the wizard week', () => {
+  it('reads a week of one pattern, and leaves a mixed one alone', async () => {
+    const { simpleWeek, weekBody } = await import('../src/lib/setup');
+    expect(simpleWeek(defaults)).toEqual({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' });
+    expect(simpleWeek([])).toEqual({ days: [], start: '09:00', end: '17:00' });
+    expect(
+      simpleWeek([
+        { weekday: 1, startTime: '09:00', endTime: '13:00' },
+        { weekday: 1, startTime: '15:00', endTime: '19:00' },
+      ]),
+    ).toBeNull();
+    const body = weekBody([2, 4], '10:00', '14:00');
+    expect(body.days).toHaveLength(7);
+    expect(body.days[1]).toEqual({ weekday: 2, windows: [{ startTime: '10:00', endTime: '14:00' }] });
+    expect(body.days[0]).toEqual({ weekday: 1, windows: [] });
+  });
+});

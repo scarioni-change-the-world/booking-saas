@@ -72,9 +72,16 @@ export function SetupChecklist({
             {done} of {items.length} done
           </p>
         </div>
-        <button type="button" className="btn-link" onClick={() => fold(true)}>
-          Hide
-        </button>
+        <div className="gs-head-end">
+          {needed > 0 && (
+            <a className="btn-secondary" href={`/admin/${slug}/start`}>
+              Set up step by step
+            </a>
+          )}
+          <button type="button" className="btn-link" onClick={() => fold(true)}>
+            Hide
+          </button>
+        </div>
       </div>
       <div className="gs-bar" aria-hidden="true">
         {items.map((i, n) => (

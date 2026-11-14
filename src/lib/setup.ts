@@ -300,3 +300,34 @@ export function setupItems(input: SetupInput): SetupItem[] {
 export function setupOpen(items: readonly SetupItem[]): boolean {
   return items.some((i) => i.state !== 'done');
 }
+
+/* ── The wizard's simple week ─────────────────────────────────────────── */
+
+/**
+ * The usual week as the wizard asks for it: which days, and one stretch of
+ * hours for all of them. null when the week is more than that (different
+ * hours on different days, or a break), which the wizard leaves alone
+ * rather than flatten; Account → Opening hours edits those.
+ */
+export function simpleWeek(rules: readonly HoursRule[]): { days: number[]; start: string; end: string } | null {
+  if (rules.length === 0) return { days: [], start: DEFAULT_HOURS.start, end: DEFAULT_HOURS.end };
+  const hhmm = (t: string) => t.slice(0, 5);
+  const first = rules[0]!;
+  const days = new Set<number>();
+  for (const r of rules) {
+    if (hhmm(r.startTime) !== hhmm(first.startTime) || hhmm(r.endTime) !== hhmm(first.endTime)) return null;
+    if (days.has(r.weekday)) return null;
+    days.add(r.weekday);
+  }
+  return { days: [...days].sort(), start: hhmm(first.startTime), end: hhmm(first.endTime) };
+}
+
+/** The whole week to save: the days chosen open at those hours, the others closed. */
+export function weekBody(days: readonly number[], start: string, end: string) {
+  return {
+    days: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+      weekday,
+      windows: days.includes(weekday) ? [{ startTime: start, endTime: end }] : [],
+    })),
+  };
+}

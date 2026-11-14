@@ -25,11 +25,14 @@ export function BookingPageCard({
   businessName,
   saved,
   onSaved,
+  onDirty,
 }: {
   slug: string;
   businessName: string;
   saved: Branding;
   onSaved: () => Promise<void>;
+  /** Told whether there are changes not saved yet (the setup wizard asks before moving on). */
+  onDirty?: (dirty: boolean) => void;
 }) {
   const [colour, setColour] = useState(saved.accentColor ?? DEFAULT_BRAND);
   const [custom, setCustom] = useState(saved.accentColor ?? '');
@@ -49,6 +52,7 @@ export function BookingPageCard({
     nameBeside !== saved.nameBesideLogo ||
     website.trim() !== (saved.websiteUrl ?? '');
   const shown = check.ok ? check.hex : DEFAULT_BRAND;
+  useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
 
   async function run(kind: 'save' | 'upload' | 'remove', request: () => Promise<unknown>) {
     setBusy(kind);

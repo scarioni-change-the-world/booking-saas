@@ -31,9 +31,11 @@ export default function WelcomePage() {
           method: 'POST',
           headers: { authorization: `Bearer ${token}` },
         });
-        const body = (await response.json().catch(() => ({}))) as { slug?: string; error?: string };
+        const body = (await response.json().catch(() => ({}))) as { slug?: string; created?: boolean; error?: string };
         if (!response.ok || !body.slug) throw new Error(body.error ?? 'We could not open your account.');
-        window.location.replace(`/admin/${body.slug}/flow`);
+        // A business made just now starts with the guided setup; opening the
+        // link again later goes to Services like any sign-in.
+        window.location.replace(`/admin/${body.slug}/${body.created ? 'start' : 'flow'}`);
       } catch (cause) {
         setMessage((cause as Error).message);
         setState('failed');
