@@ -19,12 +19,14 @@ const STILL_THERE: Record<AiUsageKind, string> = {
   intake_draft: 'you can still add questions by hand any time.',
   report_summary: 'every figure in Reports is still here.',
   site_draft: 'you can still add your services by hand.',
+  assistant: 'everything it can do is still in the menus.',
 };
 
 const LIMIT_NOUN: Record<AiUsageKind, string> = {
   intake_draft: 'AI-assisted drafts',
   report_summary: 'report summaries',
   site_draft: 'website readings',
+  assistant: 'questions to Ask khloe',
 };
 
 /**

@@ -88,8 +88,17 @@ export interface SiteDraftInput {
   siteText: string;
 }
 
+/** "Ask khloe" (lib/assistant): the business's setup facts, the conversation so far, the new message. */
+export interface AssistantInput {
+  facts: unknown;
+  history: Array<{ role: 'user' | 'assistant'; text: string }>;
+  message: string;
+}
+
 export interface AiProvider {
   readonly id: string;
+  /** Returns the raw structured reply; lib/assistant sanitizes it against the business's facts. */
+  askKhloe(input: AssistantInput): Promise<unknown>;
   draftIntake(input: IntakeDraftInput): Promise<IntakeDraft>;
   summariseReport(input: ReportSummaryInput): Promise<ReportSummary>;
   draftFromSite(input: SiteDraftInput): Promise<SiteDraft>;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AskKhloe } from "./AskKhloe";
 import { usePathname, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { ServiceMarksProvider } from "@/components/admin/ServiceMarks";
@@ -157,6 +158,8 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
           {children}
         </main>
       </div>
+      {/* On every admin page: ask how, ask why, or say what to change. */}
+      <AskKhloe slug={slug} />
     </ServiceMarksProvider>
   );
 }

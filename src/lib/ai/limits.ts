@@ -19,4 +19,7 @@ export const MONTHLY_LIMITS: Record<AiUsageKind, number> = {
   /* "Set up from your website" in the setup wizard: read once or twice
      when starting, maybe again after the site changes. */
   site_draft: 5,
+  /* "Ask khloe": questions a month. A typical one costs a cent or two;
+     this covers everyday use and bounds a loop or misuse. */
+  assistant: 100,
 };
