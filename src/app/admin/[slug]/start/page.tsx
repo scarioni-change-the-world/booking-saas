@@ -99,9 +99,11 @@ export default function StartPage() {
             <span key={s} className={i <= step ? 'is-done' : ''} />
           ))}
         </div>
-        <a className="btn-link wz-later" href={`/admin/${slug}/flow`}>
-          Finish later
-        </a>
+        {step < 3 && (
+          <a className="btn-link wz-later" href={`/admin/${slug}/flow`}>
+            Finish later
+          </a>
+        )}
       </header>
 
       {error && (
@@ -844,13 +846,18 @@ function ReadyStep({
             Next, when you have a moment: connect your calendar, and add questions to ask before people book. The
             list on Services keeps track.
           </p>
-          <a className="btn-primary" href={`/admin/${slug}/flow`}>
-            Go to your services
-          </a>
         </div>
       </div>
 
-      <Nav onBack={onBack} next={<span />} />
+      {/* The same place as every step's Continue, so the end is where people look for it. */}
+      <Nav
+        onBack={onBack}
+        next={
+          <a className="btn-primary" href={`/admin/${slug}/flow`}>
+            Finish setup
+          </a>
+        }
+      />
     </section>
   );
 }

@@ -74,7 +74,8 @@ export function SetupChecklist({
         </div>
         <div className="gs-head-end">
           {needed > 0 && (
-            <a className="btn-secondary" href={`/admin/${slug}/start`}>
+            /* The one Ochre key on the card: the quickest way through what is left. */
+            <a className="btn-secondary is-need" href={`/admin/${slug}/start`}>
               Set up step by step
             </a>
           )}
