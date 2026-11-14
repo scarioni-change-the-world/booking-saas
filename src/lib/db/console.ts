@@ -3,6 +3,7 @@ import { __unsafeServiceClient } from './client';
 import type { MemberRole, TenantPlan, TenantRow, TenantStatus } from './types';
 import { classifyError, type TenantFacts } from '../tenant-health';
 import { foundingOfferOpen, trialEndsAt } from '../plans';
+import { DEFAULT_HOURS, DEFAULT_WEEKDAYS } from '../setup';
 
 /**
  * The console's own data access — every query here is deliberately unscoped,
@@ -192,6 +193,27 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
     .eq('tenant_id', tenant.id);
   if (defaultsError) {
     console.error('[console] could not default tenant_settings email addresses:', defaultsError);
+  }
+
+  /*
+   * Usual opening hours to start from: Monday to Friday, 9:00–17:00. A new
+   * business with no hours has a booking page that offers no times at all,
+   * which reads as broken, with nothing on screen to say why. These are a
+   * starting point, named as one in the setup checklist on Services
+   * ("set for you to start"), and changed in Account → Opening hours.
+   *
+   * Not fatal, for the same reason as the addresses above.
+   */
+  const { error: hoursError } = await client.from('availability_rules').insert(
+    DEFAULT_WEEKDAYS.map((weekday) => ({
+      tenant_id: tenant.id,
+      weekday,
+      start_time: DEFAULT_HOURS.start,
+      end_time: DEFAULT_HOURS.end,
+    })),
+  );
+  if (hoursError) {
+    console.error('[console] could not add default opening hours:', hoursError);
   }
 
   return tenant;

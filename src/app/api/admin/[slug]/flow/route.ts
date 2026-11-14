@@ -51,7 +51,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     const nowIso = new Date(now).toISOString();
     const sinceIso = new Date(now - THIRTY_DAYS_MS).toISOString();
 
-    const [facts, funnel, responses, bookings, nextUp, failedSync, failedEmail, calendar, clients, settings, owedRows] =
+    const [facts, funnel, responses, bookings, nextUp, failedSync, failedEmail, calendar, clients, settings, owedRows, anyBooking, sighting] =
       await Promise.all([
         loadSetupFacts(scope),
         loadFunnelStats(scope, sinceIso),
@@ -72,6 +72,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         scope.select('clients', 'id, name, email'),
         scope.select('tenant_settings').maybeSingle(),
         scope.select('client_entitlements', 'client_id, event_type_id, total_sessions, used_sessions'),
+        // For the setup checklist: has anyone ever booked, and has the page
+        // been seen working on a website (Share; migration 0034).
+        scope.select('bookings', 'id').limit(1),
+        scope.select('embed_sightings', 'host').eq('ok', true).limit(1),
       ]);
     for (const result of [bookings, nextUp, failedSync, calendar, clients, settings, owedRows]) {
       if (result.error) throw result.error;
@@ -157,6 +161,12 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     return ok({
       ...input,
       timezone: tenant.timezone,
+      setup: {
+        hours: facts.hours,
+        everBooked: !anyBooking.error && (anyBooking.data ?? []).length > 0,
+        // Before migration 0034 there is no table, and nothing has been seen.
+        embedded: !sighting.error && (sighting.data ?? []).length > 0,
+      },
       // What the booking page still lacks to look like the business's own
       // (Services nudges towards Account → Your booking page).
       branding: {

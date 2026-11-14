@@ -25,7 +25,7 @@ export async function loadSetupFacts(scope: TenantScope) {
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true }),
     scope.select('qualification_questions', 'id, event_type_id'),
-    scope.select('availability_rules', 'id, start_time, end_time'),
+    scope.select('availability_rules', 'id, weekday, start_time, end_time'),
     scope.select('outcome_paths'),
   ]);
 
@@ -52,7 +52,7 @@ export async function loadSetupFacts(scope: TenantScope) {
      existing. */
   const otherPath = ((paths.data ?? []) as unknown as OutcomePathRow[]).find((path) => path.type === 'other');
 
-  const ruleRows = (rules.data ?? []) as unknown as Array<{ start_time: string; end_time: string }>;
+  const ruleRows = (rules.data ?? []) as unknown as Array<{ weekday: number; start_time: string; end_time: string }>;
   const minutes = (t: string) => {
     const [h, m] = t.split(':').map(Number);
     return (h ?? 0) * 60 + (m ?? 0);
@@ -65,6 +65,8 @@ export async function loadSetupFacts(scope: TenantScope) {
     })),
     globalQuestionCount,
     availabilityRuleCount: ruleRows.length,
+    /** The usual week itself, for the one-line summary in the setup checklist. */
+    hours: ruleRows.map((r) => ({ weekday: r.weekday, startTime: r.start_time, endTime: r.end_time })),
     /** The usual week's open time, before any one-off change. */
     weeklyMinutes: ruleRows.reduce((sum, r) => sum + Math.max(0, minutes(r.end_time) - minutes(r.start_time)), 0),
     hasOtherPathMessage: (otherPath?.message ?? '').trim().length > 0,

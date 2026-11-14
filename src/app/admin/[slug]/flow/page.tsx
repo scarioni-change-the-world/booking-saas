@@ -25,6 +25,8 @@ import {
 import { partForPhase, type TestMessage } from '@/lib/test-run';
 import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
 import { DeleteService } from '@/components/admin/DeleteService';
+import { SERVICE_TYPES, serviceTypeBody, setupItems, setupOpen, type HoursRule } from '@/lib/setup';
+import { SetupChecklist } from '@/components/admin/SetupChecklist';
 
 interface NextUp {
   id: string;
@@ -39,6 +41,7 @@ interface Payload extends FlowInput {
   timezone: string;
   nextUp: NextUp[];
   branding?: { logo: boolean; colour: boolean; website: boolean };
+  setup?: { hours: HoursRule[]; everBooked: boolean; embedded: boolean };
 }
 
 /**
@@ -302,6 +305,20 @@ export default function FlowPage() {
     );
   }
 
+  // What is left before people can book; null once nothing is.
+  const checklist = useMemo(() => {
+    if (!data?.setup || !data.branding) return null;
+    const items = setupItems({
+      services: data.services,
+      hours: data.setup.hours,
+      calendarStatus: data.calendarStatus,
+      branding: data.branding,
+      everBooked: data.setup.everBooked,
+      embedded: data.setup.embedded,
+    });
+    return setupOpen(items) ? items : null;
+  }, [data]);
+
   return (
     <>
       <PageHeader
@@ -324,7 +341,18 @@ export default function FlowPage() {
         }
       />
 
-      {data && brandingGaps(data.branding) && (
+      {checklist && (
+        <SetupChecklist
+          slug={slug}
+          items={checklist}
+          onAddService={() => {
+            setAdding(true);
+            window.setTimeout(() => document.getElementById('add-service')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+          }}
+        />
+      )}
+
+      {data && !checklist && brandingGaps(data.branding) && (
         <p className="notice notice-muted fc-brand-nudge" role="status">
           Make your booking page look like your own site before you share it: add {brandingGaps(data.branding)}.{' '}
           <a href={`/admin/${slug}/account#booking-page`}>Set up your booking page</a>
@@ -352,7 +380,8 @@ export default function FlowPage() {
               {adding && <AddService slug={slug} activeCount={activeCount} onCancel={() => setAdding(false)} />}
 
               {model.lanes.length === 0 ? (
-                <p className="fc-empty">No services yet. Add your first one to see how people book it.</p>
+                // The checklist above already says it, with the button.
+                !checklist && <p className="fc-empty">No services yet. Add your first one to see how people book it.</p>
               ) : (
                 <ul className="fc-rows">
                   {model.lanes.map((l) => {
@@ -927,10 +956,20 @@ function TryLegend({ walked, lane }: { walked: Walked; lane: Lane }) {
  */
 function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount: number; onCancel: () => void }) {
   const router = useRouter();
+  const [typeId, setTypeId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const atCap = !withinServiceLimit(activeCount);
+  const type = SERVICE_TYPES.find((t) => t.id === typeId) ?? SERVICE_TYPES.find((t) => t.id === 'other')!;
+
+  /** Choosing a kind suggests its name, unless one was already typed. */
+  function choose(id: string) {
+    const previous = SERVICE_TYPES.find((t) => t.id === typeId);
+    const next = SERVICE_TYPES.find((t) => t.id === id)!;
+    if (!name.trim() || name === previous?.name) setName(next.name);
+    setTypeId(id);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -941,7 +980,7 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
       const result = await adminFetchJson<{ eventType: { id: string } }>(`/api/admin/${slug}/event-types`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify(serviceTypeBody(type, name)),
       });
       router.push(`/admin/${slug}/sessions/${result.eventType.id}`);
     } catch (cause) {
@@ -951,7 +990,7 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
   }
 
   return (
-    <form className="card" onSubmit={submit} style={{ marginBottom: 14 }}>
+    <form className="card" id="add-service" onSubmit={submit} style={{ marginBottom: 14 }}>
       <div className="admin-card-title">
         A new service · {activeCount} of {SERVICE_LIMIT} in use
       </div>
@@ -965,24 +1004,39 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
           {LIMIT_REACHED}
         </p>
       ) : (
-        <div className="fl-add">
-          <div className="field">
-            <label htmlFor="fl-new-name">What is it called?</label>
-            <input
-              id="fl-new-name"
-              type="text"
-              placeholder="e.g. Website design"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+        <>
+          <p className="fl-type-label" id="fl-type-label">
+            What kind of service is it?
+            <small>It fills in the usual length and setup. You can change all of it next.</small>
+          </p>
+          <div className="fl-types" role="radiogroup" aria-labelledby="fl-type-label">
+            {SERVICE_TYPES.map((t) => (
+              <label key={t.id} className={`fl-type${typeId === t.id ? ' is-on' : ''}`}>
+                <input type="radio" name="fl-type" checked={typeId === t.id} onChange={() => choose(t.id)} />
+                <b>{t.label}</b>
+                <span>{t.hint}</span>
+              </label>
+            ))}
           </div>
-          <button type="submit" className="btn-primary" disabled={saving || !name.trim()}>
-            {saving ? 'Adding…' : 'Add and set up'}
-          </button>
-          <button type="button" className="btn-link" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
+          <div className="fl-add">
+            <div className="field">
+              <label htmlFor="fl-new-name">What is it called?</label>
+              <input
+                id="fl-new-name"
+                type="text"
+                placeholder="e.g. Website design"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn-primary" disabled={saving || !name.trim()}>
+              {saving ? 'Adding…' : 'Add and set up'}
+            </button>
+            <button type="button" className="btn-link" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
       )}
       {atCap && (
         <button type="button" className="btn-link" onClick={onCancel} style={{ marginTop: 8 }}>
