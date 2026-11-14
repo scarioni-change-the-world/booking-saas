@@ -6,6 +6,8 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import { BookingPageCard, type Branding } from '@/components/admin/BookingPageCard';
 import { DEFAULT_CURRENCY, parseMoney, priceRefusal } from '@/lib/money';
 import { SERVICE_TYPES, hoursSummary, serviceTypeBody, simpleWeek, weekBody, type HoursRule } from '@/lib/setup';
+import { SERVICE_LIMIT } from '@/lib/service-deletion';
+import type { SiteDraft } from '@/lib/ai/site-draft';
 
 interface Account {
   business: { name: string; slug: string; timezone: string };
@@ -114,6 +116,7 @@ export default function StartPage() {
           slug={slug}
           services={services}
           currency={account.currency || DEFAULT_CURRENCY}
+          website={account.branding.websiteUrl}
           onDone={async () => {
             await load();
             go(1);
@@ -220,17 +223,21 @@ function ServiceStep({
   slug,
   services,
   currency,
+  website,
   onDone,
   onError,
 }: {
   slug: string;
   services: Service[];
   currency: string;
+  website: string | null;
   onDone: () => Promise<void>;
   onError: (message: string | null) => void;
 }) {
   const live = services.filter((s) => s.availableToProspects || s.availableToExistingClients);
   const [adding, setAdding] = useState(services.length === 0);
+  // While a website draft is open for review, it is the only way forward on screen.
+  const [reviewing, setReviewing] = useState(false);
   const [typeId, setTypeId] = useState('session');
   const type = SERVICE_TYPES.find((t) => t.id === typeId)!;
   const [name, setName] = useState(type.name);
@@ -276,7 +283,7 @@ function ServiceStep({
   }
 
   return (
-    <form className="wz-step" onSubmit={save} aria-labelledby="wz-service">
+    <section className="wz-step" aria-labelledby="wz-service">
       <h1 className="wz-title" id="wz-service">
         What do you offer?
       </h1>
@@ -284,7 +291,20 @@ function ServiceStep({
         Start with one service: what people book with you most. You can add more, and questions to ask first, later.
       </p>
 
-      {!adding ? (
+      {services.length === 0 && (
+        <SiteDraftPanel
+          slug={slug}
+          currency={currency}
+          website={website}
+          onDone={onDone}
+          onError={onError}
+          onReview={setReviewing}
+        />
+      )}
+      {services.length === 0 && !reviewing && <p className="wz-or">Or add it yourself</p>}
+
+      <form className="wz-step" onSubmit={save} aria-label="Add a service yourself">
+      {reviewing ? null : !adding ? (
         <div className="card wz-card">
           <p className="wz-have">
             You already have {live.length ? 'on your page' : 'set up'}:{' '}
@@ -350,16 +370,277 @@ function ServiceStep({
         </div>
       )}
 
-      <Nav
+      {!reviewing && <Nav
         next={
           <button type="submit" className="btn-primary" disabled={busy || (adding && (!name.trim() || priceBad))}>
             {busy ? 'Saving…' : adding ? 'Add and continue' : 'Continue'}
           </button>
         }
         skip={adding && services.length === 0 ? () => void onDone() : undefined}
-      />
-    </form>
+      />}
+      </form>
+    </section>
   );
+}
+
+/* ── 1a. Start from your website ── */
+
+interface DraftRow {
+  on: boolean;
+  name: string;
+  minutes: number;
+  price: string;
+  description: string;
+  stated: boolean;
+}
+
+/**
+ * Reads the business's website and drafts its services and hours, for the
+ * business to tick and correct. Nothing is created until they press the
+ * button; then the same routes as a service typed by hand save each one.
+ */
+function SiteDraftPanel({
+  slug,
+  currency,
+  website,
+  onDone,
+  onError,
+  onReview,
+}: {
+  slug: string;
+  currency: string;
+  website: string | null;
+  onDone: () => Promise<void>;
+  onError: (message: string | null) => void;
+  onReview: (reviewing: boolean) => void;
+}) {
+  const [url, setUrl] = useState(website ?? '');
+  const [state, setState] = useState<'ask' | 'reading' | 'review' | 'saving'>('ask');
+  const [problem, setProblem] = useState<string | null>(null);
+  const [rows, setRows] = useState<DraftRow[]>([]);
+  const [hours, setHours] = useState<SiteDraft['hours']>(null);
+  const [useHours, setUseHours] = useState(true);
+  const [colour, setColour] = useState<string | null>(null);
+  const [useColour, setUseColour] = useState(true);
+  const [found, setFound] = useState('');
+  useEffect(() => onReview(state === 'review' || state === 'saving'), [state, onReview]);
+
+  async function read(event: React.FormEvent) {
+    event.preventDefault();
+    if (!url.trim()) return;
+    setState('reading');
+    setProblem(null);
+    try {
+      const result = await adminFetchJson<{ draft: SiteDraft; website: string; colour: string | null }>(
+        `/api/admin/${slug}/ai/site-draft`,
+        { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: url.trim() }) },
+      );
+      setFound(result.website);
+      setRows(
+        result.draft.services.map((s, i) => ({
+          on: i < 3,
+          name: s.name,
+          minutes: s.durationMinutes ?? 60,
+          price: s.price === null ? '' : String(s.price).replace('.', currency === 'EUR' ? ',' : '.'),
+          description: s.description,
+          stated: s.durationMinutes !== null,
+        })),
+      );
+      setHours(result.draft.hours);
+      setColour(result.colour);
+      setState('review');
+    } catch (cause) {
+      setProblem((cause as Error).message);
+      setState('ask');
+    }
+  }
+
+  const chosen = rows.filter((r) => r.on);
+  const prices = rows.map((r) => (r.price.trim() === '' ? null : parseMoney(r.price, currency)));
+  const badPrice = rows.some((r, i) => r.on && r.price.trim() !== '' && prices[i] === null);
+  const atLimit = chosen.length >= SERVICE_LIMIT;
+
+  async function save() {
+    setState('saving');
+    onError(null);
+    try {
+      for (const [i, r] of rows.entries()) {
+        if (!r.on || !r.name.trim()) continue;
+        await adminFetchJson(`/api/admin/${slug}/event-types`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            name: r.name.trim(),
+            durationMinutes: r.minutes,
+            priceMinor: prices[i],
+            ...(r.description ? { description: r.description } : {}),
+            availableToProspects: true,
+          }),
+        });
+      }
+      if (hours && useHours) {
+        await adminFetchJson(`/api/admin/${slug}/availability-rules`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(weekBody(hours.days, hours.start, hours.end)),
+        });
+      }
+      // The site read is the business's own: keep it (Share uses it), and its colour if chosen.
+      await adminFetchJson(`/api/admin/${slug}/branding`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ websiteUrl: found, ...(colour && useColour ? { accentColor: colour } : {}) }),
+      }).catch(() => undefined);
+      await onDone();
+    } catch (cause) {
+      onError((cause as Error).message);
+      setState('review');
+    }
+  }
+
+  if (state !== 'review' && state !== 'saving') {
+    return (
+      <form className="card wz-card wz-site" onSubmit={read}>
+        <p className="fl-type-label">
+          Have a website? Start from it.
+          <small>
+            We read your site and draft your services, prices and hours. You check everything before anything is
+            saved.
+          </small>
+        </p>
+        <div className="wz-site-row">
+          <input
+            type="text"
+            inputMode="url"
+            aria-label="Your website"
+            placeholder="yourwebsite.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            disabled={state === 'reading'}
+          />
+          <button type="submit" className="btn-primary" disabled={state === 'reading' || !url.trim()}>
+            {state === 'reading' ? 'Reading your website…' : 'Read my website'}
+          </button>
+        </div>
+        {state === 'reading' && <p className="field-note">This takes up to half a minute.</p>}
+        {problem && (
+          <p className="field-note wz-bad" role="alert">
+            {problem}
+          </p>
+        )}
+      </form>
+    );
+  }
+
+  return (
+    <div className="card wz-card wz-site">
+      <p className="fl-type-label">
+        From {found.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+        <small>Tick what people can book, and correct anything we read wrong. All of it can be changed later.</small>
+      </p>
+
+      {rows.length === 0 ? (
+        <p className="field-note">
+          We found nothing to book on that site. Add your service below instead.{' '}
+          <button type="button" className="btn-link" onClick={() => setState('ask')}>
+            Try another address
+          </button>
+        </p>
+      ) : (
+        <ul className="wz-draft">
+          {rows.map((r, i) => (
+            <li key={i} className={r.on ? 'is-on' : ''}>
+              <input
+                type="checkbox"
+                checked={r.on}
+                disabled={!r.on && atLimit}
+                aria-label={`Offer ${r.name}`}
+                onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, on: e.target.checked } : x)))}
+              />
+              <input
+                type="text"
+                className="wz-draft-name"
+                aria-label="Name"
+                value={r.name}
+                onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+              />
+              <select
+                aria-label={`How long is ${r.name}?`}
+                value={r.minutes}
+                onChange={(e) =>
+                  setRows(rows.map((x, j) => (j === i ? { ...x, minutes: Number(e.target.value), stated: true } : x)))
+                }
+              >
+                {[...new Set([...LENGTHS, r.minutes])]
+                  .sort((a, b) => a - b)
+                  .map((m) => (
+                    <option key={m} value={m}>
+                      {lengthLabel(m)}
+                    </option>
+                  ))}
+              </select>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="wz-draft-price"
+                aria-label={`Price of ${r.name} (${currency})`}
+                placeholder="No price"
+                value={r.price}
+                aria-invalid={r.price.trim() !== '' && prices[i] === null}
+                onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))}
+              />
+              {!r.stated && r.on && <span className="wz-draft-guess">Length not on your site: check it</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {atLimit && <p className="field-note">Up to {SERVICE_LIMIT} services can be offered at once.</p>}
+      {badPrice && (
+        <p className="field-note wz-bad" role="alert">
+          One of the prices is not a number we can read.
+        </p>
+      )}
+
+      {hours && (
+        <label className="sh-also">
+          <input type="checkbox" checked={useHours} onChange={(e) => setUseHours(e.target.checked)} />
+          <span>
+            Use these opening hours: {hoursSummary(hours.days.map((d) => ({ weekday: d, startTime: hours.start, endTime: hours.end })))}
+            <small>You can change them on the next step.</small>
+          </span>
+        </label>
+      )}
+      {colour && (
+        <label className="sh-also">
+          <input type="checkbox" checked={useColour} onChange={(e) => setUseColour(e.target.checked)} />
+          <span>
+            Use your website’s colour <i className="wz-swatch" style={{ background: colour }} aria-hidden="true" /> {colour}
+            <small>For buttons and highlights on your booking page.</small>
+          </span>
+        </label>
+      )}
+
+      <div className="wz-nav">
+        <button type="button" className="btn-link" onClick={() => setState('ask')} disabled={state === 'saving'}>
+          Read another address
+        </button>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={state === 'saving' || chosen.length === 0 || badPrice || chosen.some((r) => !r.name.trim())}
+          onClick={() => void save()}
+        >
+          {state === 'saving'
+            ? 'Adding…'
+            : `Add ${chosen.length} service${chosen.length === 1 ? '' : 's'} and continue`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function lengthLabel(m: number): string {
+  return m < 60 ? `${m} minutes` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} hour${m > 60 ? 's' : ''}`;
 }
 
 /* ── 2. When are you available? ── */

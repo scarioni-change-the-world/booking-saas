@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
+import { SignupFunnel } from '@/components/console/SignupFunnel';
 import { MiniFlow } from '@/components/console/MiniFlow';
 import { Lamp } from '@/components/admin/Instruments';
 import type { MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
@@ -248,6 +249,8 @@ export default function ConsolePage() {
           </div>
         </form>
       )}
+
+      <SignupFunnel />
 
       {loading && <p className="status">Loading…</p>}
 

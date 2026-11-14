@@ -15,6 +15,7 @@
  */
 
 import type { OutcomePathType, QuestionKind } from '../db/types';
+import type { SiteDraft } from './site-draft';
 
 export interface IntakeDraftQuestionOption {
   label: string;
@@ -80,10 +81,18 @@ export interface ReportSummaryInput {
   facts: unknown;
 }
 
+/** "Set up from your website": the site's text in, drafted services and hours out (site-draft.ts). */
+export interface SiteDraftInput {
+  businessName: string;
+  /** The pages read, as siteDigest() joins them. Untrusted text from the open web. */
+  siteText: string;
+}
+
 export interface AiProvider {
   readonly id: string;
   draftIntake(input: IntakeDraftInput): Promise<IntakeDraft>;
   summariseReport(input: ReportSummaryInput): Promise<ReportSummary>;
+  draftFromSite(input: SiteDraftInput): Promise<SiteDraft>;
 }
 
 /**

@@ -14,9 +14,17 @@ import type { TenantScope } from '../db';
 import { AiUnavailableError } from './provider';
 import { MONTHLY_LIMITS } from './limits';
 
+/** What still works without the assistant, said when its monthly allowance is used up. */
+const STILL_THERE: Record<AiUsageKind, string> = {
+  intake_draft: 'you can still add questions by hand any time.',
+  report_summary: 'every figure in Reports is still here.',
+  site_draft: 'you can still add your services by hand.',
+};
+
 const LIMIT_NOUN: Record<AiUsageKind, string> = {
   intake_draft: 'AI-assisted drafts',
   report_summary: 'report summaries',
+  site_draft: 'website readings',
 };
 
 /**
@@ -53,11 +61,8 @@ export async function assertUnderMonthlyLimit(scope: TenantScope, kind: AiUsageK
 
   if ((data?.length ?? 0) >= limit) {
     throw new AiUnavailableError(
-      kind === 'intake_draft'
-        ? `You've used all ${limit} ${LIMIT_NOUN[kind]} included this month. ` +
-            `This resets at the start of next month — you can still add questions by hand any time.`
-        : `You've used all ${limit} ${LIMIT_NOUN[kind]} included this month. ` +
-            `This resets at the start of next month — every figure in Reports is still here.`,
+      `You've used all ${limit} ${LIMIT_NOUN[kind]} included this month. ` +
+        `This resets at the start of next month — ${STILL_THERE[kind]}`,
       429,
     );
   }

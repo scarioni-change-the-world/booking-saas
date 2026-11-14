@@ -4,6 +4,7 @@ import type { MemberRole, TenantPlan, TenantRow, TenantStatus } from './types';
 import { classifyError, type TenantFacts } from '../tenant-health';
 import { foundingOfferOpen, trialEndsAt } from '../plans';
 import { DEFAULT_HOURS, DEFAULT_WEEKDAYS } from '../setup';
+import type { FunnelInput } from '../signup-funnel';
 
 /**
  * The console's own data access — every query here is deliberately unscoped,
@@ -490,4 +491,87 @@ export async function loadPlatformHealth(sinceIso: string): Promise<Map<string, 
   }
 
   return facts;
+}
+
+/**
+ * The rows the sign-up funnel on the console counts (signup-funnel.ts),
+ * for businesses that joined since `sinceIso` (or ever, when null).
+ *
+ * Counts and dates only, like loadPlatformHealth: which business made a
+ * service when, whether one is offered, when its first booking was made,
+ * whether its page was seen on a website. Plus how many sign-ups never
+ * confirmed their email: logins still holding the business they asked for
+ * (`pending_business`, signup.ts) with no confirmed address. Nothing of
+ * them is read beyond that count.
+ */
+export async function loadSignupFunnelInput(sinceIso: string | null): Promise<FunnelInput> {
+  const client = __unsafeServiceClient();
+  const since = <Q extends { gte: (c: string, v: string) => Q }>(q: Q) => (sinceIso ? q.gte('created_at', sinceIso) : q);
+
+  const tenants = await since(client.from('tenants').select('id, created_at'));
+  if (tenants.error) throw tenants.error;
+  const tenantRows = (tenants.data ?? []) as Array<{ id: string; created_at: string }>;
+  const ids = tenantRows.map((t) => t.id);
+  if (ids.length === 0) return { tenants: [], services: [], bookings: [], embedded: [], unconfirmed: await countUnconfirmed(sinceIso) };
+
+  const [services, bookings, sightings, unconfirmed] = await Promise.all([
+    client
+      .from('event_types')
+      .select('tenant_id, created_at, available_to_prospects, available_to_existing_clients, deleted_at')
+      .eq('active', true)
+      .in('tenant_id', ids),
+    // Earliest first, so the first row per business is its first booking.
+    client.from('bookings').select('tenant_id, created_at').in('tenant_id', ids).order('created_at', { ascending: true }).limit(20000),
+    client.from('embed_sightings').select('tenant_id').eq('ok', true).in('tenant_id', ids),
+    countUnconfirmed(sinceIso),
+  ]);
+  if (services.error) throw services.error;
+  if (bookings.error) throw bookings.error;
+
+  const first = new Map<string, string>();
+  for (const b of (bookings.data ?? []) as Array<{ tenant_id: string; created_at: string }>) {
+    if (!first.has(b.tenant_id)) first.set(b.tenant_id, b.created_at);
+  }
+
+  return {
+    tenants: tenantRows.map((t) => ({ id: t.id, createdAt: t.created_at })),
+    services: ((services.data ?? []) as Array<{
+      tenant_id: string;
+      created_at: string;
+      available_to_prospects: boolean;
+      available_to_existing_clients: boolean;
+      deleted_at: string | null;
+    }>)
+      .filter((s) => !s.deleted_at)
+      .map((s) => ({
+        tenantId: s.tenant_id,
+        createdAt: s.created_at,
+        live: s.available_to_prospects || s.available_to_existing_clients,
+      })),
+    bookings: [...first.entries()].map(([tenantId, createdAt]) => ({ tenantId, createdAt })),
+    // Before migration 0034 there is no table, and nothing has been seen.
+    embedded: sightings.error ? [] : [...new Set(((sightings.data ?? []) as Array<{ tenant_id: string }>).map((s) => s.tenant_id))],
+    unconfirmed,
+  };
+}
+
+/** Sign-ups since `sinceIso` that never confirmed their email. At most 20 pages of 1,000 logins are read. */
+async function countUnconfirmed(sinceIso: string | null): Promise<number> {
+  const client = __unsafeServiceClient();
+  let count = 0;
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) {
+      console.error('[console] could not count unconfirmed sign-ups:', error.message);
+      return count;
+    }
+    for (const user of data.users) {
+      const pending = (user.user_metadata as { pending_business?: unknown } | null)?.pending_business;
+      if (!pending || user.email_confirmed_at) continue;
+      if (sinceIso && user.created_at < sinceIso) continue;
+      count += 1;
+    }
+    if (data.users.length < 1000) break;
+  }
+  return count;
 }

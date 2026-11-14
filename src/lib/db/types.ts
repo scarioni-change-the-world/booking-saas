@@ -423,7 +423,7 @@ export interface CalendarConnectionRow {
  * each kind independently. One value today; a future AI feature (draft
  * history, per-service scoping, ...) adds its own rather than reusing this
  * one. */
-export type AiUsageKind = 'intake_draft' | 'report_summary';
+export type AiUsageKind = 'intake_draft' | 'report_summary' | 'site_draft';
 
 /**
  * One metered AI generation, recorded after it succeeds — see

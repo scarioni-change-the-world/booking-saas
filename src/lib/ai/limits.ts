@@ -16,4 +16,7 @@ export const MONTHLY_LIMITS: Record<AiUsageKind, number> = {
   /* Written summaries in Reports. Kept per period (report_summaries), so
      reopening one costs nothing; this bounds how many new ones a month. */
   report_summary: 10,
+  /* "Set up from your website" in the setup wizard: read once or twice
+     when starting, maybe again after the site changes. */
+  site_draft: 5,
 };
