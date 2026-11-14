@@ -1143,7 +1143,7 @@ function Attendance({
   return (
     <div className="wk-attend">
       <p className="wk-side-eyebrow">Did they come?</p>
-      <div className="wk-attend-keys" role="group" aria-label="Did they come?">
+      <div className="wk-mode wk-attend-keys" role="group" aria-label="Did they come?">
         <button
           type="button"
           className="filter-chip"

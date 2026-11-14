@@ -10981,3 +10981,42 @@ body:has(.bk-embedded) {
   padding-left: 20px;
   max-width: 72ch;
 }
+
+/* People: the "who to show" switch, and the same choice as a dropdown on a
+   phone, where eight options do not fit one row. */
+.admin-app .pp-chips {
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  border-radius: 28px;
+}
+.admin-app .pp-chips .filter-chip[aria-pressed='true'] .pp-chip-count {
+  color: var(--accent);
+}
+.pp-filter-select {
+  display: none;
+}
+.bl-switch {
+  margin-bottom: 14px;
+  align-self: flex-start;
+  width: fit-content;
+}
+.admin-app .wk-attend-keys {
+  width: fit-content;
+  gap: 0;
+}
+@media (max-width: 900px) {
+  .admin-app .pp-chips {
+    display: none;
+  }
+  .pp-filter-select {
+    display: block;
+    flex: 1 1 200px;
+    margin-bottom: 10px;
+  }
+  .pp-filter-select select {
+    width: 100%;
+  }
+  .pp-search {
+    flex: 1 1 100%;
+  }
+}

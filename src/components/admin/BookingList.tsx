@@ -89,12 +89,12 @@ export function BookingList({ slug }: { slug: string }) {
           list am I looking at" — and made three views look like one
           recommended choice and two alternatives. Pills are what the brief
           reserves for exactly this. */}
-      <div className="filter-chip-row" role="group" aria-label="Which bookings to show">
+      <div className="wk-mode bl-switch" role="group" aria-label="Which bookings to show">
         {TABS.map((tab) => (
           <button
             key={tab.view}
             type="button"
-            className={`filter-chip${view === tab.view ? ' active' : ''}`}
+            className="filter-chip"
             aria-pressed={view === tab.view}
             onClick={() => setView(tab.view)}
           >

@@ -189,12 +189,15 @@ export default function PeoplePage() {
       {!loading && data && (
         <>
           <div className="pp-toolbar">
-            <div className="filter-chip-row pp-chips" role="group" aria-label="Show">
+            {/* The same pill switch as every other "which one" on the admin
+                screens (Week, Reports). Eight choices do not fit a phone, so
+                there the same choice is a dropdown. */}
+            <div className="wk-mode pp-chips" role="group" aria-label="Show">
               {FILTERS.map((f) => (
                 <button
                   key={f.key}
                   type="button"
-                  className={`filter-chip${!figure && filter === f.key ? ' active' : ''}`}
+                  className="filter-chip"
                   aria-pressed={!figure && filter === f.key}
                   onClick={() => {
                     setFigure(null);
@@ -206,6 +209,23 @@ export default function PeoplePage() {
                 </button>
               ))}
             </div>
+            <label className="pp-filter-select">
+              <span className="sr-only">Show</span>
+              <select
+                value={figure ? '' : filter}
+                onChange={(e) => {
+                  setFigure(null);
+                  setFilter(e.target.value as PeopleFilter | 'all');
+                }}
+              >
+                {figure && <option value="">From Overview</option>}
+                {FILTERS.map((f) => (
+                  <option key={f.key} value={f.key} disabled={f.key !== 'all' && counts[f.key] === 0 && filter !== f.key}>
+                    {f.label} ({counts[f.key]})
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="pp-search">
               <span className="sr-only">Find someone</span>
               <input
