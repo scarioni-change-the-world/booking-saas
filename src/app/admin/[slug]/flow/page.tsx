@@ -27,8 +27,7 @@ import {
 import { partForPhase, type TestMessage } from '@/lib/test-run';
 import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
 import { DeleteService } from '@/components/admin/DeleteService';
-import { SERVICE_TYPES, hoursSummary, serviceTypeBody, setupItems, setupOpen, type HoursRule } from '@/lib/setup';
-import { SetupChecklist } from '@/components/admin/SetupChecklist';
+import { SERVICE_TYPES, hoursSummary, serviceTypeBody, type HoursRule } from '@/lib/setup';
 import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
 
 interface NextUp {
@@ -46,21 +45,6 @@ interface Payload extends FlowInput {
   branding?: { logo: boolean; colour: boolean; website: boolean };
   setup?: { hours: HoursRule[]; everBooked: boolean; embedded: boolean };
 }
-
-/**
- * What the booking page still lacks to read as the business's own, in plain
- * words, or null when it has it all. Clients arrive from the business's own
- * site; a page with no logo and khloe's default colour feels like leaving it.
- */
-function brandingGaps(b: Payload['branding']): string | null {
-  if (!b) return null;
-  const missing = [!b.logo && 'your logo', !b.colour && 'your colour', !b.website && 'your website'].filter(
-    Boolean,
-  ) as string[];
-  if (missing.length === 0) return null;
-  return missing.length === 1 ? missing[0]! : `${missing.slice(0, -1).join(', ')} and ${missing.at(-1)}`;
-}
-
 
 interface Walked {
   steps: Set<StepId>;
@@ -338,19 +322,6 @@ export default function FlowPage() {
     );
   }
 
-  // What is left before people can book; null once nothing is.
-  const checklist = useMemo(() => {
-    if (!data?.setup || !data.branding) return null;
-    const items = setupItems({
-      services: data.services,
-      hours: data.setup.hours,
-      calendarStatus: data.calendarStatus,
-      branding: data.branding,
-      everBooked: data.setup.everBooked,
-      embedded: data.setup.embedded,
-    });
-    return setupOpen(items) ? items : null;
-  }, [data]);
 
   return (
     <>
@@ -389,10 +360,7 @@ export default function FlowPage() {
                 />
               )}
 
-              {model.lanes.length === 0 ? (
-                // The checklist above already says it, with the button.
-                !checklist && <p className="fc-empty">No services yet. Add your first one to see how people book it.</p>
-              ) : (
+              {(
                 <>
                   <ul className="fc-tiles">
                     {model.lanes.map((l) => {
@@ -463,15 +431,6 @@ export default function FlowPage() {
               )}
 
             </section>
-
-            {checklist && <SetupChecklist slug={slug} items={checklist} onAddService={addService} />}
-
-            {!checklist && brandingGaps(data.branding) && (
-              <p className="fc-note" role="status">
-                Make your booking page look like your own site before you share it: add {brandingGaps(data.branding)}.{' '}
-                <a href={`/admin/${slug}/account#booking-page`}>Set up your booking page</a>
-              </p>
-            )}
 
             {/* Below the open flow, so nothing comes between a service and
                 the flow it opens. */}
