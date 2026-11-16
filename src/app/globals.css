@@ -12269,3 +12269,21 @@ body:has(.bk-embedded) {
   font-weight: 600;
   font-size: 0.92rem;
 }
+.svc-on-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--status-live-ink, var(--ink));
+  vertical-align: 1px;
+}
+
+/* The launcher's hidden hint still takes space above the key: only the key
+   may catch the pointer, or that corner of every page swallows clicks. */
+.ak-launch {
+  pointer-events: none;
+}
+.ak-launch .ak-key {
+  pointer-events: auto;
+}

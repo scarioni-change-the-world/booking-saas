@@ -42,7 +42,7 @@ function describe(action: AssistantAction, answer: Answer): { title: string; det
     case 'add_service':
       return {
         title: `Add “${action.name}”`,
-        detail: `${lengthWords(action.durationMinutes)} · ${price(action.price)} · on your booking page`,
+        detail: `${lengthWords(action.durationMinutes)} · ${price(action.price)} · not offered yet`,
       };
     case 'update_service': {
       const parts = [
@@ -153,7 +153,8 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
             name: action.name,
             durationMinutes: action.durationMinutes,
             priceMinor: minor(action.price),
-            availableToProspects: true,
+            // Starts not offered, like one set up by hand: it goes on the
+            // booking page only when the person offers it on its page.
           }));
           setCreatedId(made.eventType?.id ?? null);
           break;
@@ -212,6 +213,12 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
       {error && (
         <p className="ak-card-warn" role="alert">
           {error}
+        </p>
+      )}
+      {state === 'done' && action.type === 'add_service' && (
+        <p className="ak-card-note">
+          It is not on your booking page yet. Open it, check the details, then press “Offer it” at the top of its
+          page.
         </p>
       )}
       {state === 'done' ? (

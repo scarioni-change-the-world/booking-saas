@@ -65,6 +65,7 @@ export default function ServicePage() {
     window.history.replaceState(null, '', `?tab=${next}`);
   };
   const [deleting, setDeleting] = useState(false);
+  const [offering, setOffering] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -132,6 +133,11 @@ export default function ServicePage() {
 
   const stages = setupStages(facts);
   const live = service.availableToProspects || service.availableToExistingClients;
+  // What stops it being booked even once offered: said before offering.
+  const blockers: Blocker[] = [];
+  if (payload.availabilityRuleCount === 0)
+    blockers.push({ text: 'set your opening hours', href: `/admin/${slug}/account#opening-hours` });
+  if (stages.find((st) => st.id === 'rules')?.blocking) blockers.push({ text: 'choose how many sessions are in the pack', tab: 'details' });
 
   async function patch(body: Record<string, unknown>) {
     await adminFetchJson(`${base}/event-types/${id}`, {
@@ -158,23 +164,32 @@ export default function ServicePage() {
           Ask khloe is the assistant in the corner, not a step on the page. */}
       <PageHeader
         title={service.name}
-        description={
-          live ? (
-            stages.find((s) => s.id === 'review')!.note
-          ) : (
-            <>
-              <span className="svc-off-dot" aria-hidden="true" />
-              Not offered to anyone yet, so it is not on your booking page.{' '}
-              <button type="button" className="btn-link" onClick={() => setTab('who')}>
-                Choose who can book it
-              </button>
-            </>
-          )
-        }
+        description={<OfferState slug={slug} service={service} live={live} blockers={blockers} onTab={setTab} />}
         actions={
-          <a className="btn-secondary" href={`/admin/${slug}/flow?part=service:${service.id}`}>
-            How people book it
-          </a>
+          <>
+            {/* Offering is the one thing a new service needs from you, so it
+                is the page's one Ochre key, beside its name. */}
+            {service.active && !live && blockers.length === 0 && (
+              <button
+                type="button"
+                className="btn-secondary is-need"
+                disabled={offering}
+                onClick={async () => {
+                  setOffering(true);
+                  try {
+                    await patch({ availableToProspects: true, availableToExistingClients: true });
+                  } finally {
+                    setOffering(false);
+                  }
+                }}
+              >
+                {offering ? 'Offering…' : 'Offer it'}
+              </button>
+            )}
+            <a className="btn-secondary" href={`/admin/${slug}/flow?part=service:${service.id}`}>
+              How people book it
+            </a>
+          </>
         }
       />
 
@@ -272,6 +287,98 @@ export default function ServicePage() {
 }
 
 type Saver = (body: Record<string, unknown>) => Promise<void>;
+
+interface Blocker {
+  text: string;
+  href?: string;
+  tab?: Tab;
+}
+
+/**
+ * Under the service's name: whether anyone can book it, and how to change
+ * that, in one line. Offering is one press ("Offer it", beside the name):
+ * new enquiries on the booking page and existing clients from their own
+ * link. Who can book narrows it to one or the other.
+ */
+function OfferState({
+  slug,
+  service,
+  live,
+  blockers,
+  onTab,
+}: {
+  slug: string;
+  service: SerializedEventType;
+  live: boolean;
+  blockers: Blocker[];
+  onTab: (tab: Tab) => void;
+}) {
+  if (!service.active) {
+    return (
+      <>
+        <span className="svc-off-dot" aria-hidden="true" />
+        Paused: no new bookings. Resume it under{' '}
+        <button type="button" className="btn-link" onClick={() => onTab('who')}>
+          Who can book
+        </button>
+        .
+      </>
+    );
+  }
+  if (live) {
+    const who =
+      service.availableToProspects && service.availableToExistingClients
+        ? 'everyone: it is on your booking page'
+        : service.availableToProspects
+          ? 'new enquiries on your booking page'
+          : 'your existing clients, from their own link (it is not on your booking page)';
+    return (
+      <>
+        <span className="svc-on-dot" aria-hidden="true" />
+        Offered to {who}.{' '}
+        {service.availableToProspects && (
+          <>
+            <a href={`/${slug}?service=${encodeURIComponent(service.slug)}`} target="_blank" rel="noreferrer">
+              See it
+            </a>{' '}
+            ·{' '}
+          </>
+        )}
+        <button type="button" className="btn-link" onClick={() => onTab('who')}>
+          Change who can book
+        </button>
+      </>
+    );
+  }
+  if (blockers.length > 0) {
+    return (
+      <>
+        <span className="svc-off-dot" aria-hidden="true" />
+        Not offered yet. Before people can book it,{' '}
+        {blockers.map((b, i) => (
+          <span key={b.text}>
+            {i > 0 && ' and '}
+            {b.href ? (
+              <a href={b.href}>{b.text}</a>
+            ) : (
+              <button type="button" className="btn-link" onClick={() => b.tab && onTab(b.tab)}>
+                {b.text}
+              </button>
+            )}
+          </span>
+        ))}
+        .
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="svc-off-dot" aria-hidden="true" />
+      Not offered yet, so nobody can book it. “Offer it” puts it on your booking page and lets your existing clients
+      book it from their own link.
+    </>
+  );
+}
 
 /**
  * Who can book it, and whether it is taking bookings at all: one line each.
