@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, parseOptionalMoney, priceRefusal, toMoneyInput } from '@/lib/money';
+import { lengthText } from '@/components/admin/ServiceDetails';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
@@ -26,7 +27,7 @@ import {
 import { partForPhase, type TestMessage } from '@/lib/test-run';
 import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
 import { DeleteService } from '@/components/admin/DeleteService';
-import { SERVICE_TYPES, serviceTypeBody, setupItems, setupOpen, type HoursRule } from '@/lib/setup';
+import { SERVICE_TYPES, hoursSummary, serviceTypeBody, setupItems, setupOpen, type HoursRule } from '@/lib/setup';
 import { SetupChecklist } from '@/components/admin/SetupChecklist';
 import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
 
@@ -407,7 +408,15 @@ export default function FlowPage() {
         <div className={trying ? 'fl-try-layout' : undefined}>
           <div className="fc-stack">
             <section className="fc-services" aria-label="Your services">
-              {adding && <AddService slug={slug} activeCount={activeCount} onCancel={() => setAdding(false)} />}
+              {adding && (
+                <AddService
+                  slug={slug}
+                  activeCount={activeCount}
+                  currency={data.tenant.currency}
+                  hours={data.setup?.hours ?? null}
+                  onCancel={() => setAdding(false)}
+                />
+              )}
 
               {model.lanes.length === 0 ? (
                 // The checklist above already says it, with the button.
@@ -987,33 +996,66 @@ function TryLegend({ walked, lane }: { walked: Walked; lane: Lane }) {
  * would be the product saying "done" about a thing that has not started.
  * Back on Flow, its missing step is drawn as missing.
  */
-function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount: number; onCancel: () => void }) {
+function AddService({
+  slug,
+  activeCount,
+  currency,
+  hours,
+  onCancel,
+}: {
+  slug: string;
+  activeCount: number;
+  currency: string;
+  hours: HoursRule[] | null;
+  onCancel: () => void;
+}) {
   const router = useRouter();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [typeId, setTypeId] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [minutes, setMinutes] = useState('60');
+  const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const atCap = !withinServiceLimit(activeCount);
   const type = SERVICE_TYPES.find((t) => t.id === typeId) ?? SERVICE_TYPES.find((t) => t.id === 'other')!;
 
-  /** Choosing a kind suggests its name, unless one was already typed. */
+  /** Choosing a kind suggests its name, length and price, unless already typed. */
   function choose(id: string) {
     const previous = SERVICE_TYPES.find((t) => t.id === typeId);
     const next = SERVICE_TYPES.find((t) => t.id === id)!;
     if (!name.trim() || name === previous?.name) setName(next.name);
+    setMinutes(String(next.durationMinutes));
+    setPrice(next.priceMinor !== undefined ? toMoneyInput(next.priceMinor, currency) : '');
     setTypeId(id);
   }
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!name.trim()) return;
+  const n = Number(minutes);
+  const lengthOk = Number.isInteger(n) && n >= 5 && n <= 1440;
+  const parsedPrice = parseOptionalMoney(price, currency);
+  const priceText = !parsedPrice.ok
+    ? price
+    : parsedPrice.minor === null
+      ? 'no price shown'
+      : parsedPrice.minor === 0
+        ? 'Free'
+        : formatMoney(parsedPrice.minor, currency);
+  const hoursText = hours && hours.length > 0 ? hoursSummary(hours) : null;
+
+  async function create() {
+    if (!name.trim()) return setStep(1);
+    if (!lengthOk) return setStep(2);
+    if (!parsedPrice.ok) {
+      setStep(2);
+      return setError(priceRefusal(price, currency));
+    }
     setSaving(true);
     setError(null);
     try {
       const result = await adminFetchJson<{ eventType: { id: string } }>(`/api/admin/${slug}/event-types`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(serviceTypeBody(type, name)),
+        body: JSON.stringify({ ...serviceTypeBody(type, name), durationMinutes: n, priceMinor: parsedPrice.minor }),
       });
       router.push(`/admin/${slug}/sessions/${result.eventType.id}`);
     } catch (cause) {
@@ -1022,60 +1064,175 @@ function AddService({ slug, activeCount, onCancel }: { slug: string; activeCount
     }
   }
 
+  if (atCap) {
+    return (
+      <div className="card ns" id="add-service">
+        <p className="notice notice-muted" style={{ margin: 0 }}>
+          {LIMIT_REACHED}
+        </p>
+        <button type="button" className="btn-link" onClick={onCancel}>
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  /* Three steps side by side: the finished ones read as their answer, the
+     current one is open, the next waits. Nothing moves as you go. */
+  const head = (k: 1 | 2 | 3, title: string, answer: string) => (
+    <button
+      type="button"
+      className="ns-head"
+      aria-current={step === k ? 'step' : undefined}
+      disabled={k > step && !(k === 2 && name.trim()) && !(k === 3 && name.trim() && lengthOk)}
+      onClick={() => setStep(k)}
+    >
+      <span className="ns-n" aria-hidden="true">
+        {k < step ? '✓' : k}
+      </span>
+      <span className="ns-title">{title}</span>
+      {step !== k && answer && <span className="ns-answer">{answer}</span>}
+    </button>
+  );
+
   return (
-    <form className="card" id="add-service" onSubmit={submit} style={{ marginBottom: 14 }}>
-      <div className="admin-card-title">
-        A new service · {activeCount} of {SERVICE_LIMIT} in use
+    <section className="card ns" id="add-service" aria-label="A new service">
+      <div className="ns-top">
+        <p className="admin-card-title">
+          A new service · {activeCount} of {SERVICE_LIMIT} in use
+        </p>
+        <button type="button" className="btn-link" onClick={onCancel}>
+          Cancel
+        </button>
       </div>
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
         </p>
       )}
-      {atCap ? (
-        <p className="notice notice-muted" style={{ margin: 0 }}>
-          {LIMIT_REACHED}
-        </p>
-      ) : (
-        <>
-          <p className="fl-type-label" id="fl-type-label">
-            What kind of service is it?
-            <small>It fills in the usual length and setup. You can change all of it next.</small>
-          </p>
-          <div className="fl-types" role="radiogroup" aria-labelledby="fl-type-label">
-            {SERVICE_TYPES.map((t) => (
-              <label key={t.id} className={`fl-type${typeId === t.id ? ' is-on' : ''}`}>
-                <input type="radio" name="fl-type" checked={typeId === t.id} onChange={() => choose(t.id)} />
-                <b>{t.label}</b>
-                <span>{t.hint}</span>
-              </label>
-            ))}
-          </div>
-          <div className="fl-add">
-            <div className="field">
-              <label htmlFor="fl-new-name">What is it called?</label>
-              <input
-                id="fl-new-name"
-                type="text"
-                placeholder="e.g. Website design"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+      <ol className="ns-steps">
+        <li className={`ns-step${step === 1 ? ' is-open' : step > 1 ? ' is-done' : ''}`}>
+          {head(1, 'What it is', name.trim())}
+          {step === 1 && (
+            <form
+              className="ns-body"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (name.trim()) setStep(2);
+              }}
+            >
+              <div className="ns-kinds" role="radiogroup" aria-label="What kind of service">
+                {SERVICE_TYPES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={typeId === t.id}
+                    className="filter-chip"
+                    aria-pressed={typeId === t.id}
+                    onClick={() => choose(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <div className="field">
+                <label htmlFor="ns-name">Its name</label>
+                <input
+                  id="ns-name"
+                  type="text"
+                  placeholder="e.g. Website design"
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <button type="submit" className="btn-primary" disabled={!name.trim()}>
+                Next
+              </button>
+            </form>
+          )}
+        </li>
+
+        <li className={`ns-step${step === 2 ? ' is-open' : step > 2 ? ' is-done' : ''}`}>
+          {head(2, 'Length and price', step > 2 ? `${lengthText(n)} · ${priceText}` : '')}
+          {step === 2 && (
+            <form
+              className="ns-body"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!parsedPrice.ok) return setError(priceRefusal(price, currency));
+                setError(null);
+                if (lengthOk) setStep(3);
+              }}
+            >
+              <div className="field">
+                <label htmlFor="ns-length">Length</label>
+                <div className="sp-inline">
+                  <input
+                    id="ns-length"
+                    type="number"
+                    min={5}
+                    max={1440}
+                    step={5}
+                    className="sp-short"
+                    autoFocus
+                    value={minutes}
+                    onChange={(e) => setMinutes(e.target.value)}
+                  />
+                  <span>minutes</span>
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="ns-price">Price</label>
+                <div className="sp-inline">
+                  <input
+                    id="ns-price"
+                    type="text"
+                    inputMode="decimal"
+                    className="sp-short"
+                    placeholder="Not shown"
+                    value={price}
+                    onChange={(e) => {
+                      setPrice(e.target.value);
+                      setError(null);
+                    }}
+                  />
+                  <span>{currency}</span>
+                </div>
+                <p className="field-note">Empty shows no price; 0 shows Free.</p>
+              </div>
+              <button type="submit" className="btn-primary" disabled={!lengthOk}>
+                Next
+              </button>
+            </form>
+          )}
+        </li>
+
+        <li className={`ns-step${step === 3 ? ' is-open' : ''}`}>
+          {head(3, 'When', '')}
+          {step === 3 && (
+            <div className="ns-body">
+              <p className="ns-say">
+                {hoursText ? (
+                  <>
+                    Within your opening hours, shared by every service: <b>{hoursText}</b>.
+                  </>
+                ) : (
+                  'You have no opening hours yet. Add the service now and set them next.'
+                )}
+              </p>
+              <a className="btn-link" href={`/admin/${slug}/account#opening-hours`}>
+                {hoursText ? 'Change opening hours' : 'Set opening hours'}
+              </a>
+              <button type="button" className="btn-primary" disabled={saving} onClick={() => void create()}>
+                {saving ? 'Adding…' : 'Add the service'}
+              </button>
             </div>
-            <button type="submit" className="btn-primary" disabled={saving || !name.trim()}>
-              {saving ? 'Adding…' : 'Add and set up'}
-            </button>
-            <button type="button" className="btn-link" onClick={onCancel}>
-              Cancel
-            </button>
-          </div>
-        </>
-      )}
-      {atCap && (
-        <button type="button" className="btn-link" onClick={onCancel} style={{ marginTop: 8 }}>
-          Close
-        </button>
-      )}
-    </form>
+          )}
+          {step < 3 && <p className="ns-wait">{hoursText ?? 'Your opening hours'}</p>}
+        </li>
+      </ol>
+    </section>
   );
 }

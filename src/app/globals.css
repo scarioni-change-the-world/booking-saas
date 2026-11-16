@@ -11649,3 +11649,267 @@ body:has(.bk-embedded) {
     align-self: center;
   }
 }
+
+/* ── Settings: one line each, the chosen one edited beside them ─────────
+   (SettingsPanel.tsx). The list never moves; only the right side changes.
+   On a phone the editor opens in place, under its own line. */
+.sp {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin: 0 0 14px;
+}
+.sp-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
+  overflow: hidden;
+}
+.sp-item + .sp-item {
+  border-top: 1px solid var(--rule);
+}
+.sp-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 18px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.sp-row:hover {
+  background: var(--selected-mineral);
+}
+.sp-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.sp-item.is-open > .sp-row {
+  background: var(--selected-mineral);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.sp-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.sp-value {
+  display: -webkit-box;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.sp-value.is-empty {
+  font-weight: 400;
+  color: var(--faint);
+}
+.sp-go {
+  color: var(--faint);
+  text-align: right;
+}
+.sp-edit {
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
+}
+.sp-edit.is-inline {
+  padding: 4px 18px 18px;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--selected-mineral);
+}
+.sp-edit-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.sp-hint {
+  margin: 0;
+  color: var(--faint);
+}
+.sp-form {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.sp-form > input,
+.sp-form > textarea,
+.sp-form > select,
+.sp-form > .field {
+  width: 100%;
+  max-width: 520px;
+  margin: 0;
+}
+.sp-purpose {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 60ch;
+}
+.sp-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.sp-short {
+  width: 120px;
+}
+.sp-tiny {
+  width: 72px;
+}
+.sp-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.sp-form .field-note,
+.sp-form .field-error {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .sp {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-row {
+    grid-template-columns: 88px minmax(0, 1fr) 14px;
+    padding: 13px 16px;
+  }
+  .sp-item.is-open > .sp-row {
+    box-shadow: none;
+  }
+}
+
+/* ── A new service: three steps side by side ───────────────────────────
+   Done ones read as their answer, the current one is open, the next waits.
+   Nothing moves as you go. Stacked on a phone. */
+.ns {
+  margin: 0 0 14px;
+}
+.ns-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ns-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ns-step {
+  padding: 14px 16px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: transparent;
+}
+.ns-step.is-open {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.ns-head {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 2px 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.ns-head:disabled {
+  cursor: default;
+  color: var(--faint);
+}
+.ns-n {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.ns-step.is-done .ns-n {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.ns-title {
+  align-self: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.ns-answer {
+  grid-column: 2;
+  overflow: hidden;
+  font-size: 0.88rem;
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ns-body {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 14px;
+}
+.ns-body .field {
+  width: 100%;
+  margin: 0;
+}
+.ns-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ns-say {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.ns-wait {
+  margin: 4px 0 0 32px;
+  font-size: 0.85rem;
+  color: var(--faint);
+}
+@media (max-width: 760px) {
+  .ns-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Short values sit on one line with their unit: "[60] minutes", "[90] EUR". */
+.sp-inline > input.sp-short {
+  flex: 0 0 auto;
+  width: 120px;
+}
+.sp-inline > input.sp-tiny {
+  flex: 0 0 auto;
+  width: 72px;
+}
+.ns-steps {
+  align-items: start;
+}

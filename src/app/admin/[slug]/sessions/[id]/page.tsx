@@ -4,24 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui';
 import { adminFetchJson } from '@/lib/admin-fetch';
-import {
-  DEFAULT_CURRENCY,
-  formatMoney,
-  parseMoney,
-  parseOptionalMoney,
-  priceRefusal,
-  toMoneyInput,
-} from '@/lib/money';
-import { LOCATION_OPTIONS } from '@/lib/service-location';
-import { useServiceMark } from '@/components/admin/ServiceMarks';
-import { ServiceBadge } from '@/components/admin/ServiceBadge';
+import { DEFAULT_CURRENCY } from '@/lib/money';
+import { hoursSummary, type HoursRule } from '@/lib/setup';
+import { ServiceDetails } from '@/components/admin/ServiceDetails';
 import { DeleteService } from '@/components/admin/DeleteService';
 import { ServiceQuestions } from '@/components/admin/ServiceQuestions';
 import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
-import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
+import { setupStages, type ServiceFacts, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
-import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
-import { amountDue, paymentSettingProblem, type PaymentMode } from '@/lib/payments';
 
 interface SetupPayload {
   services: Array<SerializedEventType & { ownQuestionCount: number }>;
@@ -31,8 +21,6 @@ interface SetupPayload {
   hasOtherPathUrl: boolean;
   takesPayments?: boolean;
 }
-
-const PACK_PRESETS = [5, 8, 10];
 
 type Tab = 'details' | 'questions' | 'messages' | 'who';
 
@@ -63,6 +51,7 @@ export default function ServicePage() {
 
   const [payload, setPayload] = useState<SetupPayload | null>(null);
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
+  const [hours, setHours] = useState<HoursRule[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTabState] = useState<Tab>('details');
@@ -81,11 +70,13 @@ export default function ServicePage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [setup, settings] = await Promise.all([
+      const [setup, settings, rules] = await Promise.all([
         adminFetchJson<SetupPayload>(`${base}/service-setup`),
         adminFetchJson<{ settings: { currency: string } }>(`${base}/settings`),
+        adminFetchJson<{ rules: HoursRule[] }>(`${base}/availability-rules`).catch(() => null),
       ]);
       setPayload(setup);
+      setHours(rules?.rules ?? null);
       setCurrency(settings.settings.currency);
     } catch (cause) {
       setError((cause as Error).message);
@@ -220,37 +211,15 @@ export default function ServicePage() {
       </div>
 
       {tab === 'details' && (
-        <>
-          <section className="card svc-card">
-            <div className="admin-card-title">Name and description</div>
-            <ServiceStageForm service={service} onSave={patch} />
-          </section>
-          <section className="card svc-card">
-            <div className="admin-card-title">Length, price and place</div>
-            <RulesStageForm
-              service={service}
-              currency={currency}
-              takesPayments={!!payload.takesPayments}
-              slug={slug}
-              onSave={patch}
-            />
-          </section>
-          <section className="card svc-card">
-            <div className="admin-card-title">When it can be booked</div>
-            <p className="svc-lede">
-              Within your opening hours, which every service shares
-              {payload.availabilityRuleCount === 0 ? ': you have none yet, so nothing can be booked.' : '.'}
-            </p>
-            <div className="fl-actions">
-              <a className="btn-secondary" href={`/admin/${slug}/account#opening-hours`}>
-                Change opening hours
-              </a>
-              <a className="btn-link" href={`/admin/${slug}/week`}>
-                Close a day, or time off, on the Week
-              </a>
-            </div>
-          </section>
-        </>
+        <ServiceDetails
+          slug={slug}
+          service={service}
+          currency={currency}
+          takesPayments={!!payload.takesPayments}
+          hours={hours && hours.length > 0 ? hoursSummary(hours) : null}
+          packBroken={!!stages.find((st) => st.id === 'rules')?.blocking}
+          onSave={patch}
+        />
       )}
 
       {tab === 'questions' && (
@@ -346,439 +315,7 @@ export default function ServicePage() {
   );
 }
 
-function StageRow({
-  stage,
-  index,
-  slug,
-  open,
-  onToggle,
-  children,
-}: {
-  stage: Stage;
-  index: number;
-  slug: string;
-  open: boolean;
-  onToggle: () => void;
-  children?: React.ReactNode;
-}) {
-  const tone = stage.done ? 'is-done' : stage.blocking ? 'is-blocking' : 'is-loose';
-
-  return (
-    <li className={`setup-stage ${tone}`}>
-      <div className="setup-stage-head">
-        {/* Three kinds, said by the mark and a word, not by a number: a
-            numbered step without a tick read as unfinished, even when the
-            service works and the step only makes it better. */}
-        <span className="setup-stage-n" aria-hidden="true">
-          {stage.done ? '✓' : stage.blocking ? '!' : '+'}
-        </span>
-        <div className="setup-stage-main">
-          <p className="setup-stage-label">
-            {stage.label}
-            {!stage.done && (
-              <span className={`setup-stage-tag${stage.blocking ? ' is-needed' : ''}`}>
-                {stage.blocking ? 'Needed' : 'Optional'}
-              </span>
-            )}
-          </p>
-          <p className="setup-stage-purpose">{stage.purpose}</p>
-          {stage.note && <p className="setup-stage-note">{stage.note}</p>}
-        </div>
-        <div className="setup-stage-action">
-          {stage.href ? (
-            /* Out to the screen that already does this job, rather than a
-               second copy of it living here and drifting from the first. */
-            <a className="btn-secondary" href={`/admin/${slug}/${stage.href}`}>
-              {stage.done ? 'Review' : stage.blocking ? 'Set up' : 'Add'}
-            </a>
-          ) : (
-            <button type="button" className="btn-secondary" onClick={onToggle} aria-expanded={open}>
-              {open ? 'Close' : stage.done ? 'Change' : stage.blocking ? 'Set up' : 'Add'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {open && children && <div className="setup-stage-body">{children}</div>}
-    </li>
-  );
-}
-
-/* ── The three stages short enough to live here ────────────────────────── */
-
 type Saver = (body: Record<string, unknown>) => Promise<void>;
-
-function ServiceStageForm({
-  service,
-  onSave,
-}: {
-  service: SerializedEventType;
-  onSave: Saver;
-}) {
-  const [name, setName] = useState(service.name);
-  const [description, setDescription] = useState(service.description ?? '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  return (
-    <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setBusy(true);
-        setError(null);
-        try {
-          await onSave({ name, description: description || null });
-        } catch (cause) {
-          setError((cause as Error).message);
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      <div className="field">
-        <label htmlFor="setup-name">Name</label>
-        <input
-          id="setup-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="field">
-        <label htmlFor="setup-description">Description</label>
-        <p className="field-description">
-          What someone reads under the name when they are choosing between your services.
-        </p>
-        <textarea
-          id="setup-description"
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
-        </p>
-      )}
-      <button type="submit" className="btn-primary" disabled={busy}>
-        {busy ? 'Saving…' : 'Save'}
-      </button>
-    </form>
-  );
-}
-
-function RulesStageForm({
-  service,
-  currency,
-  takesPayments,
-  slug,
-  onSave,
-}: {
-  service: SerializedEventType;
-  currency: string;
-  takesPayments: boolean;
-  slug: string;
-  onSave: Saver;
-}) {
-  const [duration, setDuration] = useState(String(service.durationMinutes));
-  const [price, setPrice] = useState(toMoneyInput(service.priceMinor, currency));
-  const [locationKind, setLocationKind] = useState<ServiceLocationKind | ''>(
-    service.locationKind ?? '',
-  );
-  const [locationDetail, setLocationDetail] = useState(service.locationDetail ?? '');
-  const [bookingMode, setBookingMode] = useState<BookingMode>(service.bookingMode);
-  const [packSize, setPackSize] = useState(String(service.packSize ?? 10));
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>(service.paymentMode);
-  const [deposit, setDeposit] = useState(toMoneyInput(service.depositMinor, currency));
-  const [priceError, setPriceError] = useState<string | null>(null);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  /* What a client would be asked to pay, as the form stands now. */
-  const parsedPrice = parseOptionalMoney(price, currency);
-  const priceNow = parsedPrice.ok ? parsedPrice.minor : null;
-  const depositNow = deposit.trim() ? parseMoney(deposit, currency) : null;
-  const payable = {
-    priceMinor: priceNow,
-    paymentMode,
-    depositMinor: depositNow,
-    bookingMode,
-    packSize: bookingMode === 'pack' ? Number(packSize) || null : null,
-  };
-  const due = amountDue(payable);
-  const noPrice = priceNow === null || priceNow <= 0;
-
-  return (
-    <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        /* Parsed here, so a typo is a sentence under the field rather than
-           a 400 from the server — and so what reaches the API is already
-           the integer the column stores. */
-        const parsed = parseOptionalMoney(price, currency);
-        if (!parsed.ok) {
-          setPriceError(priceRefusal(price, currency));
-          document.getElementById('setup-price')?.focus();
-          return;
-        }
-        setPriceError(null);
-        if (takesPayments) {
-          if (paymentMode === 'deposit' && deposit.trim() && depositNow === null) {
-            setPaymentError(priceRefusal(deposit, currency));
-            return;
-          }
-          const problem = paymentSettingProblem(payable);
-          if (problem) {
-            setPaymentError(problem);
-            return;
-          }
-        }
-        setPaymentError(null);
-        setBusy(true);
-        setError(null);
-        try {
-          await onSave({
-            durationMinutes: Number(duration),
-            priceMinor: parsed.minor,
-            locationKind: locationKind === '' ? null : locationKind,
-            locationDetail: locationDetail || null,
-            bookingMode,
-            packSize: bookingMode === 'pack' ? Number(packSize) : null,
-            // Only sent while Stripe is connected: without it the setting
-            // cannot change, and what is stored stays as it was.
-            ...(takesPayments
-              ? {
-                  paymentMode,
-                  depositMinor: paymentMode === 'deposit' ? depositNow : null,
-                }
-              : {}),
-          });
-        } catch (cause) {
-          setError((cause as Error).message);
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      <div className="field">
-        <label htmlFor="setup-duration">Length (minutes)</label>
-        <input
-          id="setup-duration"
-          type="number"
-          min={5}
-          max={1440}
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-        />
-      </div>
-
-      <div className="field">
-        <label htmlFor="setup-price">Price ({currency})</label>
-        <p className="field-description">
-          Shown beside the service on your booking page. Leave blank for no published price.
-        </p>
-        <input
-          id="setup-price"
-          type="text"
-          inputMode="decimal"
-          value={price}
-          onChange={(e) => {
-            setPrice(e.target.value);
-            setPriceError(null);
-          }}
-        />
-        {priceError && (
-          <p className="field-error" role="alert">
-            {priceError}
-          </p>
-        )}
-      </div>
-
-      <div className="field">
-        <label htmlFor="setup-location">Where it happens</label>
-        <select
-          id="setup-location"
-          value={locationKind}
-          onChange={(e) => setLocationKind(e.target.value as ServiceLocationKind | '')}
-        >
-          <option value="">Not set</option>
-          {LOCATION_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {locationKind === 'in_person' && (
-        <div className="field">
-          <label htmlFor="setup-location-detail">Address</label>
-          <p className="field-description">
-            Carried into the calendar invite as a link to a map.
-          </p>
-          <input
-            id="setup-location-detail"
-            type="text"
-            value={locationDetail}
-            onChange={(e) => setLocationDetail(e.target.value)}
-          />
-        </div>
-      )}
-
-      <div className="field">
-        <label>How clients book this</label>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button
-            type="button"
-            className={bookingMode === 'single' ? 'btn-primary' : 'btn-secondary'}
-            onClick={() => setBookingMode('single')}
-          >
-            Single booking
-          </button>
-          <button
-            type="button"
-            className={bookingMode === 'pack' ? 'btn-primary' : 'btn-secondary'}
-            onClick={() => setBookingMode('pack')}
-          >
-            Booking pack
-          </button>
-        </div>
-      </div>
-
-      {bookingMode === 'pack' && (
-        <div className="field">
-          <label htmlFor="setup-pack-size">Bookings in the pack</label>
-          <p className="field-description">
-            Someone booking this picks all {packSize || 'these'} times at once and is saved as a
-            client with that balance.
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {PACK_PRESETS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={Number(packSize) === n ? 'btn-primary' : 'btn-secondary'}
-                onClick={() => setPackSize(String(n))}
-              >
-                {n}
-              </button>
-            ))}
-            <input
-              id="setup-pack-size"
-              type="text"
-              inputMode="numeric"
-              aria-label="Custom pack size"
-              placeholder="Custom"
-              style={{ width: 90 }}
-              value={PACK_PRESETS.includes(Number(packSize)) ? '' : packSize}
-              onChange={(e) => setPackSize(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="field">
-        <label>Paid when booking</label>
-        {takesPayments ? (
-          <>
-            <p className="field-description">
-              Clients pay on Stripe’s secure page before the time is theirs. The money goes to your
-              Stripe account.
-            </p>
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                marginTop: 8,
-                flexWrap: 'wrap',
-              }}
-            >
-              {(
-                [
-                  ['none', 'Not online'],
-                  ['full', 'Pay in full'],
-                  ['deposit', 'Deposit'],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={paymentMode === value ? 'btn-primary' : 'btn-secondary'}
-                  aria-pressed={paymentMode === value}
-                  disabled={value !== 'none' && noPrice}
-                  onClick={() => {
-                    setPaymentMode(value);
-                    setPaymentError(null);
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {paymentMode === 'deposit' && (
-              <div style={{ marginTop: 10, maxWidth: 220 }}>
-                <label
-                  htmlFor="setup-deposit"
-                  className="field-description"
-                  style={{ display: 'block' }}
-                >
-                  Deposit ({currency})
-                </label>
-                <input
-                  id="setup-deposit"
-                  type="text"
-                  inputMode="decimal"
-                  value={deposit}
-                  onChange={(e) => {
-                    setDeposit(e.target.value);
-                    setPaymentError(null);
-                  }}
-                />
-              </div>
-            )}
-            {paymentError ? (
-              <p className="field-error" role="alert">
-                {paymentError}
-              </p>
-            ) : noPrice && paymentMode === 'none' ? (
-              <p className="field-note">Set a price above to take payment when clients book.</p>
-            ) : due ? (
-              <p className="field-note">
-                {due.kind === 'full'
-                  ? `Clients pay ${formatMoney(due.amountMinor, currency)} when they book${due.sessions > 1 ? ` — all ${due.sessions} sessions` : ''}.`
-                  : `Clients pay ${formatMoney(due.amountMinor, currency)} when they book, and the other ${formatMoney(due.totalMinor - due.amountMinor, currency)} to you directly.`}{' '}
-                Cancelled before your minimum notice: refunded automatically.
-              </p>
-            ) : paymentMode === 'none' ? (
-              <p className="field-note">
-                Clients book without paying online. Settle it however you do today.
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <p className="field-description">
-            Not online. To have clients pay when they book,{' '}
-            <a href={`/admin/${slug}/account`}>connect Stripe on your Account page</a>.
-          </p>
-        )}
-      </div>
-
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
-        </p>
-      )}
-      <button type="submit" className="btn-primary" disabled={busy}>
-        {busy ? 'Saving…' : 'Save'}
-      </button>
-    </form>
-  );
-}
 
 function ReviewStageForm({
   service,
@@ -849,22 +386,5 @@ function ReviewStageForm({
         {busy ? 'Saving…' : 'Save'}
       </button>
     </form>
-  );
-}
-
-/**
- * How this service is recognised on Flow, the Week and in People: its two
- * letters. There is no colour to choose any more — in the admin, colour is
- * kept for what needs you and where you are — so this only shows the mark.
- */
-function ServiceIdentity({ service }: { service: SerializedEventType }) {
-  const mark = useServiceMark();
-  return (
-    <div className="svc-identity">
-      <ServiceBadge name={service.name} size="lg" />
-      <p className="svc-identity-label" style={{ margin: 0 }}>
-        Shown as <b>{mark(service.name)}</b> on Services, the Week and People, always beside its name.
-      </p>
-    </div>
   );
 }
