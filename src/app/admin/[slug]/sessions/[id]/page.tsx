@@ -10,7 +10,6 @@ import { ServiceDetails } from '@/components/admin/ServiceDetails';
 import { SettingForm, SettingsPanel, type Setting } from '@/components/admin/SettingsPanel';
 import { DeleteService } from '@/components/admin/DeleteService';
 import { ServiceQuestions } from '@/components/admin/ServiceQuestions';
-import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
 import { setupStages, type ServiceFacts, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 
@@ -155,9 +154,8 @@ export default function ServicePage() {
 
   return (
     <>
-      {/* Whether anyone can book it is said once, quietly, under the name:
-          the page's job is to change the service, so asking khloe comes
-          first and the tabs straight after. */}
+      {/* Whether anyone can book it is said once, quietly, under the name.
+          Ask khloe is the assistant in the corner, not a step on the page. */}
       <PageHeader
         title={service.name}
         description={
@@ -180,7 +178,6 @@ export default function ServicePage() {
         }
       />
 
-      <AskKhloeBox example={`Change ${service.name} to 30 minutes`} />
 
       {/* One page per service, its parts as tabs: the same pill switch as
           everywhere else in the admin. The length and price are on the

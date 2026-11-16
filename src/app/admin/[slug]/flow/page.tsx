@@ -27,8 +27,8 @@ import {
 import { partForPhase, type TestMessage } from '@/lib/test-run';
 import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
 import { DeleteService } from '@/components/admin/DeleteService';
+import { openAskKhloe } from '@/components/admin/AskKhloe';
 import { SERVICE_TYPES, hoursSummary, serviceTypeBody, type HoursRule } from '@/lib/setup';
-import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
 
 interface NextUp {
   id: string;
@@ -325,12 +325,8 @@ export default function FlowPage() {
 
   return (
     <>
-      {/* The order is the hierarchy: what you have, asking khloe to change
-          it, then the services themselves. What is left to set up is a note
-          under them, not a banner over them. */}
       <PageHeader title="Your services" />
 
-      <AskKhloeBox example="Change the discovery call to 30 minutes" />
 
       {deletedNote && (
         <p className="notice notice-muted" role="status">
@@ -960,6 +956,10 @@ function AddService({
   onCancel: () => void;
 }) {
   const router = useRouter();
+  // Two equal ways in: the three steps, or say it in words and let khloe
+  // propose it (nothing is saved until it is confirmed in her panel).
+  const [way, setWay] = useState<'self' | 'khloe'>('self');
+  const [described, setDescribed] = useState('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [typeId, setTypeId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -1055,11 +1055,46 @@ function AddService({
           Cancel
         </button>
       </div>
+      <div className="wk-mode ns-way" role="group" aria-label="How to set it up">
+        <button type="button" className="filter-chip" aria-pressed={way === 'self'} onClick={() => setWay('self')}>
+          Set it up myself
+        </button>
+        <button type="button" className="filter-chip" aria-pressed={way === 'khloe'} onClick={() => setWay('khloe')}>
+          <span aria-hidden="true">✦{'\u00a0'}</span>Describe it to khloe
+        </button>
+      </div>
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
         </p>
       )}
+      {way === 'khloe' ? (
+        <form
+          className="ns-khloe"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!described.trim()) return;
+            openAskKhloe(`Add a new service: ${described.trim()}`);
+            onCancel();
+          }}
+        >
+          <label htmlFor="ns-describe">Describe the service in your own words</label>
+          <textarea
+            id="ns-describe"
+            rows={3}
+            autoFocus
+            placeholder="e.g. A 45-minute online coaching call for new clients, €80"
+            value={described}
+            onChange={(e) => setDescribed(e.target.value)}
+          />
+          <div className="sp-keys">
+            <button type="submit" className="btn-primary" disabled={!described.trim()}>
+              Ask khloe
+            </button>
+            <span className="field-note">khloe proposes it; nothing is saved until you confirm.</span>
+          </div>
+        </form>
+      ) : (
       <ol className="ns-steps">
         <li className={`ns-step${step === 1 ? ' is-open' : step > 1 ? ' is-done' : ''}`}>
           {head(1, 'What it is', name.trim())}
@@ -1183,6 +1218,7 @@ function AddService({
           {step < 3 && <p className="ns-wait">{hoursText ?? 'Your opening hours'}</p>}
         </li>
       </ol>
+      )}
     </section>
   );
 }

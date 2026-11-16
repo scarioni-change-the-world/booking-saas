@@ -12252,3 +12252,20 @@ body:has(.bk-embedded) {
 .fc-tile-add {
   justify-content: center;
 }
+
+/* Adding a service: two equal ways in. */
+.ns-way {
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px 0 4px;
+}
+.ns-khloe {
+  display: grid;
+  gap: 8px;
+  max-width: 640px;
+  margin-top: 12px;
+}
+.ns-khloe label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}

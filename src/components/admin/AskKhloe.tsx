@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { formatMoney, minorUnitDigits } from '@/lib/money';
 import {
@@ -119,6 +120,8 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
   const [state, setState] = useState<'ask' | 'saving' | 'done' | 'dismissed'>('ask');
   const [error, setError] = useState<string | null>(null);
   const [inside, setInside] = useState<number | null>(null);
+  // A service khloe added opens on its own page, to finish setting it up.
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const { title, detail } = describe(action, answer);
   const digits = minorUnitDigits(answer.currency);
   const minor = (p: number | null | undefined) => (p === null || p === undefined ? null : Math.round(p * 10 ** digits));
@@ -145,14 +148,16 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
     try {
       const base = `/api/admin/${slug}`;
       switch (action.type) {
-        case 'add_service':
-          await adminFetchJson(`${base}/event-types`, json('POST', {
+        case 'add_service': {
+          const made = await adminFetchJson<{ eventType?: { id: string } }>(`${base}/event-types`, json('POST', {
             name: action.name,
             durationMinutes: action.durationMinutes,
             priceMinor: minor(action.price),
             availableToProspects: true,
           }));
+          setCreatedId(made.eventType?.id ?? null);
           break;
+        }
         case 'update_service':
           await adminFetchJson(`${base}/event-types/${action.serviceId}`, json('PATCH', {
             ...(action.name ? { name: action.name } : {}),
@@ -210,8 +215,11 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
         </p>
       )}
       {state === 'done' ? (
-        <a className="btn-link" href={hrefOf(slug, placeOf(action))}>
-          Done. See it
+        <a
+          className="btn-link"
+          href={createdId ? `/admin/${slug}/sessions/${createdId}` : hrefOf(slug, placeOf(action))}
+        >
+          {createdId ? 'Done. Finish setting it up' : 'Done. See it'}
         </a>
       ) : (
         <div className="ak-card-keys">
@@ -227,11 +235,9 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
   );
 }
 
-/** The event an inline box sends to open the panel: detail { question }. */
+/** The event that opens the panel from elsewhere: detail { question }. */
 export const ASK_EVENT = 'khloe:ask';
 /** Sent by an inline box as it comes into or leaves view: detail { visible }. */
-export const BOX_EVENT = 'khloe:box';
-
 /** Open Ask khloe from anywhere, with a question already asked (or just open it). */
 export function openAskKhloe(question = '') {
   window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: { question } }));
@@ -251,14 +257,10 @@ export function AskKhloe({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [left, setLeft] = useState<number | null>(null);
   const [hint, setHint] = useState(false);
-  // While an Ask khloe box is on screen, the corner key steps aside: two
-  // ways to the same thing in view at once is one too many.
-  const [boxInView, setBoxInView] = useState(false);
-  useEffect(() => {
-    const onBox = (e: Event) => setBoxInView(!!(e as CustomEvent<{ visible: boolean }>).detail?.visible);
-    window.addEventListener(BOX_EVENT, onBox);
-    return () => window.removeEventListener(BOX_EVENT, onBox);
-  }, []);
+  // A hint for one place, said once: on the first service page, what
+  // khloe can change there.
+  const [hintText, setHintText] = useState<string | null>(null);
+  const pathname = usePathname();
   const end = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
 
@@ -276,11 +278,28 @@ export function AskKhloe({ slug }: { slug: string }) {
   }, []);
 
   useEffect(() => {
+    if (!/\/sessions\/[^/]+$/.test(pathname ?? '')) return;
+    try {
+      if (window.localStorage.getItem('khloe-ask-hinted-service')) return;
+      window.localStorage.setItem('khloe-ask-hinted-service', '1');
+    } catch {
+      return;
+    }
+    setHintText('Ask me to change anything about this service, for example “Make it 30 minutes” or “Change the price to €90”.');
+    setHint(true);
+    const t = window.setTimeout(() => {
+      setHint(false);
+      setHintText(null);
+    }, 9000);
+    return () => window.clearTimeout(t);
+  }, [pathname]);
+
+  useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' });
   }, [turns, busy]);
 
-  // The inline boxes on the pages (AskKhloeBox) open this panel, with
-  // their question already asked.
+  // Other parts of the admin (Add a service: "Describe it to khloe") open
+  // this panel with their question already asked.
   const askRef = useRef<(text: string) => void>(() => {});
   useEffect(() => {
     const onAsk = (e: Event) => {
@@ -330,16 +349,22 @@ export function AskKhloe({ slug }: { slug: string }) {
 
   return (
     <>
-      {!open && !boxInView && (
+      {!open && (
         <div className={`ak-launch${hint ? ' is-hinting' : ''}`}>
           <div className="ak-hint" role="tooltip" id="ak-hint">
             <b>Ask khloe</b>
-            <span>How something works, why something happens, or what to change. For example:</span>
-            <ul>
-              {ASSISTANT_EXAMPLES.slice(0, 3).map((e) => (
-                <li key={e}>“{e}”</li>
-              ))}
-            </ul>
+            {hintText ? (
+              <span>{hintText}</span>
+            ) : (
+              <>
+                <span>How something works, why something happens, or what to change. For example:</span>
+                <ul>
+                  {ASSISTANT_EXAMPLES.slice(0, 3).map((e) => (
+                    <li key={e}>“{e}”</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
           <button type="button" className="ak-key" aria-describedby="ak-hint" onClick={() => setOpen(true)}>
             <span className="ak-key-mark" aria-hidden="true">
