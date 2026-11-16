@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import Toggle from '@/components/admin/Toggle';
+import { useNarrow } from '@/components/admin/SettingsPanel';
 import { replay, routingChanged, type Capacity, type ReplayQuestion, type ReplayResponse } from '@/lib/replay';
 
 type Kind = 'text' | 'yes_no' | 'single_choice';
@@ -614,13 +615,6 @@ function QuestionsPreview({ questions }: { questions: Question[] }) {
   );
 }
 
-/**
- * One question, in either its display row or its edit form — the same
- * block the flat list used to inline once, now shared between the "asked
- * for every service" section and the "asked only for {service}" one
- * (migration 0016) so the two don't drift into two slightly different
- * question rows over time.
- */
 interface ReplayData {
   responses: ReplayResponse[];
   capacity: Capacity;
@@ -776,124 +770,131 @@ function ReplayPanel({
   );
 }
 
+/** What a question's row says under it: the kind, and where answers lead. */
+function questionSummary(q: Question): string {
+  const parts = [KIND_LABEL[q.kind], q.required ? 'required' : 'optional'];
+  if (q.options.length > 0) {
+    const elsewhere = q.options.filter((o) => o.outcomePathType !== 'meeting').length;
+    if (q.kind === 'single_choice') parts.push(`${q.options.length} answers`);
+    if (elsewhere > 0) parts.push(`${elsewhere} ${elsewhere === 1 ? 'answer sends' : 'answers send'} people elsewhere`);
+  }
+  return parts.join(' · ');
+}
+
+/**
+ * One question as one line: its order, its words, and what kind it is.
+ * Choosing it opens its editor beside the list (under it on a phone);
+ * nothing in the list moves.
+ */
 function QuestionRow({
   q,
   isFirst,
   isLast,
-  editingId,
-  editForm,
-  setEditForm,
-  saving,
-  onEdit,
-  onCancelEdit,
-  onSubmitEdit,
+  open,
+  narrow,
+  onChoose,
   onMove,
-  onToggleRequired,
+  children,
+}: {
+  q: Question;
+  isFirst: boolean;
+  isLast: boolean;
+  open: boolean;
+  narrow: boolean;
+  onChoose: () => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={`qrow${open ? ' is-open' : ''}`}>
+      <div className="data-row">
+        <div className="data-row-handle">
+          <button
+            type="button"
+            className="row-move"
+            disabled={isFirst}
+            onClick={() => onMove(q.id, 'up')}
+            aria-label={`Move "${q.prompt}" up`}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            className="row-move"
+            disabled={isLast}
+            onClick={() => onMove(q.id, 'down')}
+            aria-label={`Move "${q.prompt}" down`}
+          >
+            ↓
+          </button>
+        </div>
+        <button
+          type="button"
+          className="qrow-main"
+          aria-expanded={narrow ? open : undefined}
+          aria-current={!narrow && open ? 'true' : undefined}
+          onClick={onChoose}
+        >
+          <span className="data-row-title">{q.prompt}</span>
+          <span className="data-row-meta">{questionSummary(q)}</span>
+        </button>
+        <span className="sp-go" aria-hidden="true">
+          {narrow ? (open ? '▴' : '▾') : '›'}
+        </span>
+      </div>
+      {open && children && <div className="sp-edit is-inline">{children}</div>}
+    </div>
+  );
+}
+
+/** A question's editor: its words and answers, Save, and Remove; with what
+ *  last month's answers would have done under the change, when editing. */
+function QuestionEditor({
+  title,
+  saved,
+  form,
+  setForm,
+  idPrefix,
+  saving,
+  submitLabel,
+  onSubmit,
+  onClose,
   onRemove,
   questions,
   replayData,
 }: {
-  q: Question;
+  title: string;
+  saved: Question | null;
+  form: FormState;
+  setForm: (f: FormState) => void;
+  idPrefix: string;
+  saving: boolean;
+  submitLabel: string;
+  onSubmit: (event: React.FormEvent) => void;
+  onClose: () => void;
+  onRemove?: () => void;
   questions: Question[];
   replayData: ReplayData | null | 'unavailable';
-  isFirst: boolean;
-  isLast: boolean;
-  editingId: string | null;
-  editForm: FormState;
-  setEditForm: (f: FormState) => void;
-  saving: boolean;
-  onEdit: (q: Question) => void;
-  onCancelEdit: () => void;
-  onSubmitEdit: (event: React.FormEvent, id: string) => void;
-  onMove: (id: string, direction: 'up' | 'down') => void;
-  onToggleRequired: (q: Question) => void;
-  onRemove: (id: string) => void;
 }) {
-  if (editingId === q.id) {
-    return (
-      <form className="card rp-split" onSubmit={(e) => onSubmitEdit(e, q.id)}>
-        <div>
-          <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`edit-${q.id}`} />
-          <div className="actions">
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button type="button" className="btn-link" onClick={onCancelEdit}>
-              Cancel
-            </button>
-          </div>
-        </div>
-        <ReplayPanel saved={q} form={editForm} questions={questions} data={replayData} />
-      </form>
-    );
-  }
-
-  /* A row rather than a card — see DataRow.tsx. Each question used to be a
-     bordered box whose height came from a vertical stack of three actions on
-     the right, so one line of content produced an almost empty rectangle and
-     a real questionnaire produced a page of them. */
   return (
-    <div className="data-row">
-      <div className="data-row-handle">
-        <button
-          type="button"
-          className="row-move"
-          disabled={isFirst}
-          onClick={() => onMove(q.id, 'up')}
-          aria-label={`Move "${q.prompt}" up`}
-        >
-          ↑
+    <form className="qedit" onSubmit={onSubmit}>
+      <p className="sp-edit-title">{title}</p>
+      <QuestionForm form={form} setForm={setForm} idPrefix={idPrefix} />
+      <div className="sp-keys">
+        <button type="submit" className="btn-primary" disabled={saving || !form.prompt.trim()}>
+          {saving ? 'Saving…' : submitLabel}
         </button>
-        <button
-          type="button"
-          className="row-move"
-          disabled={isLast}
-          onClick={() => onMove(q.id, 'down')}
-          aria-label={`Move "${q.prompt}" down`}
-        >
-          ↓
+        <button type="button" className="btn-link" onClick={onClose}>
+          Close
         </button>
-      </div>
-
-      <div className="data-row-body">
-        <span className="data-row-title">{q.prompt}</span>
-        <span className="data-row-meta">
-          {KIND_LABEL[q.kind]}
-          {q.required ? ' · required' : ' · optional'}
-        </span>
-        {q.options.length > 0 && (
-          <span className="answer-chips">
-            {q.options.map((opt) => (
-              /* Where each answer leads, said on the answer itself. The two
-                 tints are the only place a path shows as colour, and each
-                 carries a word as well — "opens the calendar" is legible to
-                 someone who cannot tell the tints apart. */
-              <span
-                key={opt.label}
-                className={`answer-chip${opt.outcomePathType === 'meeting' ? ' to-calendar' : ' to-resource'}`}
-              >
-                {opt.label}
-                <span className="answer-chip-path">
-                  {opt.outcomePathType === 'meeting' ? 'opens the calendar' : 'another next step'}
-                </span>
-              </span>
-            ))}
-          </span>
+        {onRemove && (
+          <button type="button" className="btn-link qedit-remove" onClick={onRemove}>
+            Remove question
+          </button>
         )}
       </div>
-
-      <div className="data-row-actions">
-        <button type="button" className="btn-secondary" onClick={() => onEdit(q)}>
-          Edit
-        </button>
-        <button type="button" className="text-action" onClick={() => onToggleRequired(q)}>
-          {q.required ? 'Make optional' : 'Make required'}
-        </button>
-        <button type="button" className="btn-destructive" onClick={() => onRemove(q.id)}>
-          Remove
-        </button>
-      </div>
-    </div>
+      {saved && <ReplayPanel saved={saved} form={form} questions={questions} data={replayData} />}
+    </form>
   );
 }
 
@@ -926,6 +927,7 @@ export default function ScreeningQuestionsPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
+  const narrow = useNarrow();
   /* Last month's answers, loaded once: every toggle replays them in the
      browser, so flipping an answer shows its effect at once. */
   const [replayData, setReplayData] = useState<ReplayData | null | 'unavailable'>(null);
@@ -985,6 +987,7 @@ export default function ScreeningQuestionsPage() {
   }, [eventTypes, viewServiceId]);
 
   function startCreate(scope: 'global' | 'service') {
+    setEditingId(null);
     setForm(EMPTY_FORM);
     setCreatingScope(scope);
   }
@@ -1014,7 +1017,10 @@ export default function ScreeningQuestionsPage() {
     }
   }
 
-  function startEdit(q: Question) {
+  /** Choose a question: its editor opens; choosing it again closes it. */
+  function choose(q: Question) {
+    cancelCreate();
+    if (editingId === q.id) return setEditingId(null);
     setEditingId(q.id);
     setEditForm(questionToForm(q));
   }
@@ -1029,27 +1035,11 @@ export default function ScreeningQuestionsPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(formToPayload(editForm)),
       });
-      setEditingId(null);
       await load();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function toggleRequired(q: Question) {
-    setError(null);
-    setQuestions((prev) => prev.map((x) => (x.id === q.id ? { ...x, required: !x.required } : x)));
-    try {
-      await adminFetchJson(`${base}/${q.id}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ required: !q.required }),
-      });
-    } catch (cause) {
-      setError((cause as Error).message);
-      await load();
     }
   }
 
@@ -1072,6 +1062,7 @@ export default function ScreeningQuestionsPage() {
     setError(null);
     try {
       await adminFetchJson(`${base}/${id}`, { method: 'DELETE' });
+      if (editingId === id) setEditingId(null);
       await load();
     } catch (cause) {
       setError((cause as Error).message);
@@ -1086,20 +1077,56 @@ export default function ScreeningQuestionsPage() {
   // shared questions, then that service's own, same order the widget uses.
   const previewQuestions = viewServiceId ? [...globalQuestions, ...serviceQuestions] : globalQuestions;
 
-  const rowProps = {
-    editingId,
-    editForm,
-    setEditForm,
-    saving,
-    onEdit: startEdit,
-    onCancelEdit: () => setEditingId(null),
-    onSubmitEdit: submitEdit,
-    onMove: move,
-    onToggleRequired: toggleRequired,
-    onRemove: remove,
-    questions,
-    replayData,
-  };
+  const editing = questions.find((q) => q.id === editingId) ?? null;
+
+  /* The one editor on the page: the chosen question, or a new one. */
+  const editor = editing ? (
+    <QuestionEditor
+      key={editing.id}
+      title={editing.eventTypeId ? `Only for ${viewServiceName}` : 'Asked for every service'}
+      saved={editing}
+      form={editForm}
+      setForm={setEditForm}
+      idPrefix={`edit-${editing.id}`}
+      saving={saving}
+      submitLabel="Save"
+      onSubmit={(e) => submitEdit(e, editing.id)}
+      onClose={() => setEditingId(null)}
+      onRemove={() => void remove(editing.id)}
+      questions={questions}
+      replayData={replayData}
+    />
+  ) : creatingScope !== 'none' ? (
+    <QuestionEditor
+      title={creatingScope === 'global' ? 'A new question for every service' : `A new question for ${viewServiceName}`}
+      saved={null}
+      form={form}
+      setForm={setForm}
+      idPrefix={`new-${creatingScope}`}
+      saving={saving}
+      submitLabel="Add question"
+      onSubmit={(e) => submitCreate(e, creatingScope === 'service' ? viewServiceId : undefined)}
+      onClose={cancelCreate}
+      questions={questions}
+      replayData={replayData}
+    />
+  ) : null;
+
+  const rows = (list: Question[]) =>
+    list.map((q, i) => (
+      <QuestionRow
+        key={q.id}
+        q={q}
+        isFirst={i === 0}
+        isLast={i === list.length - 1}
+        open={editingId === q.id}
+        narrow={narrow}
+        onChoose={() => choose(q)}
+        onMove={move}
+      >
+        {narrow ? editor : null}
+      </QuestionRow>
+    ));
 
   return (
     <div className="builder-split">
@@ -1154,27 +1181,12 @@ export default function ScreeningQuestionsPage() {
               <div className="admin-card-title" style={{ marginBottom: 0 }}>
                 Asked for every service
               </div>
-              {creatingScope === 'none' && (
-                <button type="button" className="btn-primary" onClick={() => startCreate('global')}>
-                  Add question
-                </button>
-              )}
+              <button type="button" className="btn-secondary" onClick={() => startCreate('global')}>
+                + Add question
+              </button>
             </div>
 
-            {creatingScope === 'global' && (
-              <form className="card" onSubmit={(e) => submitCreate(e, undefined)} style={{ marginBottom: 14 }}>
-                <div className="admin-card-title">New question</div>
-                <QuestionForm form={form} setForm={setForm} idPrefix="new-global" />
-                <div className="actions">
-                  <button type="submit" className="btn-primary" disabled={saving}>
-                    {saving ? 'Saving…' : 'Add question'}
-                  </button>
-                  <button type="button" className="btn-link" onClick={cancelCreate}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
+            {narrow && creatingScope === 'global' && <div className="sp-edit is-inline qnew">{editor}</div>}
 
             {globalQuestions.length === 0 && creatingScope !== 'global' && (
               <p className="notice notice-muted">
@@ -1184,15 +1196,7 @@ export default function ScreeningQuestionsPage() {
             )}
 
             <div className="surface surface-flush" style={{ marginBottom: eventTypes.length > 0 ? 26 : 0 }}>
-              {globalQuestions.map((q, i) => (
-                <QuestionRow
-                  key={q.id}
-                  q={q}
-                  isFirst={i === 0}
-                  isLast={i === globalQuestions.length - 1}
-                  {...rowProps}
-                />
-              ))}
+              {rows(globalQuestions)}
             </div>
 
             {/* Shown for one service as readily as for five. It used to
@@ -1235,11 +1239,9 @@ export default function ScreeningQuestionsPage() {
                       <div className="admin-card-title" style={{ marginBottom: 0 }}>
                         Asked only for {viewServiceName}
                       </div>
-                      {creatingScope === 'none' && (
-                        <button type="button" className="btn-secondary" onClick={() => startCreate('service')}>
-                          Add question
-                        </button>
-                      )}
+                      <button type="button" className="btn-secondary" onClick={() => startCreate('service')}>
+                        + Add question
+                      </button>
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 10px' }}>
                       Shown after the shared questions above, only when someone books this service.
@@ -1260,24 +1262,7 @@ export default function ScreeningQuestionsPage() {
                       </p>
                     )}
 
-                    {creatingScope === 'service' && (
-                      <form
-                        className="card"
-                        onSubmit={(e) => submitCreate(e, viewServiceId)}
-                        style={{ marginBottom: 14 }}
-                      >
-                        <div className="admin-card-title">New question</div>
-                        <QuestionForm form={form} setForm={setForm} idPrefix="new-service" />
-                        <div className="actions">
-                          <button type="submit" className="btn-primary" disabled={saving}>
-                            {saving ? 'Saving…' : 'Add question'}
-                          </button>
-                          <button type="button" className="btn-link" onClick={cancelCreate}>
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    )}
+                    {narrow && creatingScope === 'service' && <div className="sp-edit is-inline qnew">{editor}</div>}
 
                     {serviceQuestions.length === 0 && creatingScope !== 'service' && (
                       <p className="notice notice-muted">
@@ -1286,15 +1271,7 @@ export default function ScreeningQuestionsPage() {
                     )}
 
                     <div className="surface surface-flush">
-                      {serviceQuestions.map((q, i) => (
-                        <QuestionRow
-                          key={q.id}
-                          q={q}
-                          isFirst={i === 0}
-                          isLast={i === serviceQuestions.length - 1}
-                          {...rowProps}
-                        />
-                      ))}
+                      {rows(serviceQuestions)}
                     </div>
                   </div>
                 )}
@@ -1304,9 +1281,17 @@ export default function ScreeningQuestionsPage() {
         )}
       </div>
 
-      <div>
-        <div className="preview-panel-label">Customer preview</div>
-        <QuestionsPreview questions={previewQuestions} />
+      {/* Beside the list: the chosen question's editor, or, with none
+          chosen, what a client sees. On a phone the editor opens in place. */}
+      <div className="q-side">
+        {editor && !narrow ? (
+          <div className="sp-edit">{editor}</div>
+        ) : (
+          <>
+            <div className="preview-panel-label">Customer preview</div>
+            <QuestionsPreview questions={previewQuestions} />
+          </>
+        )}
       </div>
     </div>
   );

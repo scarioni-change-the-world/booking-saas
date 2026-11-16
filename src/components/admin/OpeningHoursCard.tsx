@@ -55,7 +55,17 @@ function problem(windows: Window[]): string | null {
  * for them first. One-off changes (a closed day, a late evening) stay on the
  * Week, on that date.
  */
-export function OpeningHoursCard({ slug, timezone, weekHref }: { slug: string; timezone: string; weekHref: string }) {
+export function OpeningHoursCard({
+  slug,
+  timezone,
+  weekHref,
+  onSaved,
+}: {
+  slug: string;
+  timezone: string;
+  weekHref: string;
+  onSaved?: () => void;
+}) {
   const [saved, setSaved] = useState<Week | null>(null);
   const [draft, setDraft] = useState<Week | null>(null);
   const [saving, setSaving] = useState(false);
@@ -97,6 +107,7 @@ export function OpeningHoursCard({ slug, timezone, weekHref }: { slug: string; t
       setSaved(week);
       setDraft(week);
       setDone(true);
+      onSaved?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {

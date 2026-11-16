@@ -8,6 +8,8 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import { BookingPageCard, type Branding } from '@/components/admin/BookingPageCard';
 import { OpeningHoursCard } from '@/components/admin/OpeningHoursCard';
 import { GettingPaidCard, PlanCard, type PaymentsInfo, type PlanInfo } from '@/components/admin/BillingCards';
+import { SettingForm, SettingsPanel, type Setting } from '@/components/admin/SettingsPanel';
+import { hoursSummary, type HoursRule } from '@/lib/setup';
 
 interface Account {
   business: { name: string; slug: string; timezone: string; createdAt: string };
@@ -38,7 +40,8 @@ function currencyName(code: string): string {
 const ROLE: Record<Account['me']['role'], string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 
 /**
- * Account: what is left of Settings.
+ * Account: what is left of Settings, one line per setting (SettingsPanel).
+ * The chosen one is edited beside the list.
  *
  * Settings used to hold everything nobody knew where else to put. Most of
  * it now lives where it takes effect — notice, booking window and Google
@@ -50,6 +53,7 @@ const ROLE: Record<Account['me']['role'], string> = { owner: 'Owner', admin: 'Ad
 export default function AccountPage() {
   const { slug } = useParams<{ slug: string }>();
   const [account, setAccount] = useState<Account | null>(null);
+  const [hours, setHours] = useState<HoursRule[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -60,29 +64,32 @@ export default function AccountPage() {
     }
   }, [slug]);
 
+  const loadHours = useCallback(async () => {
+    try {
+      setHours((await adminFetchJson<{ rules: HoursRule[] }>(`/api/admin/${slug}/availability-rules`)).rules);
+    } catch {
+      setHours(null);
+    }
+  }, [slug]);
+
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadHours();
+  }, [load, loadHours]);
 
-  // Arriving from Services' "Set up your booking page": the card only exists
-  // once the account has loaded, so the browser's own jump to #booking-page
-  // has nothing to land on. Done once, after the first load.
-  const loaded = account !== null;
+  // A link to #opening-hours while already here opens that line.
+  const [hashKey, setHashKey] = useState(0);
   useEffect(() => {
-    const target = window.location.hash.slice(1);
-    if (loaded && (target === 'booking-page' || target === 'opening-hours')) {
-      document.getElementById(target)?.scrollIntoView({ block: 'start' });
-    }
-  }, [loaded]);
+    const onHash = () => setHashKey((k) => k + 1);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   const a = (path: string) => `/admin/${slug}/${path}`;
 
   return (
     <>
-      <PageHeader
-        title={account?.business.name ?? 'Account'}
-        description="Things set once and rarely touched. Everything else lives where it takes effect."
-      />
+      <PageHeader title={account?.business.name ?? 'Account'} />
 
       {error && (
         <div className="notice notice-error" role="alert">
@@ -92,234 +99,265 @@ export default function AccountPage() {
       {!account && !error && <p className="status">Loading…</p>}
 
       {account && (
-        <div className="acct">
-          <div className="acct-main">
-            <BusinessCard slug={slug} account={account} onSaved={load} />
-            <OpeningHoursCard slug={slug} timezone={account.business.timezone} weekHref={a('week')} />
-            <BookingPageCard
-              slug={slug}
-              businessName={account.business.name}
-              saved={account.branding}
-              onSaved={load}
-            />
-            <GettingPaidCard slug={slug} payments={account.payments} onChanged={load} />
-            <CurrencyCard slug={slug} current={account.currency} onSaved={load} />
+        <>
+          <SettingsPanel key={hashKey} label="Your account" settings={accountSettings(slug, account, hours, load, loadHours)} initial={fromHash()} />
 
-            <section className="card acct-card">
-              <div className="admin-card-title">Signing in</div>
-              <p className="acct-line">
-                You sign in as <b>{account.me.email ?? 'this account'}</b> · {ROLE[account.me.role]}
-              </p>
-              <p className="acct-line">
-                <a href="/admin/forgot-password">Change your password</a> — we email you a link to set a new one.
-              </p>
-            </section>
-
-            <section className="card acct-card">
-              <div className="admin-card-title">Your team</div>
-              <ul className="acct-team">
-                {account.team.map((m, i) => (
-                  <li key={`${m.email}-${i}`}>
-                    <span>
-                      {m.email ?? 'Someone without an address'}
-                      {m.you && <small> · you</small>}
-                    </span>
-                    <span className="wk-muted">{ROLE[m.role]}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="wk-side-hint">Adding or removing someone is done by support for now — just ask.</p>
-            </section>
-
-            <PlanCard slug={slug} plan={account.plan} />
-          </div>
-
-          <aside className="acct-side">
-            <p className="wk-side-eyebrow">Where everything else is</p>
-            <ul className="acct-moved">
-              <li>
-                <a href={a('week')}>Week</a>
-                <span>Days off and one-off hours, minimum notice, how far ahead people can book, and your Google or Outlook calendar.</span>
-              </li>
-              <li>
-                <a href={a('share')}>Share</a>
-                <span>Your booking link, and the code to put it on your own website, for every service or one.</span>
-              </li>
-              <li>
-                <a href={a('messages')}>Messages</a>
-                <span>What every email says, where booking alerts go, and where replies land.</span>
-              </li>
-              <li>
-                <a href={a('flow')}>Services → a service’s settings</a>
-                <span>Each service’s price, length, place and who it is offered to.</span>
-              </li>
-            </ul>
-          </aside>
-        </div>
+          {/* Everything else lives where it takes effect. */}
+          <p className="acct-elsewhere">
+            Elsewhere: <a href={a('week')}>Week</a> for days off, notice and your calendar ·{' '}
+            <a href={a('share')}>Share</a> for your link and website code · <a href={a('messages')}>Messages</a> for
+            emails and where replies land · <a href={a('flow')}>Services</a> for each service’s price and length.
+          </p>
+        </>
       )}
     </>
   );
 }
 
-function BusinessCard({ slug, account, onSaved }: { slug: string; account: Account; onSaved: () => Promise<void> }) {
-  const [name, setName] = useState(account.business.name);
-  const [zone, setZone] = useState(account.business.timezone);
-  const [zones, setZones] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+/** Links elsewhere open the setting they name: account#opening-hours. */
+function fromHash(): string | undefined {
+  const hash = typeof window === 'undefined' ? '' : window.location.hash.slice(1);
+  return (
+    { 'opening-hours': 'hours', 'booking-page': 'look', payments: 'paid', plan: 'plan', currency: 'currency' } as Record<
+      string,
+      string
+    >
+  )[hash];
+}
 
+function accountSettings(
+  slug: string,
+  account: Account,
+  hours: HoursRule[] | null,
+  load: () => Promise<void>,
+  loadHours: () => Promise<void>,
+): Setting[] {
+  const b = account.branding;
+  const look =
+    b.logoUrl && b.accentColor ? 'Logo and colour' : b.logoUrl ? 'Logo' : b.accentColor ? 'Colour' : 'khloe’s plain look';
+  const p = account.payments;
+  const paid = !p.available
+    ? 'Not available yet'
+    : p.connected && p.chargesEnabled
+      ? 'Stripe connected'
+      : p.connected
+        ? 'Stripe: finish setting up'
+        : 'Not connected';
+  const plan = account.plan;
+  const daysLeft = plan.trialEndsAt ? Math.max(0, Math.ceil(DateTime.fromISO(plan.trialEndsAt).diffNow('days').days)) : 0;
+  const planText = {
+    free: 'Free access',
+    trial: daysLeft > 0 ? `Free trial, ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : 'Free trial ended',
+    active: 'Active',
+    past_due: 'Payment failed',
+    cancelled: 'Cancelled',
+  }[plan.state];
+
+  return [
+    {
+      id: 'name',
+      label: 'Business name',
+      value: account.business.name,
+      editor: <NameEditor slug={slug} current={account.business.name} onSaved={load} />,
+    },
+    {
+      id: 'address',
+      label: 'Web address',
+      value: `khloe.io/${account.business.slug}`,
+      editor: (
+        <p className="sp-purpose">
+          Your booking page is at <b>khloe.io/{account.business.slug}</b>. It is fixed, so links you have already
+          shared keep working. <a href={`/admin/${slug}/share`}>Share it</a>.
+        </p>
+      ),
+    },
+    {
+      id: 'zone',
+      label: 'Time zone',
+      value: account.business.timezone.replace(/_/g, ' '),
+      editor: <ZoneEditor slug={slug} current={account.business.timezone} onSaved={load} />,
+    },
+    {
+      id: 'hours',
+      label: 'Opening hours',
+      value: hours === null ? '…' : hours.length ? hoursSummary(hours) : 'None yet',
+      empty: hours !== null && hours.length === 0,
+      needed: hours !== null && hours.length === 0,
+      editor: (
+        <OpeningHoursCard
+          slug={slug}
+          timezone={account.business.timezone}
+          weekHref={`/admin/${slug}/week`}
+          onSaved={() => void loadHours()}
+        />
+      ),
+    },
+    {
+      id: 'look',
+      label: 'Booking page',
+      value: look,
+      empty: !b.logoUrl && !b.accentColor,
+      editor: <BookingPageCard slug={slug} businessName={account.business.name} saved={b} onSaved={load} />,
+    },
+    {
+      id: 'paid',
+      label: 'Getting paid',
+      value: paid,
+      empty: !(p.connected && p.chargesEnabled),
+      editor: <GettingPaidCard slug={slug} payments={p} onChanged={load} />,
+    },
+    {
+      id: 'currency',
+      label: 'Currency',
+      value: `${account.currency} · ${currencyName(account.currency)}`,
+      editor: <CurrencyCard slug={slug} current={account.currency} onSaved={load} />,
+    },
+    {
+      id: 'signin',
+      label: 'Signing in',
+      value: account.me.email ?? 'This account',
+      editor: (
+        <div className="sp-form">
+          <p className="sp-purpose">
+            You sign in as <b>{account.me.email ?? 'this account'}</b> · {ROLE[account.me.role]}.
+          </p>
+          <a className="btn-secondary" href="/admin/forgot-password">
+            Change your password
+          </a>
+          <p className="field-note">We email you a link to set a new one.</p>
+        </div>
+      ),
+    },
+    {
+      id: 'team',
+      label: 'Team',
+      value: account.team.length === 1 ? 'Just you' : `${account.team.length} people`,
+      editor: (
+        <div className="sp-form">
+          <ul className="acct-team">
+            {account.team.map((m, i) => (
+              <li key={`${m.email}-${i}`}>
+                <span>
+                  {m.email ?? 'Someone without an address'}
+                  {m.you && <small> · you</small>}
+                </span>
+                <span className="wk-muted">{ROLE[m.role]}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="field-note">Adding or removing someone is done by support for now. Just ask.</p>
+        </div>
+      ),
+    },
+    {
+      id: 'plan',
+      label: 'Plan',
+      value: planText,
+      needed: plan.state === 'past_due' || plan.state === 'cancelled',
+      editor: <PlanCard slug={slug} plan={plan} />,
+    },
+  ];
+}
+
+async function patchAccount(slug: string, body: Record<string, unknown>) {
+  await adminFetchJson(`/api/admin/${slug}/account`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+function NameEditor({ slug, current, onSaved }: { slug: string; current: string; onSaved: () => Promise<void> }) {
+  const [name, setName] = useState(current);
+  return (
+    <SettingForm
+      purpose="On your booking page and at the top of every email."
+      dirty={name.trim() !== '' && name.trim() !== current}
+      save={async () => {
+        await patchAccount(slug, { name: name.trim() });
+        await onSaved();
+      }}
+    >
+      <input aria-label="Business name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+    </SettingForm>
+  );
+}
+
+function ZoneEditor({ slug, current, onSaved }: { slug: string; current: string; onSaved: () => Promise<void> }) {
+  const [zone, setZone] = useState(current);
+  const [zones, setZones] = useState<string[]>([current]);
   useEffect(() => {
     try {
       setZones(Intl.supportedValuesOf('timeZone'));
     } catch {
-      setZones([account.business.timezone]);
+      /* Only the current one. */
     }
-  }, [account.business.timezone]);
-
-  const zoneChanged = zone !== account.business.timezone;
-  const dirty = name.trim() !== account.business.name || zoneChanged;
+  }, []);
 
   /* The effect of a new zone, before it is saved: a 10:00 opening hour stays
      10:00 in the new place, and a booking made for 10:00 here is shown at
      whatever that same moment is there. */
   const preview = useMemo(() => {
-    if (!zoneChanged) return null;
-    const moment = DateTime.now().setZone(account.business.timezone).plus({ days: 7 }).set({ hour: 10, minute: 0 });
-    return {
-      booked: moment.setZone(zone).toFormat('HH:mm'),
-      day: moment.toFormat('cccc'),
-    };
-  }, [zone, zoneChanged, account.business.timezone]);
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    try {
-      await adminFetchJson(`/api/admin/${slug}/account`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          ...(name.trim() !== account.business.name ? { name: name.trim() } : {}),
-          ...(zoneChanged ? { timezone: zone } : {}),
-        }),
-      });
-      await onSaved();
-      setSaved(true);
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
+    if (zone === current) return null;
+    const moment = DateTime.now().setZone(current).plus({ days: 7 }).set({ hour: 10, minute: 0 });
+    return { booked: moment.setZone(zone).toFormat('HH:mm'), day: moment.toFormat('cccc') };
+  }, [zone, current]);
 
   return (
-    <form className="card acct-card" onSubmit={save}>
-      <div className="admin-card-title">Your business</div>
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
+    <SettingForm
+      purpose="Every hour and booking time is read in this zone."
+      dirty={zone !== current}
+      save={async () => {
+        await patchAccount(slug, { timezone: zone });
+        await onSaved();
+      }}
+    >
+      <select aria-label="Time zone" value={zone} onChange={(e) => setZone(e.target.value)}>
+        {zones.map((z) => (
+          <option key={z} value={z}>
+            {z.replace(/_/g, ' ')}
+          </option>
+        ))}
+      </select>
+      {preview && (
+        <p className="wk-warning" style={{ margin: 0 }}>
+          Your opening hours keep their clock times, now in {zone.replace(/_/g, ' ')}: 09:00 stays 09:00. A booking
+          already made for {preview.day} at 10:00 is the same moment, shown as {preview.booked}.
         </p>
       )}
-      <div className="field">
-        <label htmlFor="acct-name">Name</label>
-        <input id="acct-name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />
-        <p className="field-note">On your booking page and at the top of every email.</p>
-      </div>
-      <div className="field">
-        <label htmlFor="acct-address">Web address</label>
-        <input id="acct-address" type="text" value={`/${account.business.slug}`} readOnly />
-        <p className="field-note">Fixed, so links you have already shared keep working.</p>
-      </div>
-      <div className="field">
-        <label htmlFor="acct-zone">Time zone</label>
-        <select id="acct-zone" value={zone} onChange={(e) => setZone(e.target.value)}>
-          {zones.map((z) => (
-            <option key={z} value={z}>
-              {z.replace(/_/g, ' ')}
-            </option>
-          ))}
-        </select>
-        {preview ? (
-          <p className="wk-warning" style={{ marginTop: 8 }}>
-            Your opening hours keep their clock times, now in {zone.replace(/_/g, ' ')}: 09:00 stays 09:00. A booking
-            already made for {preview.day} at 10:00 is the same moment, shown as {preview.booked}.
-          </p>
-        ) : (
-          <p className="field-note">Every hour and booking time is read in this zone.</p>
-        )}
-      </div>
-      <div className="wk-actions" style={{ marginTop: 0 }}>
-        <button type="submit" className="btn-primary" disabled={!dirty || saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        {saved && !dirty && <span className="ms-saved">Saved.</span>}
-      </div>
-    </form>
+    </SettingForm>
   );
 }
 
 function CurrencyCard({ slug, current, onSaved }: { slug: string; current: string; onSaved: () => Promise<void> }) {
   const [currency, setCurrency] = useState(current);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const options = CURRENCIES.includes(current) ? CURRENCIES : [current, ...CURRENCIES];
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    try {
-      await adminFetchJson(`/api/admin/${slug}/settings`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ currency }),
-      });
-      await onSaved();
-      setSaved(true);
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
-    <form className="card acct-card" onSubmit={save}>
-      <div className="admin-card-title">Money</div>
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
+    <SettingForm
+      purpose="Every price on a service is shown in this."
+      dirty={currency !== current}
+      save={async () => {
+        await adminFetchJson(`/api/admin/${slug}/settings`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ currency }),
+        });
+        await onSaved();
+      }}
+    >
+      <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+        {options.map((code) => (
+          <option key={code} value={code}>
+            {code} — {currencyName(code)}
+          </option>
+        ))}
+      </select>
+      {currency !== current && (
+        <p className="wk-warning" style={{ margin: 0 }}>
+          Prices are relabelled, not converted: a service at 120 {current} will show as 120 {currency}. Check your
+          services after.
         </p>
       )}
-      <div className="field" style={{ maxWidth: 320 }}>
-        <label htmlFor="acct-currency">Currency</label>
-        <select id="acct-currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-          {options.map((code) => (
-            <option key={code} value={code}>
-              {code} — {currencyName(code)}
-            </option>
-          ))}
-        </select>
-        {currency !== current ? (
-          <p className="wk-warning" style={{ marginTop: 8 }}>
-            Prices are relabelled, not converted: a service at 120 {current} will show as 120 {currency}. Check your
-            services after.
-          </p>
-        ) : (
-          <p className="field-note">Every price on a service is shown in this.</p>
-        )}
-      </div>
-      <div className="wk-actions" style={{ marginTop: 0 }}>
-        <button type="submit" className="btn-primary" disabled={currency === current || saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        {saved && currency === current && <span className="ms-saved">Saved.</span>}
-      </div>
-    </form>
+    </SettingForm>
   );
 }

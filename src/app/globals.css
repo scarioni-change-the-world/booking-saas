@@ -11913,3 +11913,170 @@ body:has(.bk-embedded) {
 .ns-steps {
   align-items: start;
 }
+
+/* Account: the existing cards become editors inside a settings panel, so
+   they lose their own box and title (the panel says which it is). */
+.sp-edit .acct-card {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.sp-edit .acct-card > .admin-card-title {
+  display: none;
+}
+.acct-elsewhere {
+  margin: 8px 0 0;
+  max-width: 90ch;
+  font-size: 0.86rem;
+  color: var(--faint);
+}
+.acct-elsewhere a {
+  color: var(--muted);
+}
+
+/* Questions: one line per question; the chosen one is edited beside the
+   list (in place on a phone). With none chosen, the side shows what a
+   client sees. */
+@media (min-width: 761px) and (max-width: 860px) {
+  .builder-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.q-side {
+  position: sticky;
+  top: 16px;
+}
+.qrow + .qrow {
+  border-top: 1px solid var(--soft-border);
+}
+.qrow .data-row {
+  border-top: 0;
+  padding: 10px 16px 10px 14px;
+  gap: 12px;
+}
+.qrow.is-open > .data-row {
+  background: var(--selected-mineral);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.qrow-main {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.qrow-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.qrow-main .data-row-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.qrow:hover > .data-row {
+  background: var(--selected-mineral);
+}
+.qedit {
+  display: grid;
+  gap: 14px;
+}
+.qedit .field {
+  margin-bottom: 0;
+}
+.qedit-remove {
+  margin-left: auto;
+  color: var(--muted);
+}
+.qnew {
+  margin: 0 0 12px;
+  border-radius: 14px;
+}
+
+/* Share: the website guide's three steps side by side. Each says its
+   answer; the open one's content sits full width beneath them. */
+.sh-heads {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 4px 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.sh-head button {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 10px;
+  width: 100%;
+  height: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.sh-head button:hover {
+  background: var(--selected-mineral);
+}
+.sh-head.is-open button {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.sh-head.is-done .sh-step-n {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.sh-head-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.sh-head-answer {
+  grid-column: 2;
+  overflow: hidden;
+  font-size: 0.84rem;
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sh-open {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.sh-open > * {
+  max-width: 100%;
+}
+.sh-open > .embed-snippet,
+.sh-open > .sh-methods,
+.sh-open > .sh-row,
+.sh-open > form,
+.sh-open > .sh-steps,
+.sh-open > .sh-live,
+.sh-open > p {
+  justify-self: stretch;
+}
+@media (max-width: 760px) {
+  .sh-heads {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.qrow-main {
+  place-items: start;
+  justify-content: stretch;
+  align-content: center;
+}
+.qrow-main > span {
+  max-width: 100%;
+}

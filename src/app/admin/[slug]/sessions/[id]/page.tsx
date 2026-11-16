@@ -7,6 +7,7 @@ import { adminFetchJson } from '@/lib/admin-fetch';
 import { DEFAULT_CURRENCY } from '@/lib/money';
 import { hoursSummary, type HoursRule } from '@/lib/setup';
 import { ServiceDetails } from '@/components/admin/ServiceDetails';
+import { SettingForm, SettingsPanel, type Setting } from '@/components/admin/SettingsPanel';
 import { DeleteService } from '@/components/admin/DeleteService';
 import { ServiceQuestions } from '@/components/admin/ServiceQuestions';
 import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
@@ -64,7 +65,6 @@ export default function ServicePage() {
     setTabState(next);
     window.history.replaceState(null, '', `?tab=${next}`);
   };
-  const [retiring, setRetiring] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
@@ -243,46 +243,13 @@ export default function ServicePage() {
       )}
 
       {tab === 'who' && (
-        <section className="card svc-card">
-          <div className="admin-card-title">Who can book it</div>
-          <ReviewStageForm service={service} onSave={patch} />
-        </section>
-      )}
-
-      {tab === 'who' && (
       <>
-      {/* Pausing and deleting live at the foot of the service they end, as
-          well as on Services. Deleting asks what the rules ask everywhere
+      <WhoCanBook service={service} live={live} onSave={patch} />
+
+      {/* Deleting stays at the foot, apart: the one thing here that cannot
+          be undone. It asks what the rules ask everywhere
           (src/lib/service-deletion.ts): paused first, nothing still coming
           up or owed, and the name typed back. */}
-      <div className="service-retire">
-        <div>
-          <p className="service-retire-label">
-            {service.active ? 'Pause this service' : 'This service is paused'}
-          </p>
-          <p className="service-retire-note">
-            {service.active
-              ? 'No new appointments can be made. Appointments already booked stay, and those clients can still move or cancel them. You can resume it at any time.'
-              : 'No new appointments can be made. Appointments already booked stay. You can resume it, or delete it for good below.'}
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={retiring}
-          onClick={async () => {
-            setRetiring(true);
-            try {
-              await patch({ active: !service.active });
-            } finally {
-              setRetiring(false);
-            }
-          }}
-        >
-          {retiring ? 'Saving…' : service.active ? 'Pause' : 'Resume'}
-        </button>
-      </div>
-
       <div className="service-retire service-delete">
         <div>
           <p className="service-retire-label">Delete this service</p>
@@ -317,74 +284,115 @@ export default function ServicePage() {
 
 type Saver = (body: Record<string, unknown>) => Promise<void>;
 
-function ReviewStageForm({
-  service,
-  onSave,
+/**
+ * Who can book it, and whether it is taking bookings at all: one line each.
+ * New enquiries and existing clients are two independent choices, not two
+ * ends of one switch: a service may be offered to both, either, or neither.
+ */
+function WhoCanBook({ service, live, onSave }: { service: SerializedEventType; live: boolean; onSave: Saver }) {
+  const offer = (key: 'availableToProspects' | 'availableToExistingClients', who: string, how: string) => (
+    <OfferEditor
+      key={`${key}-${service[key]}`}
+      on={service[key]}
+      purpose={how}
+      who={who}
+      save={(on) => onSave({ [key]: on })}
+    />
+  );
+  const settings: Setting[] = [
+    {
+      id: 'prospects',
+      label: 'New enquiries',
+      value: service.availableToProspects ? 'Can book' : 'Cannot book',
+      empty: !service.availableToProspects,
+      needed: !live,
+      editor: offer(
+        'availableToProspects',
+        'new enquiries',
+        'Anyone who finds your booking page, answers your questions and qualifies.',
+      ),
+    },
+    {
+      id: 'clients',
+      label: 'Existing clients',
+      value: service.availableToExistingClients ? 'Can book' : 'Cannot book',
+      empty: !service.availableToExistingClients,
+      editor: offer(
+        'availableToExistingClients',
+        'existing clients',
+        'People booking from their own private link, with no questions to answer.',
+      ),
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      value: service.active ? 'Taking bookings' : 'Paused',
+      empty: !service.active,
+      editor: <PauseEditor key={String(service.active)} active={service.active} save={(active) => onSave({ active })} />,
+    },
+  ];
+  return <SettingsPanel label="Who can book it" settings={settings} />;
+}
+
+function OfferEditor({
+  on,
+  who,
+  purpose,
+  save,
 }: {
-  service: SerializedEventType;
-  onSave: Saver;
+  on: boolean;
+  who: string;
+  purpose: string;
+  save: (on: boolean) => Promise<void>;
 }) {
-  const [prospects, setProspects] = useState(service.availableToProspects);
-  const [clients, setClients] = useState(service.availableToExistingClients);
+  const [value, setValue] = useState(on);
+  return (
+    <SettingForm purpose={purpose} dirty={value !== on} save={() => save(value)}>
+      <div className="wk-mode" role="group" aria-label={`Can ${who} book it?`}>
+        <button type="button" className="filter-chip" aria-pressed={value} onClick={() => setValue(true)}>
+          Can book
+        </button>
+        <button type="button" className="filter-chip" aria-pressed={!value} onClick={() => setValue(false)}>
+          Cannot book
+        </button>
+      </div>
+    </SettingForm>
+  );
+}
+
+function PauseEditor({ active, save }: { active: boolean; save: (active: boolean) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   return (
-    <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setBusy(true);
-        setError(null);
-        try {
-          await onSave({
-            availableToProspects: prospects,
-            availableToExistingClients: clients,
-          });
-        } catch (cause) {
-          setError((cause as Error).message);
-        } finally {
-          setBusy(false);
-        }
-      }}
-    >
-      {/* Two independent choices, not two ends of one switch: a service may
-          be offered to both, either, or neither. Treating this as a single
-          flag was a real bug in an earlier version. */}
-      <label className="setup-audience">
-        <input
-          type="checkbox"
-          checked={prospects}
-          onChange={(e) => setProspects(e.target.checked)}
-        />
-        <span>
-          <strong>New enquiries</strong>
-          <small>Anyone who answers your questions and qualifies.</small>
-        </span>
-      </label>
-
-      <label className="setup-audience">
-        <input type="checkbox" checked={clients} onChange={(e) => setClients(e.target.checked)} />
-        <span>
-          <strong>Existing clients</strong>
-          <small>People booking from their own private link, with no questions to answer.</small>
-        </span>
-      </label>
-
-      {!prospects && !clients && (
-        <p className="notice notice-muted">
-          With neither ticked this service exists but nobody can reach it. That is a real choice —
-          it is how you keep something ready without offering it yet.
-        </p>
-      )}
-
+    <div className="sp-form">
+      <p className="sp-purpose">
+        {active
+          ? 'Pausing stops new bookings. Those already made stay, and those clients can still move or cancel them. You can resume it at any time.'
+          : 'Paused: no new bookings. Those already made stay. Resume it, or delete it for good below.'}
+      </p>
       {error && (
-        <p className="notice notice-error" role="alert">
+        <p className="field-error" role="alert">
           {error}
         </p>
       )}
-      <button type="submit" className="btn-primary" disabled={busy}>
-        {busy ? 'Saving…' : 'Save'}
+      <button
+        type="button"
+        className="btn-secondary"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await save(!active);
+          } catch (cause) {
+            setError((cause as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? 'Saving…' : active ? 'Pause' : 'Resume'}
       </button>
-    </form>
+    </div>
   );
 }

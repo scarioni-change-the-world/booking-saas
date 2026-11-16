@@ -67,6 +67,8 @@ export default function SharePage() {
   const [detecting, setDetecting] = useState(false);
   const [origin, setOrigin] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // The open step: the first one until there is a website, then the second.
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -95,7 +97,10 @@ export default function SharePage() {
         ]);
         setServices(types.eventTypes.filter((s) => s.active));
         setShare(state);
-        if (state.website) void detect();
+        if (state.website) {
+          setStep(2);
+          void detect();
+        }
       } catch (cause) {
         setError((cause as Error).message);
       }
@@ -163,13 +168,24 @@ export default function SharePage() {
               Add <b className="sh-khloe">khloe</b> to your website
             </h2>
 
-            <Step n={1} title="Your website" done={!!share.website}>
+            {/* The three steps side by side: each says its answer, the open
+                one's content sits full width beneath them. Nothing moves. */}
+            <ol className="sh-heads">
+              <StepHead n={1} step={step} done={!!share.website} title="Your website" answer={share.website ? `${hostOf(share.website)}${builder && builder !== 'other' ? ` · ${tool.name}` : ''}` : 'Not added yet'} onOpen={setStep} />
+              <StepHead n={2} step={step} done={step > 2} title="How it looks" answer={method === 'button' ? 'A “Book now” button' : 'Booking on your page'} onOpen={setStep} />
+              <StepHead n={3} step={step} done={false} title={`Add it in ${tool.id === 'other' ? 'your website' : tool.name}`} answer="" onOpen={setStep} />
+            </ol>
+
+            <div className="sh-open" aria-live="polite">
+              {step === 1 && (
+                <>
               <WebsiteStep
                 slug={slug}
                 website={share.website}
                 onSaved={async () => {
                   await loadShare();
                   void detect();
+                  setStep(2);
                 }}
               />
               {share.website && (
@@ -195,9 +211,15 @@ export default function SharePage() {
                   )}
                 </p>
               )}
-            </Step>
-
-            <Step n={2} title="What it shows, and how it looks" done={false}>
+                  {share.website && (
+                    <button type="button" className="btn-primary" onClick={() => setStep(2)}>
+                      Next
+                    </button>
+                  )}
+                </>
+              )}
+              {step === 2 && (
+                <>
               {perService && (
                 <p className="wk-side-hint sh-which">
                   This shows all your services. For a page about one of them, take its code from{' '}
@@ -231,9 +253,13 @@ export default function SharePage() {
                   </div>
                 </>
               )}
-            </Step>
-
-            <Step n={3} title={`Add it in ${tool.id === 'other' ? 'your website' : tool.name}`} done={false} last>
+                  <button type="button" className="btn-primary" onClick={() => setStep(3)}>
+                    Next
+                  </button>
+                </>
+              )}
+              {step === 3 && (
+                <>
               <ol className="sh-steps">
                 {(method === 'button' ? tool.button : tool.section).map((step) => (
                   <li key={step}>{step}</li>
@@ -249,7 +275,9 @@ export default function SharePage() {
               {method === 'section' && (
                 <LiveStatus slug={slug} share={share} onChanged={loadShare} />
               )}
-            </Step>
+                </>
+              )}
+            </div>
           </section>
 
           <details className="card sh-card sh-more">
@@ -389,33 +417,44 @@ function ServicePanel({
   );
 }
 
-function Step({
+function StepHead({
   n,
-  title,
+  step,
   done,
-  last,
-  children,
+  title,
+  answer,
+  onOpen,
 }: {
-  n: number;
-  title: string;
+  n: 1 | 2 | 3;
+  step: number;
   done: boolean;
-  last?: boolean;
-  children: React.ReactNode;
+  title: string;
+  answer: string;
+  onOpen: (n: 1 | 2 | 3) => void;
 }) {
+  const open = step === n;
   return (
-    <div className={`sh-step${last ? ' is-last' : ''}`}>
-      <span className={`sh-step-n${done ? ' is-done' : ''}`} aria-hidden="true">
-        {done ? '✓' : n}
-      </span>
-      <div className="sh-step-body">
-        <h3 className="sh-step-title">
+    <li className={`sh-head${open ? ' is-open' : ''}${done && !open ? ' is-done' : ''}`}>
+      <button type="button" aria-current={open ? 'step' : undefined} onClick={() => onOpen(n)}>
+        <span className="sh-step-n" aria-hidden="true">
+          {done && !open ? '✓' : n}
+        </span>
+        <span className="sh-head-title">
           <span className="sr-only">Step {n}: </span>
           {title}
-        </h3>
-        {children}
-      </div>
-    </div>
+        </span>
+        {!open && answer && <span className="sh-head-answer">{answer}</span>}
+      </button>
+    </li>
   );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 function MethodCard({

@@ -17,6 +17,19 @@ export interface Setting {
 
 const NARROW = '(max-width: 760px)';
 
+/** True on a phone-width screen, where "beside" becomes "under". */
+export function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(NARROW);
+    const update = () => setNarrow(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  return narrow;
+}
+
 /**
  * A group of settings, read and changed like the controls of a well-made
  * device: every setting is one line with its current value, so the whole
