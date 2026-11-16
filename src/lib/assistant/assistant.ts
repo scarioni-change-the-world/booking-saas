@@ -16,7 +16,6 @@
 
 export const PLACES = {
   services: { label: 'Services', href: 'flow' },
-  setup: { label: 'Step-by-step setup', href: 'start' },
   week: { label: 'Week', href: 'week' },
   calendar: { label: 'Your calendar', href: 'week#calendar' },
   people: { label: 'People', href: 'people' },

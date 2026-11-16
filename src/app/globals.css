@@ -12287,3 +12287,37 @@ body:has(.bk-embedded) {
 .ak-launch .ak-key {
   pointer-events: auto;
 }
+
+/* Adding a service: the first one says hello; "From my website". */
+.ns-hello {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+.ns-hello-sub {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.ns-site {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+  margin-top: 12px;
+}
+.ns-site > label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.ns-site .field-note {
+  margin: 0;
+}
+.ns-site .wz-site-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ns-site .wz-site-row input {
+  flex: 1 1 260px;
+}

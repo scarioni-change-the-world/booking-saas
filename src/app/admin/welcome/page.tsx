@@ -35,7 +35,7 @@ export default function WelcomePage() {
         if (!response.ok || !body.slug) throw new Error(body.error ?? 'We could not open your account.');
         // A business made just now starts with the guided setup; opening the
         // link again later goes to Services like any sign-in.
-        window.location.replace(`/admin/${body.slug}/${body.created ? 'start' : 'flow'}`);
+        window.location.replace(`/admin/${body.slug}/flow`);
       } catch (cause) {
         setMessage((cause as Error).message);
         setState('failed');

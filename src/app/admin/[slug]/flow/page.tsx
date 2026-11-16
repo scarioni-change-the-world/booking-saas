@@ -28,6 +28,7 @@ import { partForPhase, type TestMessage } from '@/lib/test-run';
 import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-deletion';
 import { DeleteService } from '@/components/admin/DeleteService';
 import { openAskKhloe } from '@/components/admin/AskKhloe';
+import { SiteDraftPanel } from '@/components/admin/SiteDraft';
 import { SERVICE_TYPES, hoursSummary, serviceTypeBody, type HoursRule } from '@/lib/setup';
 
 interface NextUp {
@@ -177,6 +178,11 @@ export default function FlowPage() {
   }
 
   const activeCount = data?.services.filter((s) => s.active).length ?? 0;
+  // A new account has one thing to do: add a service. Its card starts open.
+  const noServices = !!data && data.services.length === 0;
+  useEffect(() => {
+    if (noServices) setAdding(true);
+  }, [noServices]);
   const a = (path: string) => `/admin/${slug}/${path}`;
 
   /* The chosen service's flow, opened right under its row like a drop-down. */
@@ -305,16 +311,8 @@ export default function FlowPage() {
     );
   }
 
-  /**
-   * "Add a service": the first one goes through the step-by-step setup,
-   * where it is guided (and can be read from the business's website);
-   * after that, the quick form on this page.
-   */
+  /** "Add a service": the same card for the first service and every other. */
   function addService() {
-    if (data && data.services.length === 0) {
-      window.location.assign(`/admin/${slug}/start`);
-      return;
-    }
     setAdding(true);
     window.setTimeout(
       () => document.getElementById('add-service')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
@@ -352,6 +350,11 @@ export default function FlowPage() {
                   activeCount={activeCount}
                   currency={data.tenant.currency}
                   hours={data.setup?.hours ?? null}
+                  first={noServices}
+                  onAdded={() => {
+                    setAdding(false);
+                    void load();
+                  }}
                   onCancel={() => setAdding(false)}
                 />
               )}
@@ -947,18 +950,23 @@ function AddService({
   activeCount,
   currency,
   hours,
+  first,
+  onAdded,
   onCancel,
 }: {
   slug: string;
   activeCount: number;
   currency: string;
   hours: HoursRule[] | null;
+  /** The account has no services yet: say hello, and there is no Cancel. */
+  first: boolean;
+  onAdded: () => void;
   onCancel: () => void;
 }) {
   const router = useRouter();
   // Two equal ways in: the three steps, or say it in words and let khloe
   // propose it (nothing is saved until it is confirmed in her panel).
-  const [way, setWay] = useState<'self' | 'khloe'>('self');
+  const [way, setWay] = useState<'self' | 'khloe' | 'site'>('self');
   const [described, setDescribed] = useState('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [typeId, setTypeId] = useState<string | null>(null);
@@ -1048,12 +1056,23 @@ function AddService({
   return (
     <section className="card ns" id="add-service" aria-label="A new service">
       <div className="ns-top">
-        <p className="admin-card-title">
-          A new service · {activeCount} of {SERVICE_LIMIT} in use
-        </p>
-        <button type="button" className="btn-link" onClick={onCancel}>
-          Cancel
-        </button>
+        {first ? (
+          <div>
+            <h2 className="ns-hello">Add your first service</h2>
+            <p className="ns-hello-sub">
+              What people book with you. Set it up yourself, describe it to khloe, or let khloe read your website.
+            </p>
+          </div>
+        ) : (
+          <p className="admin-card-title">
+            A new service · {activeCount} of {SERVICE_LIMIT} in use
+          </p>
+        )}
+        {!first && (
+          <button type="button" className="btn-link" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
       </div>
       <div className="wk-mode ns-way" role="group" aria-label="How to set it up">
         <button type="button" className="filter-chip" aria-pressed={way === 'self'} onClick={() => setWay('self')}>
@@ -1062,13 +1081,18 @@ function AddService({
         <button type="button" className="filter-chip" aria-pressed={way === 'khloe'} onClick={() => setWay('khloe')}>
           <span aria-hidden="true">✦{'\u00a0'}</span>Describe it to khloe
         </button>
+        <button type="button" className="filter-chip" aria-pressed={way === 'site'} onClick={() => setWay('site')}>
+          From my website
+        </button>
       </div>
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
         </p>
       )}
-      {way === 'khloe' ? (
+      {way === 'site' ? (
+        <SiteDraftPanel slug={slug} currency={currency} room={Math.max(0, SERVICE_LIMIT - activeCount)} onAdded={onAdded} />
+      ) : way === 'khloe' ? (
         <form
           className="ns-khloe"
           onSubmit={(e) => {
