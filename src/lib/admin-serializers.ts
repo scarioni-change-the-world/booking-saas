@@ -101,6 +101,8 @@ export function serializeSettings(row: TenantSettingsRow) {
     notificationEmail: row.notification_email,
     replyToEmail: row.reply_to_email,
     currency: row.currency,
+    closingQuestion: row.closing_question ?? null,
+    closingRequired: row.closing_required ?? false,
     updatedAt: row.updated_at,
   };
 }

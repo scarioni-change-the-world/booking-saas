@@ -16,6 +16,8 @@ import { LOCATION_OPTIONS } from '@/lib/service-location';
 import { useServiceMark } from '@/components/admin/ServiceMarks';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { DeleteService } from '@/components/admin/DeleteService';
+import { ServiceQuestions } from '@/components/admin/ServiceQuestions';
+import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
 import { setupStages, type ServiceFacts, type Stage, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
@@ -31,6 +33,8 @@ interface SetupPayload {
 }
 
 const PACK_PRESETS = [5, 8, 10];
+
+type Tab = 'details' | 'questions' | 'messages' | 'who';
 
 /**
  * A service: everything about it, in the order each decision informs the
@@ -61,7 +65,16 @@ export default function ServicePage() {
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<StageId | null>(null);
+  const [tab, setTabState] = useState<Tab>('details');
+  // ?tab= opens a tab directly (links from the checklist, Ask khloe, the flow).
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get('tab');
+    if (asked === 'details' || asked === 'questions' || asked === 'messages' || asked === 'who') setTabState(asked);
+  }, []);
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    window.history.replaceState(null, '', `?tab=${next}`);
+  };
   const [retiring, setRetiring] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -141,73 +154,134 @@ export default function ServicePage() {
     await load();
   }
 
+  // Which tab holds each stage, so a tab can say when something in it is needed.
+  const neededIn = (ids: StageId[]) => stages.some((s) => ids.includes(s.id) && !s.done && s.blocking);
+  const tabs: Array<{ id: Tab; label: string; needed: boolean }> = [
+    { id: 'details', label: 'Details', needed: neededIn(['service', 'rules', 'availability']) },
+    { id: 'questions', label: 'Questions', needed: neededIn(['questions']) },
+    { id: 'messages', label: 'Messages', needed: neededIn(['messages']) },
+    { id: 'who', label: 'Who can book', needed: neededIn(['review']) },
+  ];
+  const messagesStage = stages.find((s) => s.id === 'messages');
+
   return (
     <>
       <PageHeader
-        /* The eyebrow changes because the page's job does. On a service
-           straight out of + Add this is a setup screen; a year later it is
-           where you change the price. Same screen, and it should not keep
-           calling itself a wizard once there is nothing left to walk
-           through. */
         title={service.name}
         description={
           outstanding === 0
-            ? 'Everything is decided. Any of it can still be changed.'
+            ? 'Everything is set. Change anything, any time.'
             : needed === 0
-              ? 'Ready to book. The steps marked optional make it better, in any order, whenever you like.'
-              : 'Work through these in any order. Nothing is lost if you leave and come back.'
+              ? 'Ready to book. The rest makes it better, whenever you like.'
+              : 'A few things to set before people can book it. The tabs marked with a dot need you.'
         }
         actions={
           <a className="btn-secondary" href={`/admin/${slug}/flow?part=service:${service.id}`}>
-            See it in the flow
+            How people book it
           </a>
         }
       />
 
-      <ServiceIdentity service={service} />
+      <AskKhloeBox example={`Change ${service.name} to 30 minutes`} />
 
-      {/* The sentence this whole page exists for. A service created from the
-          Services list is offered to nobody, does not appear on the booking
-          page, and until now nothing said so — a business found out days
-          later when a client told them. */}
+      {/* The sentence this whole page exists for: whether anyone can book it. */}
       <div className={`setup-state${live ? ' is-live' : ''}`}>
         <span className="setup-state-mark" aria-hidden="true" />
         <p>
           {live
             ? stages.find((s) => s.id === 'review')!.note
-            : 'Not offered to anyone yet. This service does not appear on your booking page.'}
+            : 'Not offered to anyone yet. This service does not appear on your booking page.'}{' '}
+          {!live && (
+            <button type="button" className="btn-link" onClick={() => setTab('who')}>
+              Choose who can book it
+            </button>
+          )}
         </p>
       </div>
 
-      <ol className="setup-stages">
-        {stages.map((stage, index) => (
-          <StageRow
-            key={stage.id}
-            stage={stage}
-            index={index + 1}
-            slug={slug}
-            open={open === stage.id}
-            onToggle={() => setOpen(open === stage.id ? null : stage.id)}
+      {/* One page per service, its parts as tabs: the same pill switch as
+          everywhere else in the admin. The length and price are on the
+          first tab, not behind a heading nobody would guess. */}
+      <div className="wk-mode svc-tabs" role="tablist" aria-label="About this service">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            className="filter-chip"
+            aria-selected={tab === t.id}
+            aria-pressed={tab === t.id}
+            onClick={() => setTab(t.id)}
           >
-            {stage.id === 'service' && (
-              <ServiceStageForm service={service} onSave={patch} />
-            )}
-            {stage.id === 'rules' && (
-              <RulesStageForm
-                service={service}
-                currency={currency}
-                takesPayments={!!payload.takesPayments}
-                slug={slug}
-                onSave={patch}
-              />
-            )}
-            {stage.id === 'review' && (
-              <ReviewStageForm service={service} onSave={patch} />
-            )}
-          </StageRow>
+            {t.label}
+            {t.needed && <span className="svc-tab-dot" aria-label="(needed)" />}
+          </button>
         ))}
-      </ol>
+      </div>
 
+      {tab === 'details' && (
+        <>
+          <section className="card svc-card">
+            <div className="admin-card-title">Name and description</div>
+            <ServiceStageForm service={service} onSave={patch} />
+          </section>
+          <section className="card svc-card">
+            <div className="admin-card-title">Length, price and place</div>
+            <RulesStageForm
+              service={service}
+              currency={currency}
+              takesPayments={!!payload.takesPayments}
+              slug={slug}
+              onSave={patch}
+            />
+          </section>
+          <section className="card svc-card">
+            <div className="admin-card-title">When it can be booked</div>
+            <p className="svc-lede">
+              Within your opening hours, which every service shares
+              {payload.availabilityRuleCount === 0 ? ': you have none yet, so nothing can be booked.' : '.'}
+            </p>
+            <div className="fl-actions">
+              <a className="btn-secondary" href={`/admin/${slug}/account#opening-hours`}>
+                Change opening hours
+              </a>
+              <a className="btn-link" href={`/admin/${slug}/week`}>
+                Close a day, or time off, on the Week
+              </a>
+            </div>
+          </section>
+        </>
+      )}
+
+      {tab === 'questions' && (
+        <ServiceQuestions slug={slug} serviceId={service.id} serviceName={service.name} onChanged={() => void load()} />
+      )}
+
+      {tab === 'messages' && (
+        <section className="card svc-card">
+          <div className="admin-card-title">The emails people get</div>
+          <p className="svc-lede">
+            A confirmation when they book, a reminder the day before, a note if plans change, and a question after.
+            They are the same for every service, written in your words on Messages.
+          </p>
+          {messagesStage?.note && <p className="svc-note">{messagesStage.note}</p>}
+          <div className="fl-actions">
+            <a className="btn-secondary" href={`/admin/${slug}/messages`}>
+              Open Messages
+            </a>
+          </div>
+        </section>
+      )}
+
+      {tab === 'who' && (
+        <section className="card svc-card">
+          <div className="admin-card-title">Who can book it</div>
+          <ReviewStageForm service={service} onSave={patch} />
+        </section>
+      )}
+
+      {tab === 'who' && (
+      <>
       {/* Pausing and deleting live at the foot of the service they end, as
           well as on Services. Deleting asks what the rules ask everywhere
           (src/lib/service-deletion.ts): paused first, nothing still coming
@@ -265,6 +339,8 @@ export default function ServicePage() {
             window.location.href = `/admin/${slug}/flow?deleted=${encodeURIComponent(note)}`;
           }}
         />
+      )}
+      </>
       )}
     </>
   );
@@ -490,7 +566,7 @@ function RulesStageForm({
       }}
     >
       <div className="field">
-        <label htmlFor="setup-duration">Duration (minutes)</label>
+        <label htmlFor="setup-duration">Length (minutes)</label>
         <input
           id="setup-duration"
           type="number"

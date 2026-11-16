@@ -536,7 +536,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
 
           <form onSubmit={submitDetails} className="bk-form">
             <div className="field">
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name">Full name</label>
               <input
                 id="name"
                 type="text"
@@ -560,14 +560,19 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
               <p className="bk-hint">Your confirmation and any changes go here.</p>
             </div>
 
+            {/* The last box, in the business's own words when it has some
+                (Services → a service → Questions), and required when it chose. */}
             <div className="field">
-              <label htmlFor="notes">Anything {config?.name ?? 'we'} should know?</label>
+              <label htmlFor="notes">
+                {config?.closing?.question ?? `Anything ${config?.name ?? 'we'} should know?`}
+              </label>
               <textarea
                 id="notes"
+                required={!!config?.closing?.required}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
-              <p className="bk-hint">Optional.</p>
+              {!config?.closing?.required && <p className="bk-hint">Optional.</p>}
             </div>
 
             <p className="bk-privacy">
@@ -706,7 +711,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
             </div>
             {notes.trim() !== '' && (
               <div className="bk-review-row">
-                <dt>Your note</dt>
+                <dt>{config?.closing?.question ? 'Your answer' : 'Your note'}</dt>
                 <dd className="bk-review-note">{notes}</dd>
               </div>
             )}

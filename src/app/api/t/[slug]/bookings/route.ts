@@ -102,11 +102,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       return fail('Complete the questions first', 403);
     }
 
+    const notes = optionalString(body, 'notes', { maxLength: 5000 });
+    // The business made its last question required (migration 0039).
+    const closing = await scope.select('tenant_settings', 'closing_question, closing_required').maybeSingle();
+    const closingRow = (closing.error ? null : closing.data) as unknown as
+      | { closing_question: string | null; closing_required: boolean }
+      | null;
+    if (closingRow?.closing_required && !(notes ?? '').trim()) {
+      return fail(`Please answer: ${closingRow.closing_question ?? 'the last question'}`, 400);
+    }
+
     const common = {
       eventTypeId,
       name: requireString(body, 'name', { maxLength: 200 }),
       email: requireEmail(body, 'email'),
-      notes: optionalString(body, 'notes', { maxLength: 5000 }),
+      notes,
       qualificationResponseId: responseId,
       // Where they came from, as the page worked it out — for Reports.
       source: cleanSource(body.source),

@@ -27,6 +27,7 @@ import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-
 import { DeleteService } from '@/components/admin/DeleteService';
 import { SERVICE_TYPES, serviceTypeBody, setupItems, setupOpen, type HoursRule } from '@/lib/setup';
 import { SetupChecklist } from '@/components/admin/SetupChecklist';
+import { AskKhloeBox } from '@/components/admin/AskKhloeBox';
 
 interface NextUp {
   id: string;
@@ -358,6 +359,8 @@ export default function FlowPage() {
         }
       />
 
+      <AskKhloeBox example="Change the discovery call to 30 minutes" />
+
       {checklist && (
         <SetupChecklist
           slug={slug}
@@ -406,9 +409,11 @@ export default function FlowPage() {
                         <button
                           type="button"
                           className={`fc-row${isOpen ? ' is-open' : ''}`}
-                          aria-expanded={isOpen}
-                          aria-controls="fc-flow"
-                          onClick={() => chooseLane(l.id)}
+                          /* A service opens its own page, where everything
+                             about it is edited (Details, Questions, Messages,
+                             Who can book). Its booking path, the diagram,
+                             opens from that page ("How people book it"). */
+                          onClick={() => (isOpen ? chooseLane(l.id) : window.location.assign(`/admin/${slug}/sessions/${l.id}`))}
                           disabled={trying && !isOpen}
                         >
                           <ServiceBadge name={l.name} off={!state.live} />

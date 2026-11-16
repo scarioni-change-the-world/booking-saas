@@ -73,6 +73,17 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ slug: str
       const value = body.notificationEmail;
       patch.notification_email = value === null || value === '' ? null : requireEmail(body, 'notificationEmail');
     }
+    // The last box on the booking form (migration 0039): its wording, or
+    // null for the default, and whether it must be answered.
+    if ('closingQuestion' in body) {
+      const value = typeof body.closingQuestion === 'string' ? body.closingQuestion.replace(/\s+/g, ' ').trim() : '';
+      if (value.length > 200) return fail('Keep the question under 200 characters', 400);
+      patch.closing_question = value || null;
+    }
+    if ('closingRequired' in body) {
+      if (typeof body.closingRequired !== 'boolean') return fail('"closingRequired" must be true or false', 400);
+      patch.closing_required = body.closingRequired;
+    }
     if ('ratingEmails' in body) {
       if (typeof body.ratingEmails !== 'boolean') return fail('"ratingEmails" must be true or false', 400);
       patch.rating_emails = body.ratingEmails;

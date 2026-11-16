@@ -51,6 +51,8 @@ export interface PublicConfig {
     redirectUrl: string | null;
     redirectLabel: string | null;
   };
+  /** The last box on the form: the business's own question (null: the default) and whether it must be answered. */
+  closing?: { question: string | null; required: boolean };
 }
 
 export interface DaySlots {

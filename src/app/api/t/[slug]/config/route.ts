@@ -35,6 +35,11 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       currency:
         (settings.data as unknown as { currency?: string } | null)?.currency ?? DEFAULT_CURRENCY,
       branding: tenant.branding,
+      // The last box on the form, in the business's words (migration 0039).
+      closing: {
+        question: (settings.data as unknown as { closing_question?: string | null } | null)?.closing_question ?? null,
+        required: !!(settings.data as unknown as { closing_required?: boolean } | null)?.closing_required,
+      },
       otherPath: {
         message: otherPath?.message ?? '',
         redirectUrl: otherPath?.redirect_url ?? null,

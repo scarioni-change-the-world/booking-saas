@@ -227,6 +227,14 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
   );
 }
 
+/** The event an inline box sends to open the panel: detail { question }. */
+export const ASK_EVENT = 'khloe:ask';
+
+/** Open Ask khloe from anywhere, with a question already asked (or just open it). */
+export function openAskKhloe(question = '') {
+  window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: { question } }));
+}
+
 /**
  * "Ask khloe": a round key in the corner of every admin page. Resting on it
  * says what it can do, with examples; pressing it opens the panel. Ask how
@@ -261,6 +269,19 @@ export function AskKhloe({ slug }: { slug: string }) {
     end.current?.scrollIntoView({ block: 'end' });
   }, [turns, busy]);
 
+  // The inline boxes on the pages (AskKhloeBox) open this panel, with
+  // their question already asked.
+  const askRef = useRef<(text: string) => void>(() => {});
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const question = (e as CustomEvent<{ question?: string }>).detail?.question ?? '';
+      setOpen(true);
+      if (question.trim()) askRef.current(question);
+    };
+    window.addEventListener(ASK_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_EVENT, onAsk);
+  }, []);
+
   useEffect(() => {
     if (open) input.current?.focus();
   }, [open]);
@@ -294,6 +315,8 @@ export function AskKhloe({ slug }: { slug: string }) {
       setBusy(false);
     }
   }
+
+  askRef.current = (text: string) => void ask(text);
 
   return (
     <>

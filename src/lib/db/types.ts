@@ -97,6 +97,9 @@ export interface TenantSettingsRow {
   tenant_id: string;
   booking_notice_hours: number;
   booking_window_days: number;
+  /** The last box on the booking form in the business's words; null keeps the default (migration 0039). */
+  closing_question?: string | null;
+  closing_required?: boolean;
   notification_email: string | null;
   reply_to_email: string | null;
   /* ISO 4217, on the tenant rather than the service: a business bills in
