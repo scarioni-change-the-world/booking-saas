@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import { setupOpen, type SetupItem } from '@/lib/setup';
 
 /**
- * "Get ready to take bookings": what is left before people can book, in
- * order, each with the place to do it. The finish line a new business
- * otherwise has to guess at.
+ * "Getting ready": what is left before people can book, as one line.
  *
- * Same marks as a service's setup (✓ done, ! needed, + optional), so the
- * two lists read alike. It stays until everything is done; hiding it folds
- * it to one line with the count, never away entirely, so nobody hides it
- * on day one and then wonders what they missed.
+ * The page it sits on is about the business's services, so this never
+ * takes the page over: one line with how far along it is and only the
+ * next thing to do, with its button. "See all" opens the whole list, each
+ * item on one line (done ones a tick). It is gone once everything is done.
+ *
+ * The step-by-step setup is offered inside it, and is the one Ochre key on
+ * the page only while something is actually needed.
  */
 export function SetupChecklist({
   slug,
@@ -22,113 +23,102 @@ export function SetupChecklist({
   items: SetupItem[];
   onAddService: () => void;
 }) {
-  const key = `khloe-setup-folded:${slug}`;
-  const [folded, setFolded] = useState(false);
+  const key = `khloe-setup-open:${slug}`;
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     try {
-      setFolded(window.localStorage.getItem(key) === '1');
+      setOpen(window.localStorage.getItem(key) === '1');
     } catch {
-      /* No storage (a private window): it simply starts open. */
+      /* No storage: it starts closed. */
     }
   }, [key]);
 
-  function fold(next: boolean) {
-    setFolded(next);
+  function toggle() {
+    const next = !open;
+    setOpen(next);
     try {
       if (next) window.localStorage.setItem(key, '1');
       else window.localStorage.removeItem(key);
     } catch {
-      /* Folding still works for this visit. */
+      /* Still toggles for this visit. */
     }
   }
 
   if (!setupOpen(items)) return null;
   const done = items.filter((i) => i.state === 'done').length;
-  const needed = items.filter((i) => i.state === 'needed').length;
+  const needed = items.some((i) => i.state === 'needed');
+  // The next thing: the first needed item, else the first optional one.
+  const nextItem = items.find((i) => i.state === 'needed') ?? items.find((i) => i.state !== 'done')!;
 
-  if (folded) {
-    return (
-      <p className="gs-folded">
-        <span>
-          <b>Getting ready</b> · {done} of {items.length} done
-          {needed > 0 && <span className="gs-folded-needed"> · {needed} needed</span>}
-        </span>
-        <button type="button" className="btn-link" onClick={() => fold(false)}>
-          Show
-        </button>
-      </p>
-    );
-  }
+  const action = (item: SetupItem, emphasis = false) =>
+    item.action &&
+    (item.action.href === 'add-service' ? (
+      <button type="button" className={`btn-secondary${emphasis ? ' is-need' : ''}`} onClick={onAddService}>
+        {item.action.label}
+      </button>
+    ) : (
+      <a className={`btn-secondary${emphasis ? ' is-need' : ''}`} href={`/admin/${slug}/${item.action.href}`}>
+        {item.action.label}
+      </a>
+    ));
 
   return (
-    <section className="card gs" aria-labelledby="gs-title">
-      <div className="gs-head">
-        <div>
-          <h2 className="gs-title" id="gs-title">
-            {needed > 0 ? 'Get ready to take bookings' : 'Nearly there'}
-          </h2>
-          <p className="gs-count">
-            {done} of {items.length} done
-          </p>
-        </div>
-        <div className="gs-head-end">
-          {needed > 0 && (
-            /* The one Ochre key on the card: the quickest way through what is left. */
-            <a className="btn-secondary is-need" href={`/admin/${slug}/start`}>
-              Start step-by-step setup
-            </a>
-          )}
-          <button type="button" className="btn-link" onClick={() => fold(true)}>
-            Hide
+    <section className={`gs2${open ? ' is-open' : ''}`} aria-label="Getting ready to take bookings">
+      <div className="gs2-line">
+        <span className={`gs2-lamp${needed ? ' is-need' : ''}`} aria-hidden="true" />
+        <p className="gs2-progress">
+          <b>Getting ready</b> · {done} of {items.length}
+        </p>
+        <p className="gs2-next">
+          <span className="gs2-next-label">Next:</span> {nextItem.title}
+        </p>
+        <div className="gs2-keys">
+          {action(nextItem, nextItem.state === 'needed')}
+          <button type="button" className="btn-link" aria-expanded={open} onClick={toggle}>
+            {open ? 'Close' : 'See all'}
           </button>
         </div>
       </div>
-      <div className="gs-bar" aria-hidden="true">
-        {items.map((i, n) => (
-          <span key={i.id} className={n < done ? 'is-done' : ''} />
-        ))}
-      </div>
 
-      <ol className="setup-stages gs-list">
-        {items.map((item) => {
-          const tone = item.state === 'done' ? 'is-done' : item.state === 'needed' ? 'is-blocking' : 'is-loose';
-          return (
-            <li key={item.id} className={`setup-stage ${tone}`}>
-              <div className="setup-stage-head">
-                <span className="setup-stage-n" aria-hidden="true">
+      {open && (
+        <>
+          <ol className="gs2-list">
+            {items.map((item) => (
+              <li key={item.id} className={`gs2-item is-${item.state}`}>
+                <span className="gs2-mark" aria-hidden="true">
                   {item.state === 'done' ? '✓' : item.state === 'needed' ? '!' : '+'}
                 </span>
-                <div className="setup-stage-main">
-                  <p className="setup-stage-label">
-                    {item.title}
-                    {item.state !== 'done' && (
-                      <span className={`setup-stage-tag${item.state === 'needed' ? ' is-needed' : ''}`}>
-                        {item.state === 'needed' ? 'Needed' : 'Optional'}
-                      </span>
-                    )}
-                    <span className="sr-only">{item.state === 'done' ? ' (done)' : ''}</span>
-                  </p>
-                  <p className="setup-stage-purpose">{item.detail}</p>
-                </div>
-                {item.action && (
-                  <div className="setup-stage-action">
-                    {item.action.href === 'add-service' ? (
-                      <button type="button" className="btn-secondary" onClick={onAddService}>
-                        {item.action.label}
-                      </button>
-                    ) : (
-                      <a className="btn-secondary" href={`/admin/${slug}/${item.action.href}`}>
-                        {item.action.label}
-                      </a>
-                    )}
-                  </div>
+                <span className="gs2-text">
+                  <b>{item.title}</b>
+                  {item.state !== 'done' && <small>{item.detail}</small>}
+                  <span className="sr-only">
+                    {item.state === 'done' ? ' (done)' : item.state === 'needed' ? ' (needed)' : ' (optional)'}
+                  </span>
+                </span>
+                {item.state !== 'done' && item !== nextItem && item.action && (
+                  item.action.href === 'add-service' ? (
+                    <button type="button" className="btn-link" onClick={onAddService}>
+                      {item.action.label}
+                    </button>
+                  ) : (
+                    <a className="btn-link" href={`/admin/${slug}/${item.action.href}`}>
+                      {item.action.label}
+                    </a>
+                  )
                 )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            ))}
+          </ol>
+          <p className="gs2-guided">
+            Prefer to be walked through it?{' '}
+            {/* Plain: the line's next step is the one Ochre key. */}
+            <a className="btn-secondary" href={`/admin/${slug}/start`}>
+              Start step-by-step setup
+            </a>
+          </p>
+        </>
+      )}
     </section>
   );
 }

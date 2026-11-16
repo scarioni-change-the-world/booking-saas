@@ -229,6 +229,8 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
 
 /** The event an inline box sends to open the panel: detail { question }. */
 export const ASK_EVENT = 'khloe:ask';
+/** Sent by an inline box as it comes into or leaves view: detail { visible }. */
+export const BOX_EVENT = 'khloe:box';
 
 /** Open Ask khloe from anywhere, with a question already asked (or just open it). */
 export function openAskKhloe(question = '') {
@@ -249,6 +251,14 @@ export function AskKhloe({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [left, setLeft] = useState<number | null>(null);
   const [hint, setHint] = useState(false);
+  // While an Ask khloe box is on screen, the corner key steps aside: two
+  // ways to the same thing in view at once is one too many.
+  const [boxInView, setBoxInView] = useState(false);
+  useEffect(() => {
+    const onBox = (e: Event) => setBoxInView(!!(e as CustomEvent<{ visible: boolean }>).detail?.visible);
+    window.addEventListener(BOX_EVENT, onBox);
+    return () => window.removeEventListener(BOX_EVENT, onBox);
+  }, []);
   const end = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
 
@@ -320,7 +330,7 @@ export function AskKhloe({ slug }: { slug: string }) {
 
   return (
     <>
-      {!open && (
+      {!open && !boxInView && (
         <div className={`ak-launch${hint ? ' is-hinting' : ''}`}>
           <div className="ak-hint" role="tooltip" id="ak-hint">
             <b>Ask khloe</b>

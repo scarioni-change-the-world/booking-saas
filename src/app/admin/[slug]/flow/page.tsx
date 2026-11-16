@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
+import { formatMoney } from '@/lib/money';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
@@ -81,6 +82,19 @@ const START: Walked = { steps: new Set(['find']), current: 'find', elsewhere: fa
  * with the button that fixes it. Choosing a chip opens its detail, its
  * problems in full and the way to change it, in one panel under them.
  */
+/** A row's facts in a glance: "30 min · Free", "4 × 1 h · €320". */
+function rowFacts(
+  s: { durationMinutes: number; priceMinor: number | null; bookingMode: string; packSize: number | null } | undefined,
+  currency: string,
+): string {
+  if (!s) return '';
+  const m = s.durationMinutes;
+  const length = m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`;
+  const shape = s.bookingMode === 'pack' && s.packSize ? `${s.packSize} × ${length}` : length;
+  const price = s.priceMinor === null ? null : s.priceMinor === 0 ? 'Free' : formatMoney(s.priceMinor, currency);
+  return price ? `${shape} · ${price}` : shape;
+}
+
 export default function FlowPage() {
   const { slug } = useParams<{ slug: string }>();
   const search = useSearchParams();
@@ -341,13 +355,12 @@ export default function FlowPage() {
     <>
       <PageHeader
         title="Your services"
-        description="Choose a service to configure it."
         actions={
-          model && !trying ? (
+          /* One main action. Sharing is in the menu, and is the checklist's
+             next step while it is still to do. With no services yet the
+             checklist's own "Add a service" is the one to press. */
+          model && !trying && data && data.services.length > 0 ? (
             <>
-              <a className="btn-secondary" href={`/admin/${slug}/share`}>
-                Share your page
-              </a>
               <button type="button" className="btn-primary btn-add" onClick={addService}>
                 <span className="btn-add-plus" aria-hidden="true">
                   +
@@ -400,7 +413,7 @@ export default function FlowPage() {
                 // The checklist above already says it, with the button.
                 !checklist && <p className="fc-empty">No services yet. Add your first one to see how people book it.</p>
               ) : (
-                <ul className="fc-rows">
+                <ul className="fc-rows fc-list">
                   {model.lanes.map((l) => {
                     const state = laneState(model, l);
                     const isOpen = lane?.id === l.id;
@@ -419,9 +432,10 @@ export default function FlowPage() {
                           <ServiceBadge name={l.name} off={!state.live} />
                           <span className="fc-row-name">
                             <b>{l.name}</b>
-                            <small>{l.words}</small>
+                            <small>{rowFacts(data.services.find((x) => x.id === l.id), data.tenant.currency)}</small>
                           </span>
-                          {(state.live || l.owedSessions > 0) && (
+                          {/* Figures only when there is something to say. */}
+                          {((state.live && l.bookedPeople > 0) || l.owedSessions > 0) && (
                             <span className="fc-row-figs">
                               {state.live && (
                                 <>
@@ -444,9 +458,9 @@ export default function FlowPage() {
                             <Lamp tone={state.live ? 'live' : 'need'} />
                             {state.label}
                           </span>
-                          {/* A knob that turns: filled while its flow is open. */}
-                          <span className="fc-row-toggle" aria-hidden="true">
-                            {isOpen ? '▴' : '▾'}
+                          {/* Opens its page; while its diagram is open here, closes it. */}
+                          <span className="fc-row-go" aria-hidden="true">
+                            {isOpen ? '▴' : '›'}
                           </span>
                         </button>
                         {isOpen && renderFlow(model, l, data)}

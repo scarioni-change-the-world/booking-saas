@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { openAskKhloe } from './AskKhloe';
+import { useEffect, useRef, useState } from 'react';
+import { BOX_EVENT, openAskKhloe } from './AskKhloe';
 
 /**
  * Ask khloe, inline: a box on the pages where people get stuck, looking
@@ -11,8 +11,24 @@ import { openAskKhloe } from './AskKhloe';
  */
 export function AskKhloeBox({ example }: { example: string }) {
   const [text, setText] = useState('');
+  const ref = useRef<HTMLFormElement>(null);
+
+  // Tell the corner key whether this box is in view, so only one shows.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const say = (visible: boolean) => window.dispatchEvent(new CustomEvent(BOX_EVENT, { detail: { visible } }));
+    const watch = new IntersectionObserver(([entry]) => say(!!entry?.isIntersecting), { threshold: 0.5 });
+    watch.observe(el);
+    return () => {
+      watch.disconnect();
+      say(false);
+    };
+  }, []);
+
   return (
     <form
+      ref={ref}
       className="ak-box"
       role="search"
       onSubmit={(e) => {
