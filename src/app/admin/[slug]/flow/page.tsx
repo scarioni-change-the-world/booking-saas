@@ -354,41 +354,12 @@ export default function FlowPage() {
 
   return (
     <>
-      <PageHeader
-        title="Your services"
-        actions={
-          /* One main action. Sharing is in the menu, and is the checklist's
-             next step while it is still to do. With no services yet the
-             checklist's own "Add a service" is the one to press. */
-          model && !trying && data && data.services.length > 0 ? (
-            <>
-              <button type="button" className="btn-primary btn-add" onClick={addService}>
-                <span className="btn-add-plus" aria-hidden="true">
-                  +
-                </span>
-                Add a service
-              </button>
-            </>
-          ) : undefined
-        }
-      />
+      {/* The order is the hierarchy: what you have, asking khloe to change
+          it, then the services themselves. What is left to set up is a note
+          under them, not a banner over them. */}
+      <PageHeader title="Your services" />
 
       <AskKhloeBox example="Change the discovery call to 30 minutes" />
-
-      {checklist && (
-        <SetupChecklist
-          slug={slug}
-          items={checklist}
-          onAddService={addService}
-        />
-      )}
-
-      {data && !checklist && brandingGaps(data.branding) && (
-        <p className="notice notice-muted fc-brand-nudge" role="status">
-          Make your booking page look like your own site before you share it: add {brandingGaps(data.branding)}.{' '}
-          <a href={`/admin/${slug}/account#booking-page`}>Set up your booking page</a>
-        </p>
-      )}
 
       {deletedNote && (
         <p className="notice notice-muted" role="status">
@@ -422,65 +393,85 @@ export default function FlowPage() {
                 // The checklist above already says it, with the button.
                 !checklist && <p className="fc-empty">No services yet. Add your first one to see how people book it.</p>
               ) : (
-                <ul className="fc-rows fc-list">
-                  {model.lanes.map((l) => {
-                    const state = laneState(model, l);
-                    const isOpen = lane?.id === l.id;
-                    return (
-                      <li key={l.id}>
-                        <button
-                          type="button"
-                          className={`fc-row${isOpen ? ' is-open' : ''}`}
-                          /* A service opens its own page, where everything
-                             about it is edited (Details, Questions, Messages,
-                             Who can book). Its booking path, the diagram,
-                             opens from that page ("How people book it"). */
-                          onClick={() => (isOpen ? chooseLane(l.id) : window.location.assign(`/admin/${slug}/sessions/${l.id}`))}
-                          disabled={trying && !isOpen}
-                        >
-                          <ServiceBadge name={l.name} off={!state.live} />
-                          <span className="fc-row-name">
-                            <b>{l.name}</b>
-                            <small>{rowFacts(data.services.find((x) => x.id === l.id), data.tenant.currency)}</small>
-                          </span>
-                          {/* Figures only when there is something to say. */}
-                          {((state.live && l.bookedPeople > 0) || l.owedSessions > 0) && (
-                            <span className="fc-row-figs">
-                              {state.live && (
-                                <>
-                                  {l.bookedPeople} booked
-                                  {l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}
-                                </>
-                              )}
-                              {/* Quiet, in place — not a page-level banner: a
-                                  session someone still owes said where the
-                                  service itself already reads out its numbers. */}
-                              {l.owedSessions > 0 && (
-                                <span className="fc-row-owed">
-                                  {state.live ? ' · ' : ''}
-                                  {l.owedSessions === 1 ? '1 to book' : `${l.owedSessions} to book`}
-                                </span>
-                              )}
+                <>
+                  <ul className="fc-tiles">
+                    {model.lanes.map((l) => {
+                      const state = laneState(model, l);
+                      const isOpen = lane?.id === l.id;
+                      return (
+                        <li key={l.id}>
+                          <button
+                            type="button"
+                            className={`fc-tile${isOpen ? ' is-open' : ''}`}
+                            /* A service opens its own page, where everything
+                               about it is edited. Its booking path, the
+                               diagram, opens from there ("How people book
+                               it") and shows under these cards. */
+                            onClick={() =>
+                              isOpen ? chooseLane(l.id) : window.location.assign(`/admin/${slug}/sessions/${l.id}`)
+                            }
+                            disabled={trying && !isOpen}
+                          >
+                            <span className="fc-tile-top">
+                              <ServiceBadge name={l.name} off={!state.live} />
+                              <span className={`fc-state${state.live ? '' : ' is-off'}`}>
+                                <Lamp tone={state.live ? 'live' : 'need'} />
+                                {state.label}
+                              </span>
                             </span>
-                          )}
-                          <span className={`fc-state${state.live ? '' : ' is-off'}`}>
-                            <Lamp tone={state.live ? 'live' : 'need'} />
-                            {state.label}
+                            <b className="fc-tile-name">{l.name}</b>
+                            <small className="fc-tile-facts">
+                              {rowFacts(data.services.find((x) => x.id === l.id), data.tenant.currency)}
+                            </small>
+                            {/* Figures only when there is something to say. */}
+                            {((state.live && l.bookedPeople > 0) || l.owedSessions > 0) && (
+                              <span className="fc-tile-figs">
+                                {state.live && (
+                                  <>
+                                    {l.bookedPeople} booked
+                                    {l.fromPage && asksQuestions(l) ? ` · ${l.qualified} could book` : ''}
+                                  </>
+                                )}
+                                {l.owedSessions > 0 && (
+                                  <span className="fc-row-owed">
+                                    {state.live ? ' · ' : ''}
+                                    {l.owedSessions === 1 ? '1 to book' : `${l.owedSessions} to book`}
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                    {/* Adding sits where the next service will be. */}
+                    {!trying && !adding && (
+                      <li>
+                        <button type="button" className="fc-tile fc-tile-add" onClick={addService}>
+                          <span className="fc-tile-plus" aria-hidden="true">
+                            +
                           </span>
-                          {/* Opens its page; while its diagram is open here, closes it. */}
-                          <span className="fc-row-go" aria-hidden="true">
-                            {isOpen ? '▴' : '›'}
-                          </span>
+                          Add a service
                         </button>
-                        {isOpen && renderFlow(model, l, data)}
                       </li>
-                    );
-                  })}
-                </ul>
+                    )}
+                  </ul>
+                  {/* A service's booking path opens under the cards, full
+                      width, so no card moves. */}
+                  {lane && model.lanes.some((l) => l.id === lane.id) && renderFlow(model, lane, data)}
+                </>
               )}
 
             </section>
 
+            {checklist && <SetupChecklist slug={slug} items={checklist} onAddService={addService} />}
+
+            {!checklist && brandingGaps(data.branding) && (
+              <p className="fc-note" role="status">
+                Make your booking page look like your own site before you share it: add {brandingGaps(data.branding)}.{' '}
+                <a href={`/admin/${slug}/account#booking-page`}>Set up your booking page</a>
+              </p>
+            )}
 
             {/* Below the open flow, so nothing comes between a service and
                 the flow it opens. */}

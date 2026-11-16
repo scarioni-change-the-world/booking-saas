@@ -133,8 +133,6 @@ export default function ServicePage() {
 
   const stages = setupStages(facts);
   const live = service.availableToProspects || service.availableToExistingClients;
-  const outstanding = stages.filter((s) => !s.done).length;
-  const needed = stages.filter((s) => !s.done && s.blocking).length;
 
   async function patch(body: Record<string, unknown>) {
     await adminFetchJson(`${base}/event-types/${id}`, {
@@ -157,14 +155,23 @@ export default function ServicePage() {
 
   return (
     <>
+      {/* Whether anyone can book it is said once, quietly, under the name:
+          the page's job is to change the service, so asking khloe comes
+          first and the tabs straight after. */}
       <PageHeader
         title={service.name}
         description={
-          outstanding === 0
-            ? 'Everything is set. Change anything, any time.'
-            : needed === 0
-              ? 'Ready to book. The rest makes it better, whenever you like.'
-              : 'A few things to set before people can book it. The tabs marked with a dot need you.'
+          live ? (
+            stages.find((s) => s.id === 'review')!.note
+          ) : (
+            <>
+              <span className="svc-off-dot" aria-hidden="true" />
+              Not offered to anyone yet, so it is not on your booking page.{' '}
+              <button type="button" className="btn-link" onClick={() => setTab('who')}>
+                Choose who can book it
+              </button>
+            </>
+          )
         }
         actions={
           <a className="btn-secondary" href={`/admin/${slug}/flow?part=service:${service.id}`}>
@@ -174,21 +181,6 @@ export default function ServicePage() {
       />
 
       <AskKhloeBox example={`Change ${service.name} to 30 minutes`} />
-
-      {/* The sentence this whole page exists for: whether anyone can book it. */}
-      <div className={`setup-state${live ? ' is-live' : ''}`}>
-        <span className="setup-state-mark" aria-hidden="true" />
-        <p>
-          {live
-            ? stages.find((s) => s.id === 'review')!.note
-            : 'Not offered to anyone yet. This service does not appear on your booking page.'}{' '}
-          {!live && (
-            <button type="button" className="btn-link" onClick={() => setTab('who')}>
-              Choose who can book it
-            </button>
-          )}
-        </p>
-      </div>
 
       {/* One page per service, its parts as tabs: the same pill switch as
           everywhere else in the admin. The length and price are on the

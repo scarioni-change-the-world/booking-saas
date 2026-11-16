@@ -19,6 +19,9 @@ How this applies in the admin:
 
 - **Settings, not forms.** A group of settings reads as one line each (label, current value). The chosen one is edited beside the list (on a phone, in place under its line). Nothing else moves. Each setting saves on its own. See `src/components/admin/SettingsPanel.tsx`.
 - **Steps sit side by side** when there are few of them: finished ones collapse to their answer, the current one is open, later ones wait.
+- **Selected is shading only** (`--selected-mineral`): no accent edge or extra border.
+- **Hierarchy follows the job.** The page's main tool (e.g. Ask khloe) comes first and carries weight; status and setup notes are quiet lines, never full-width banners above the content.
+- **Collections are cards side by side** (services), with "Add" as the last card where the next one will appear.
 - **One Ochre key per view**, and only for something that needs the person (`btn-secondary is-need`). Everything else is plain.
 - **Exclusive views use the pill switch** (`.wk-mode` with `.filter-chip[aria-pressed]`).
 - **Intuitive is a rule.** If a tester cannot find something, the page is wrong, not the tester.

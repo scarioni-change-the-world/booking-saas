@@ -4915,7 +4915,6 @@ body:has(.bk-embedded) {
 }
 .wk-cell.is-on {
   background: var(--selected-mineral);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 .wk-cell:focus-visible {
   outline: 2px solid var(--accent);
@@ -5151,7 +5150,6 @@ body:has(.bk-embedded) {
 }
 .pp-row.is-selected {
   background: var(--selected-mineral);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 .pp-row:focus-visible {
   outline: 2px solid var(--accent);
@@ -5477,7 +5475,6 @@ body:has(.bk-embedded) {
 .ms-card[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--selected-mineral);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 .ms-card:focus-visible {
   outline: 2px solid var(--accent);
@@ -11695,7 +11692,6 @@ body:has(.bk-embedded) {
 }
 .sp-item.is-open > .sp-row {
   background: var(--selected-mineral);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 .sp-label {
   font-size: 0.82rem;
@@ -11958,7 +11954,6 @@ body:has(.bk-embedded) {
 }
 .qrow.is-open > .data-row {
   background: var(--selected-mineral);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 .qrow-main {
   display: grid;
@@ -12079,4 +12074,181 @@ body:has(.bk-embedded) {
 }
 .qrow-main > span {
   max-width: 100%;
+}
+
+/* ── Hierarchy on Services and a service's page ────────────────────────
+   Asking khloe is the page's main way in: the box carries weight (taller,
+   lifted, an Ink key like the corner one). What is left to set up is a
+   note under the services, not a banner over them. */
+.admin-app .ak-box {
+  margin: 4px 0 24px;
+  padding: 8px 8px 8px 22px;
+  min-height: 64px;
+  border: 1px solid var(--strong-border);
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 18px 30px -22px rgba(32, 34, 33, 0.5);
+}
+.admin-app .ak-box:focus-within {
+  border-color: var(--ink);
+}
+.admin-app .ak-box-mark {
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+.admin-app .ak-box input {
+  font-size: 1.02rem;
+  color: var(--ink);
+}
+.admin-app .ak-box input::placeholder {
+  color: var(--muted);
+}
+.admin-app .ak-box .btn-primary {
+  min-height: 46px;
+  padding: 4px 24px;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+.admin-app .ak-box .btn-primary:hover {
+  background: #000;
+}
+
+/* The status under a service's name. */
+.svc-off-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--emphasis);
+  vertical-align: 1px;
+}
+.page-header-description .btn-link {
+  font-size: inherit;
+}
+
+/* Services as cards side by side, like the settings inside a service. */
+.fc-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.fc-tiles > li {
+  display: flex;
+}
+.fc-tile {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 4px;
+  width: 100%;
+  min-height: 150px;
+  padding: 16px 18px 18px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fc-tile:hover,
+.fc-tile.is-open {
+  background: var(--selected-mineral);
+}
+.fc-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fc-tile:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.fc-tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+.fc-tile-top .fc-state {
+  font-size: 0.82rem;
+}
+.fc-tile-name {
+  font-size: 1.08rem;
+}
+.fc-tile-facts {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.fc-tile-figs {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 0.84rem;
+  color: var(--faint);
+}
+.fc-tile-add {
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  border: 1.5px dashed var(--strong-border);
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 600;
+}
+.fc-tile-add:hover {
+  border-color: var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+.fc-tile-plus {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  font-weight: 400;
+}
+
+/* "Getting ready": a quiet note under the services, not a box. */
+.admin-app .gs2 {
+  margin: 4px 0 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.admin-app .gs2.is-open {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+.fc-note {
+  margin: 4px 0 18px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .fc-tiles {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .fc-tile {
+    min-height: 0;
+  }
+}
+.fc-tile {
+  justify-content: stretch;
+  grid-template-columns: minmax(0, 1fr);
+}
+.fc-tile-add {
+  justify-content: center;
 }
