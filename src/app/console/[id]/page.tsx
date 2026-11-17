@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
-import { MiniFlow } from '@/components/console/MiniFlow';
 import { Lamp } from '@/components/admin/Instruments';
 import { DeleteBusiness } from '@/components/console/DeleteBusiness';
-import type { Finding, MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
 
 interface Tenant {
   id: string;
@@ -81,17 +79,6 @@ export default function ConsoleTenantPage() {
       setMembersLoading(false);
     }
   }
-
-  /* Where this business's line breaks, from the same shape-only health
-     read the list uses. Optional: the page works without it. */
-  const [health, setHealth] = useState<{ flow: MiniFlowModel | null; findings: Finding[] } | null>(null);
-  useEffect(() => {
-    adminFetchJson<{ tenants: Array<{ id: string; flow: MiniFlowModel | null; findings: Finding[] }> }>(
-      '/api/console/health',
-    )
-      .then((r) => setHealth(r.tenants.find((t) => t.id === id) ?? null))
-      .catch(() => setHealth(null));
-  }, [id]);
 
   useEffect(() => {
     void load();
@@ -259,7 +246,7 @@ export default function ConsoleTenantPage() {
 
   return (
     <div className="console-detail">
-      <a href="/console" className="btn-link" style={{ padding: 0, fontSize: '0.85rem' }}>
+      <a href="/console/businesses" className="btn-link" style={{ padding: 0, fontSize: '0.85rem' }}>
         ← All businesses
       </a>
 
@@ -280,29 +267,6 @@ export default function ConsoleTenantPage() {
 
       {!loading && tenant && (
         <>
-          {health?.flow && (
-            <div className="card" style={{ marginBottom: 14 }}>
-              <div className="admin-card-title">Their flow</div>
-              <MiniFlow flow={health.flow} />
-              <p className="biz-card-sentence">{health.flow.sentence}</p>
-              {health.findings.length > 0 && (
-                <ul className="health-findings" style={{ marginTop: 10 }}>
-                  {health.findings.map((f) => (
-                    <li key={f.headline} className={`is-${f.severity}`}>
-                      <strong>{f.headline}</strong>
-                      {f.detail && <span>{f.detail}</span>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="wk-side-hint">
-                Counts and fixed words only — never their clients, questions or answers.{' '}
-                <a href={`/${tenant.slug}`} target="_blank" rel="noreferrer">
-                  See their booking page →
-                </a>
-              </p>
-            </div>
-          )}
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="admin-card-title">Status</div>
@@ -560,7 +524,7 @@ export default function ConsoleTenantPage() {
           <DeleteBusiness
             id={id}
             name={tenant.name}
-            onDeleted={(note) => window.location.assign(`/console?deleted=${encodeURIComponent(note)}`)}
+            onDeleted={(note) => window.location.assign(`/console/businesses?deleted=${encodeURIComponent(note)}`)}
           />
         </>
       )}

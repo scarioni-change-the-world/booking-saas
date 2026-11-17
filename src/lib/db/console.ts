@@ -1,10 +1,10 @@
 import { BookingError } from '../booking-service';
 import { __unsafeServiceClient } from './client';
-import type { MemberRole, TenantPlan, TenantRow, TenantStatus } from './types';
-import { classifyError, type TenantFacts } from '../tenant-health';
+import type { AiUsageKind, MemberRole, TenantPlan, TenantRow, TenantStatus } from './types';
 import { foundingOfferOpen, trialEndsAt } from '../plans';
 import { DEFAULT_HOURS, DEFAULT_WEEKDAYS } from '../setup';
 import type { FunnelInput } from '../signup-funnel';
+import { recordBillingState } from './billing-events';
 
 /**
  * The console's own data access — every query here is deliberately unscoped,
@@ -173,6 +173,9 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
     await client.from('tenants').delete().eq('id', tenant.id);
     throw memberError;
   }
+
+  // Billing history (migration 0040): where this business starts.
+  await recordBillingState(tenant);
 
   /*
    * The address a business is created with is the one thing every business
@@ -371,133 +374,10 @@ export async function removeTenantMember(tenantId: string, userId: string): Prom
 }
 
 /**
- * The health of every business on the platform, as shape rather than
- * content.
- *
- * Every column read here is a count, a flag, a timestamp or an error
- * string that is classified and discarded before it leaves this function.
- * No names, no email addresses, no question wording, no answers, no client
- * list. See src/lib/tenant-health.ts for why that constraint is cheap and
- * what it is protecting.
- *
- * Six queries for the whole platform rather than six per business: a
- * support screen that costs a round trip per tenant stops being opened.
- */
-export async function loadPlatformHealth(sinceIso: string): Promise<Map<string, TenantFacts>> {
-  const client = __unsafeServiceClient();
-
-  const [tenants, services, rules, questions, bookings, responses] = await Promise.all([
-    client.from('tenants').select('id, created_at'),
-    client
-      .from('event_types')
-      .select('tenant_id, available_to_prospects, available_to_existing_clients')
-      .eq('active', true),
-    client.from('availability_rules').select('tenant_id'),
-    client.from('qualification_questions').select('tenant_id'),
-    client
-      .from('bookings')
-      .select('tenant_id, created_at, email_status, email_error, sync_status, sync_error')
-      .gte('created_at', sinceIso),
-    client.from('qualification_responses').select('tenant_id, started_at').gte('started_at', sinceIso),
-  ]);
-
-  for (const result of [tenants, services, rules, questions, bookings, responses]) {
-    if (result.error) throw result.error;
-  }
-
-  const facts = new Map<string, TenantFacts>();
-  for (const row of (tenants.data ?? []) as Array<{ id: string; created_at: string }>) {
-    facts.set(row.id, {
-      activeServices: 0,
-      servicesOfferedToNobody: 0,
-      availabilityRuleCount: 0,
-      questionCount: 0,
-      emailsFailed: 0,
-      emailErrorClasses: [],
-      syncsFailed: 0,
-      syncErrorClasses: [],
-      lastBookingAt: null,
-      lastEnquiryAt: null,
-      bookingsInWindow: 0,
-      enquiriesInWindow: 0,
-      createdAt: row.created_at,
-    });
-  }
-
-  const bump = (id: string, change: (f: TenantFacts) => TenantFacts) => {
-    const current = facts.get(id);
-    if (current) facts.set(id, change(current));
-  };
-
-  for (const s of (services.data ?? []) as Array<{
-    tenant_id: string;
-    available_to_prospects: boolean;
-    available_to_existing_clients: boolean;
-  }>) {
-    const hidden = !s.available_to_prospects && !s.available_to_existing_clients;
-    bump(s.tenant_id, (f) => ({
-      ...f,
-      activeServices: f.activeServices + 1,
-      servicesOfferedToNobody: f.servicesOfferedToNobody + (hidden ? 1 : 0),
-    }));
-  }
-
-  for (const r of (rules.data ?? []) as Array<{ tenant_id: string }>) {
-    bump(r.tenant_id, (f) => ({ ...f, availabilityRuleCount: f.availabilityRuleCount + 1 }));
-  }
-
-  for (const q of (questions.data ?? []) as Array<{ tenant_id: string }>) {
-    bump(q.tenant_id, (f) => ({ ...f, questionCount: f.questionCount + 1 }));
-  }
-
-  for (const b of (bookings.data ?? []) as Array<{
-    tenant_id: string;
-    created_at: string;
-    email_status: string | null;
-    email_error: string | null;
-    sync_status: string | null;
-    sync_error: string | null;
-  }>) {
-    bump(b.tenant_id, (f) => {
-      const emailFailed = b.email_status === 'failed';
-      const syncFailed = b.sync_status === 'failed';
-      return {
-        ...f,
-        emailsFailed: f.emailsFailed + (emailFailed ? 1 : 0),
-        /* Classified here and the message dropped on the floor. This is the
-           only line in the file where anything free-text is touched, and
-           nothing derived from it survives the call. */
-        emailErrorClasses: emailFailed
-          ? [...f.emailErrorClasses, classifyError(b.email_error)]
-          : f.emailErrorClasses,
-        syncsFailed: f.syncsFailed + (syncFailed ? 1 : 0),
-        syncErrorClasses: syncFailed
-          ? [...f.syncErrorClasses, classifyError(b.sync_error)]
-          : f.syncErrorClasses,
-        lastBookingAt:
-          !f.lastBookingAt || b.created_at > f.lastBookingAt ? b.created_at : f.lastBookingAt,
-        bookingsInWindow: f.bookingsInWindow + 1,
-      };
-    });
-  }
-
-  for (const r of (responses.data ?? []) as Array<{ tenant_id: string; started_at: string }>) {
-    bump(r.tenant_id, (f) => ({
-      ...f,
-      enquiriesInWindow: f.enquiriesInWindow + 1,
-      lastEnquiryAt:
-        !f.lastEnquiryAt || r.started_at > f.lastEnquiryAt ? r.started_at : f.lastEnquiryAt,
-    }));
-  }
-
-  return facts;
-}
-
-/**
  * The rows the sign-up funnel on the console counts (signup-funnel.ts),
  * for businesses that joined since `sinceIso` (or ever, when null).
  *
- * Counts and dates only, like loadPlatformHealth: which business made a
+ * Counts and dates only: which business made a
  * service when, whether one is offered, when its first booking was made,
  * whether its page was seen on a website. Plus how many sign-ups never
  * confirmed their email: logins still holding the business they asked for
@@ -574,4 +454,66 @@ async function countUnconfirmed(sinceIso: string | null): Promise<number> {
     if (data.users.length < 1000) break;
   }
   return count;
+}
+
+/**
+ * Platform-wide totals for the console's Overview (console-overview.ts).
+ *
+ * The owner's privacy rule: nothing from inside a business reaches the
+ * console. Rows are read here only to be counted; what leaves this function
+ * is sums over every business, never a figure for one of them. tenant_id is
+ * read only to count how many different businesses something happened in.
+ */
+export async function loadPlatformTotals(input: {
+  range: { from: Date; to: Date };
+  previous: { from: Date; to: Date };
+  monthStart: Date;
+}): Promise<{
+  activity: { bookings: number; prevBookings: number; businessesBooked: number; prevBusinessesBooked: number };
+  aiRows: Array<{ kind: AiUsageKind; tenant_id: string }>;
+  failures: { emails: number; calendar: number };
+}> {
+  const client = __unsafeServiceClient();
+  const iso = (d: Date) => d.toISOString();
+
+  const bookingCount = async (r: { from: Date; to: Date }) => {
+    const { count, error } = await client
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', iso(r.from))
+      .lt('created_at', iso(r.to));
+    if (error) throw error;
+    return count ?? 0;
+  };
+  const businessesWithBookings = async (r: { from: Date; to: Date }) => {
+    const { data, error } = await client
+      .from('bookings')
+      .select('tenant_id')
+      .gte('created_at', iso(r.from))
+      .lt('created_at', iso(r.to))
+      .limit(50_000);
+    if (error) throw error;
+    return new Set((data ?? []).map((row) => (row as { tenant_id: string }).tenant_id)).size;
+  };
+
+  const [bookings, prevBookings, businessesBooked, prevBusinessesBooked, ai, emails, calendar] = await Promise.all([
+    bookingCount(input.range),
+    bookingCount(input.previous),
+    businessesWithBookings(input.range),
+    businessesWithBookings(input.previous),
+    client.from('ai_usage_events').select('kind, tenant_id').gte('created_at', iso(input.monthStart)).limit(50_000),
+    client
+      .from('email_sends')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'failed')
+      .gte('created_at', iso(input.range.from))
+      .lt('created_at', iso(input.range.to)),
+    client.from('bookings').select('id', { count: 'exact', head: true }).eq('sync_status', 'failed'),
+  ]);
+
+  return {
+    activity: { bookings, prevBookings, businessesBooked, prevBusinessesBooked },
+    aiRows: ai.error ? [] : ((ai.data ?? []) as Array<{ kind: AiUsageKind; tenant_id: string }>),
+    failures: { emails: emails.error ? 0 : (emails.count ?? 0), calendar: calendar.error ? 0 : (calendar.count ?? 0) },
+  };
 }

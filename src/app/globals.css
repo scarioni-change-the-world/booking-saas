@@ -12321,3 +12321,368 @@ body:has(.bk-embedded) {
 .ns-site .wz-site-row input {
   flex: 1 1 260px;
 }
+
+/* ── Console: Overview and Businesses ──────────────────────────────────
+   Account and billing facts, and totals over every business: nothing from
+   inside a business. One line per figure; Ochre only where the owner is
+   needed. */
+.console-nav {
+  display: flex;
+  gap: 22px;
+  margin-left: 28px;
+  margin-right: auto;
+}
+.console-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.console-nav a[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.co-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin: 0 0 18px;
+}
+.co-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.co-arrow {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--soft-border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.co-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.co-label {
+  min-width: 150px;
+  font-weight: 600;
+  text-align: center;
+}
+.co {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.co-wide {
+  grid-column: 1 / -1;
+}
+.co-funnel > .card {
+  margin: 0;
+}
+.co-card {
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
+}
+.co-title {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+.co-card.is-need .co-title::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--emphasis);
+  vertical-align: 2px;
+}
+.co-sub,
+.co-calm {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.co-sub {
+  margin-bottom: 10px;
+}
+.co-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 16px;
+  padding: 11px 0;
+  border-top: 1px solid var(--rule);
+}
+.co-line:first-child {
+  border-top: 0;
+}
+.co-line-label {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.co-line-value {
+  font-weight: 700;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.co-line-note {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  color: var(--faint);
+}
+.co-line > a {
+  color: var(--ink);
+  font-weight: 600;
+}
+.co-need {
+  color: var(--emphasis-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: right;
+}
+.co-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+}
+.co-two .co-line:nth-child(2) {
+  border-top: 0;
+}
+.co-big {
+  margin: 4px 0 10px;
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.co-big span {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.co-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.co-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+/* Monthly revenue: one hue, thin bars, 4px rounded tops, the latest labelled. */
+.co-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+  height: 180px;
+  padding-top: 26px;
+}
+.co-bar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  outline: none;
+}
+.co-bar i {
+  display: block;
+  width: min(28px, 70%);
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+}
+.co-bar-month {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.co-bar-value {
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.co-bar-tip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+.co-bar:hover .co-bar-tip,
+.co-bar:focus-visible .co-bar-tip {
+  opacity: 1;
+}
+.co-bar:focus-visible i {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.co-table-wrap {
+  overflow-x: auto;
+}
+.co-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.co-table th,
+.co-table td {
+  padding: 9px 10px;
+  border-top: 1px solid var(--rule);
+  text-align: left;
+  white-space: nowrap;
+}
+.co-table thead th {
+  border-top: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--faint);
+}
+.co-table td.is-empty {
+  color: var(--faint);
+}
+/* Businesses: one line each. */
+.cb-filter {
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+.cb-count {
+  margin-left: 4px;
+  color: var(--faint);
+  font-weight: 400;
+}
+.cb-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 24px -20px rgba(32, 34, 33, 0.4);
+  overflow: hidden;
+}
+.cb-rows li + li {
+  border-top: 1px solid var(--rule);
+}
+.cb-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.cb-row:hover {
+  background: var(--selected-mineral);
+}
+.cb-name {
+  display: grid;
+  min-width: 0;
+}
+.cb-name b,
+.cb-name small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cb-name small,
+.cb-date,
+.cb-joined {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.cb-billing {
+  font-size: 0.9rem;
+}
+.cb-billing.is-need {
+  color: var(--emphasis-ink);
+  font-weight: 600;
+}
+.cb-billing.is-cancelled {
+  color: var(--faint);
+}
+@media (max-width: 760px) {
+  .console-nav {
+    margin-left: 16px;
+    gap: 14px;
+  }
+  .co {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .co-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .co-two .co-line:nth-child(2) {
+    border-top: 1px solid var(--rule);
+  }
+  .cb-row {
+    grid-template-columns: minmax(0, 1fr) auto 14px;
+    grid-template-areas: 'name billing go' 'date date go';
+  }
+  .cb-name { grid-area: name; }
+  .cb-billing { grid-area: billing; text-align: right; }
+  .cb-date { grid-area: date; }
+  .cb-joined { display: none; }
+  .cb-row .sp-go { grid-area: go; }
+}
+@media (max-width: 560px) {
+  .console .shell-bar {
+    flex-wrap: wrap;
+  }
+  .console .console-nav {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0;
+  }
+  .console .shell-account {
+    margin-left: auto;
+  }
+}
+.co > * {
+  min-width: 0;
+}
+.co-bar-tip {
+  display: none;
+}
+.co-bar:hover .co-bar-tip,
+.co-bar:focus-visible .co-bar-tip {
+  display: block;
+}
+.co-bar:first-child .co-bar-tip {
+  left: 0;
+  transform: none;
+}
+.co-bar:last-child .co-bar-tip {
+  left: auto;
+  right: 0;
+  transform: none;
+}

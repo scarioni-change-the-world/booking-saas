@@ -19,6 +19,10 @@ export const STANDARD_PRICE = '€15';
  */
 export const FOUNDING_PRICE = '€9';
 
+/** The same two prices in cents, for the owner console's revenue figures. */
+export const STANDARD_PRICE_MINOR = 1500;
+export const FOUNDING_PRICE_MINOR = 900;
+
 /** How many businesses can get the founding price, unless FOUNDING_SEATS says otherwise. */
 const DEFAULT_FOUNDING_SEATS = 100;
 
@@ -36,10 +40,14 @@ export function monthlyPrice(founding: boolean): string {
  * (a date, YYYY-MM-DD), until the end of that day. FOUNDING_SEATS=0 closes
  * the offer.
  */
-export function foundingOfferOpen(foundingSoFar: number, now = new Date()): boolean {
+/** How many businesses the founding price is for (FOUNDING_SEATS, or 100). */
+export function foundingSeats(): number {
   const seatsRaw = process.env.FOUNDING_SEATS?.trim();
-  const seats = seatsRaw && /^\d+$/.test(seatsRaw) ? Number(seatsRaw) : DEFAULT_FOUNDING_SEATS;
-  if (foundingSoFar >= seats) return false;
+  return seatsRaw && /^\d+$/.test(seatsRaw) ? Number(seatsRaw) : DEFAULT_FOUNDING_SEATS;
+}
+
+export function foundingOfferOpen(foundingSoFar: number, now = new Date()): boolean {
+  if (foundingSoFar >= foundingSeats()) return false;
 
   const until = process.env.FOUNDING_UNTIL?.trim();
   if (until && /^\d{4}-\d{2}-\d{2}$/.test(until)) {

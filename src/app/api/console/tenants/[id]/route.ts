@@ -11,6 +11,7 @@ import {
 import { BookingError } from '@/lib/booking-service';
 import { requirePlatformStaff } from '@/lib/auth';
 import { getTenantById, updateTenant, type UpdateTenantInput } from '@/lib/db/console';
+import { recordBillingState } from '@/lib/db/billing-events';
 import { serializeTenant } from '@/lib/console-serializers';
 import type { TenantPlan, TenantStatus } from '@/lib/db/types';
 import { businessDeletionBlockers, slugConfirmed } from '@/lib/business-deletion';
@@ -91,6 +92,8 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     }
 
     const tenant = await updateTenant(id, patch);
+    // Plan or free access may have changed: billing history (migration 0040).
+    await recordBillingState(tenant);
     return ok({ tenant: serializeTenant(tenant) });
   } catch (error) {
     return handleError(error);

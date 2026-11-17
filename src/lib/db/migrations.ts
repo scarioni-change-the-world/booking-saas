@@ -64,6 +64,7 @@ export const EXPECTED_MIGRATIONS = [
   '0037_delete_business',
   '0038_assistant_usage',
   '0039_closing_question',
+  '0040_billing_events',
 ] as const;
 
 /**

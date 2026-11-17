@@ -10,6 +10,7 @@ import {
 } from './db/billing';
 import { completePayment, expirePayment } from './client-payments';
 import { stripe } from './stripe';
+import { recordBillingState } from './db/billing-events';
 import { canStartSubscription, planForSubscription } from './subscription';
 
 /**
@@ -112,4 +113,5 @@ async function applySubscription(sub: Stripe.Subscription): Promise<void> {
     subscription_current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     ...(plan ? { plan } : {}),
   });
+  await recordBillingState({ ...tenant, subscription_status: sub.status, ...(plan ? { plan } : {}) });
 }

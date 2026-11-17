@@ -10,6 +10,7 @@ import type { BookingRow, CalendarConnectionRow, TenantRow } from './db/types';
 import { stripe, stripeConfigured } from './stripe';
 import { CLOSING_REASON, type BusinessDeletionFacts } from './business-deletion';
 import { sendBusinessDeletedEmail } from './business-deletion-email';
+import { recordBillingState } from './db/billing-events';
 import { schemaState } from './db/migrations';
 
 /**
@@ -183,6 +184,8 @@ export async function deleteBusiness(tenant: TenantRow): Promise<BusinessDeletio
     const removed = await client.rpc('delete_tenant', { p_tenant: tenant.id });
     if (removed.error) throw removed.error;
   });
+  // Billing history keeps the business's end (migration 0040; account facts only).
+  await recordBillingState(tenant, 'deleted');
 
   // 5. Logins on no other business, then the owners' confirmation.
   let loginsDeleted = 0;

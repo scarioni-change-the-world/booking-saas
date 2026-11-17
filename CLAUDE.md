@@ -27,3 +27,7 @@ How this applies in the admin:
 - **One Ochre key per view**, and only for something that needs the person (`btn-secondary is-need`). Everything else is plain.
 - **Exclusive views use the pill switch** (`.wk-mode` with `.filter-chip[aria-pressed]`).
 - **Intuitive is a rule.** If a tester cannot find something, the page is wrong, not the tester.
+
+# Privacy rule for the owner console (from the owner; mandatory)
+
+The console never shows anything from inside a business: not its services, hours, questions, messages, clients or bookings, not even as a count for one business. Per business it shows only account and billing facts (name, web address, plan, billing state, trial and sign-up dates, team logins). Activity appears only as totals over every business, summed on the server (`loadPlatformTotals` in `src/lib/db/console.ts`); nothing per business leaves the server. Billing history (`billing_events`, migration 0040) holds account states only.

@@ -123,6 +123,14 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         <a href="/console" className="admin-brand">
           khloe <span className="console-mark">console</span>
         </a>
+        <nav className="console-nav" aria-label="Console">
+          <a href="/console" aria-current={pathname === '/console' ? 'page' : undefined}>
+            Overview
+          </a>
+          <a href="/console/businesses" aria-current={pathname !== '/console' && pathname !== '/console/login' ? 'page' : undefined}>
+            Businesses
+          </a>
+        </nav>
         <div className="shell-account">
           <span className="shell-tenant console-role">{check.role}</span>
           <button type="button" className="btn-link shell-link" onClick={signOut}>

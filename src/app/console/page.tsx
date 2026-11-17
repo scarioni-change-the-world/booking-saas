@@ -1,363 +1,334 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { SignupFunnel } from '@/components/console/SignupFunnel';
-import { MiniFlow } from '@/components/console/MiniFlow';
-import { Lamp } from '@/components/admin/Instruments';
-import type { MiniFlow as MiniFlowModel } from '@/lib/tenant-health';
+import type { ConsoleOverview, OverviewUnit } from '@/lib/console-overview';
 
-interface Finding {
-  severity: 'stopped' | 'watch';
-  headline: string;
-  detail?: string;
-}
+const UNITS: Array<{ id: OverviewUnit; label: string }> = [
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
+  { id: 'quarter', label: 'Quarter' },
+  { id: 'year', label: 'Year' },
+];
 
-interface HealthRow {
-  id: string;
-  slug: string;
-  name: string;
-  findings: Finding[];
-  flow: MiniFlowModel | null;
-  activity: { lastBookingAt: string | null; lastEnquiryAt: string | null; activeServices: number } | null;
-}
-
-interface HealthPayload {
-  windowDays: number;
-  tenants: HealthRow[];
-}
-
-interface Tenant {
-  id: string;
-  slug: string;
-  name: string;
-  timezone: string;
-  plan: 'trial' | 'starter' | 'pro' | 'cancelled';
-  status: 'active' | 'suspended' | 'deleted';
-  createdAt: string;
-}
-
-const STATUS_LABEL: Record<Tenant['status'], string> = {
-  active: 'Active',
-  suspended: 'Suspended',
-  deleted: 'Deleted',
+const AI_LABEL: Record<string, string> = {
+  intake_draft: 'Questions drafted',
+  report_summary: 'Report summaries',
+  site_draft: 'Websites read',
+  assistant: 'Ask khloe questions',
 };
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const euros = (minor: number) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR', maximumFractionDigits: minor % 100 ? 2 : 0 }).format(
+    minor / 100,
+  );
+const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit', timeZone: 'UTC' });
+const monthName = (ym: string) => monthFormat.format(new Date(`${ym}-01T00:00:00Z`));
+
+/** "+4", "−2", "same": the change against the period before, or nothing when unknown. */
+function change(now: number | null, before: number | null, format: (n: number) => string = String): string | null {
+  if (now === null || before === null) return null;
+  const d = now - before;
+  if (d === 0) return 'same as before';
+  return `${d > 0 ? '+' : '−'}${format(Math.abs(d))} on the period before`;
+}
 
 /**
- * Time zone starts empty rather than guessing New York. The real default is
- * whatever zone this browser is in, which is only knowable on the client —
- * filled in by the effect below, so the value here is never what anybody
- * actually submits.
+ * The owner console's first screen: how the khloe business is doing.
+ *
+ * Account and billing facts, and totals over every business. The owner's
+ * privacy rule: nothing from inside a business shows here, not even per
+ * business; see src/lib/console-overview.ts.
  */
-const EMPTY_FORM = { slug: '', name: '', timezone: '', ownerEmail: '' };
-
-export default function ConsolePage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [health, setHealth] = useState<HealthPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function ConsoleOverviewPage() {
+  const [unit, setUnit] = useState<OverviewUnit>('month');
+  const [offset, setOffset] = useState(0);
+  const [data, setData] = useState<ConsoleOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-
-  // Every zone this browser knows, which is the same list the server
-  // validates against (requireTimezone in api.ts calls the identical
-  // Intl.supportedValuesOf). Reading it here rather than shipping a hardcoded
-  // list means the two can't drift apart, and it makes an invalid choice
-  // unreachable rather than merely rejected afterwards.
-  //
-  // Populated in an effect, not at module scope, for two reasons: this page
-  // is prerendered, so module scope would run in Node and bake the server's
-  // answer into the HTML; and the local zone differs between server and
-  // browser, which is a hydration mismatch. Empty until mounted, which the
-  // render below falls back to a plain text field for.
-  const [zones, setZones] = useState<string[]>([]);
-  const [localZone, setLocalZone] = useState('');
-  const [deletedNote, setDeletedNote] = useState<string | null>(null);
-
-  useEffect(() => {
-    let supported: string[] = [];
-    try {
-      supported = Intl.supportedValuesOf('timeZone');
-    } catch {
-      // Ancient browser. The text field still works, and the server still
-      // checks — worse to type in, impossible to get wrong silently.
-    }
-    setZones(supported);
-
-    const here = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
-    setLocalZone(here);
-    // Only as a default: never overwrite something already typed.
-    setForm((current) => (current.timezone ? current : { ...current, timezone: here }));
-  }, []);
-
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async () => {
     setError(null);
     try {
-      const [result, healthResult] = await Promise.all([
-        adminFetchJson<{ tenants: Tenant[] }>('/api/console/tenants'),
-        /* Non-critical: the list is still worth showing without it, so a
-           failure here leaves the panel out rather than the page. */
-        adminFetchJson<HealthPayload>('/api/console/health').catch(() => null),
-      ]);
-      setTenants(result.tenants);
-      setHealth(healthResult);
+      const r = await adminFetchJson<{ overview: ConsoleOverview }>(`/api/console/overview?unit=${unit}&offset=${offset}`);
+      setData(r.overview);
     } catch (cause) {
       setError((cause as Error).message);
-    } finally {
-      setLoading(false);
     }
-  }
+  }, [unit, offset]);
 
   useEffect(() => {
     void load();
-    // Back from deleting a business: say what was done, once.
-    const note = new URLSearchParams(window.location.search).get('deleted');
-    if (note) {
-      setDeletedNote(note);
-      window.history.replaceState(null, '', '/console');
-    }
-  }, []);
+  }, [load]);
 
-  async function submitCreate(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      await adminFetchJson('/api/console/tenants', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      setForm({ ...EMPTY_FORM, timezone: localZone });
-      setCreating(false);
-      await load();
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
+  const o = data;
+  const needs = o ? o.needs.trialsEnding.length + o.needs.paymentFailed.length : 0;
 
   return (
     <>
       <div className="admin-page-head">
         <div>
-          <div className="admin-eyebrow">Businesses</div>
-          <h1>Every business on the platform</h1>
+          <div className="admin-eyebrow">Overview</div>
+          <h1>How khloe is doing</h1>
         </div>
-        {!creating && (
-          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-            Create business
-          </button>
-        )}
       </div>
 
-      {deletedNote && (
-        <p className="notice notice-muted" role="status">
-          {deletedNote}
-        </p>
-      )}
+      {/* The same period switch as Reports: a length, and arrows through it. */}
+      <div className="co-period">
+        <div className="wk-mode" role="group" aria-label="Period">
+          {UNITS.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              className="filter-chip"
+              aria-pressed={unit === u.id}
+              onClick={() => {
+                setUnit(u.id);
+                setOffset(0);
+              }}
+            >
+              {u.label}
+            </button>
+          ))}
+        </div>
+        <div className="co-step">
+          <button type="button" className="co-arrow" aria-label="Previous period" onClick={() => setOffset((n) => n + 1)}>
+            ←
+          </button>
+          <span className="co-label">
+            {o?.period.label ?? '…'}
+            {o?.period.current ? ' · so far' : ''}
+          </span>
+          <button
+            type="button"
+            className="co-arrow"
+            aria-label="Next period"
+            disabled={offset === 0}
+            onClick={() => setOffset((n) => Math.max(0, n - 1))}
+          >
+            →
+          </button>
+        </div>
+      </div>
 
       {error && (
         <div className="notice notice-error" role="alert">
           {error}
         </div>
       )}
+      {!o && !error && <p className="status">Loading…</p>}
 
-
-      {creating && (
-        <form className="card" onSubmit={submitCreate} style={{ marginBottom: 14 }}>
-          <div className="admin-card-title">New business</div>
-          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', margin: '-4px 0 16px' }}>
-            An owner who already has a login is added straight to this business. One who
-            doesn&apos;t gets an email from Supabase to set a password — either way, nothing
-            to send yourself.
-          </p>
-
-          <div className="field">
-            <label htmlFor="new-name">Business name</label>
-            <input
-              id="new-name"
-              type="text"
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </div>
-
-          <div className="admin-field-row">
-            <div className="field">
-              <label htmlFor="new-slug">Web address</label>
-              <input
-                id="new-slug"
-                type="text"
-                required
-                placeholder="acme-coaching"
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })}
+      {o && (
+        <div className="co">
+          {/* 1. The business, in five lines. */}
+          <section className="co-card" aria-labelledby="co-business">
+            <h2 id="co-business" className="co-title">
+              The business
+            </h2>
+            <ul className="co-lines">
+              <Line
+                label="Paying businesses"
+                value={o.lines.paying.now === null ? 'Not recorded' : String(o.lines.paying.now)}
+                note={change(o.lines.paying.now, o.lines.paying.before)}
               />
-            </div>
-            <div className="field">
-              <label htmlFor="new-timezone">Time zone</label>
-              {zones.length > 0 ? (
-                <select
-                  id="new-timezone"
-                  required
-                  value={form.timezone}
-                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                >
-                  {zones.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone.replace(/_/g, ' ')}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id="new-timezone"
-                  type="text"
-                  required
-                  placeholder="Europe/Madrid"
-                  value={form.timezone}
-                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                />
-              )}
-              <p className="tz">
-                Every working hour and booking time is read in this zone.
-                {localZone && form.timezone === localZone ? " Yours, by default." : ''}
+              <Line
+                label="Monthly revenue"
+                value={o.lines.revenue.now === null ? 'Not recorded' : euros(o.lines.revenue.now)}
+                note={
+                  [
+                    o.lines.revenue.founding !== null && o.lines.paying.now
+                      ? `${o.lines.paying.now - o.lines.revenue.founding} × €15 · ${o.lines.revenue.founding} × €9 · VAT included`
+                      : 'VAT included',
+                    change(o.lines.revenue.now, o.lines.revenue.before, euros),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                }
+              />
+              <Line label="New sign-ups" value={String(o.lines.signups.now)} note={change(o.lines.signups.now, o.lines.signups.before)} />
+              <Line
+                label="Trials that became paying"
+                value={o.lines.trials.ended === 0 ? '—' : `${o.lines.trials.converted} of ${o.lines.trials.ended}`}
+                note={
+                  o.lines.trials.ended === 0
+                    ? 'No trial ended in this period.'
+                    : `${Math.round((o.lines.trials.converted / o.lines.trials.ended) * 100)}% of the trials that ended in this period`
+                }
+              />
+              <Line
+                label="Lost"
+                value={o.lines.lost ? `${o.lines.lost.cancelled + o.lines.lost.deleted}` : 'Not recorded'}
+                note={
+                  o.lines.lost
+                    ? `${o.lines.lost.cancelled} cancelled · ${o.lines.lost.deleted} deleted${o.lines.lost.complete ? '' : ' · counted since billing history started'}`
+                    : 'Starts once billing history is on (migration 0040).'
+                }
+              />
+            </ul>
+          </section>
+
+          {/* 2. Needs you: only when there is something. Account facts only. */}
+          <section className={`co-card${needs ? ' is-need' : ''}`} aria-labelledby="co-needs">
+            <h2 id="co-needs" className="co-title">
+              Needs you
+            </h2>
+            {needs === 0 ? (
+              <p className="co-calm">Nothing right now.</p>
+            ) : (
+              <ul className="co-lines">
+                {o.needs.paymentFailed.map((t) => (
+                  <li key={t.id} className="co-line">
+                    <a href={`/console/${t.id}`}>{t.name}</a>
+                    <span className="co-need">Payment failed</span>
+                  </li>
+                ))}
+                {o.needs.trialsEnding.map((t) => (
+                  <li key={t.id} className="co-line">
+                    <a href={`/console/${t.id}`}>{t.name}</a>
+                    <span className="co-need">Trial ends {dateFormat.format(new Date(t.endsAt))}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* 3. Monthly revenue over time, from billing history. */}
+          <section className="co-card co-wide" aria-labelledby="co-revenue">
+            <h2 id="co-revenue" className="co-title">
+              Monthly revenue
+            </h2>
+            {o.history.revenue.length === 0 ? (
+              <p className="co-calm">
+                Recorded from the day billing history is switched on (migration 0040); the trend builds month by month.
               </p>
+            ) : (
+              <RevenueBars months={o.history.revenue} />
+            )}
+          </section>
+
+          {/* 4. Of each month's sign-ups, how many pay later. */}
+          <section className="co-card co-wide" aria-labelledby="co-cohorts">
+            <h2 id="co-cohorts" className="co-title">
+              Do they stay?
+            </h2>
+            <p className="co-sub">Of the businesses that signed up each month, how many are paying 1, 2 and 3 months later.</p>
+            <div className="co-table-wrap">
+              <table className="co-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Signed up</th>
+                    <th scope="col">Businesses</th>
+                    <th scope="col">After 1 month</th>
+                    <th scope="col">After 2 months</th>
+                    <th scope="col">After 3 months</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {o.history.cohorts.map((c) => (
+                    <tr key={c.month}>
+                      <th scope="row">{monthName(c.month)}</th>
+                      <td>{c.signedUp}</td>
+                      {c.paying.map((p, i) => (
+                        <td key={i} className={p === null || p === 'unknown' ? 'is-empty' : ''}>
+                          {p === null ? 'not yet' : p === 'unknown' ? 'not recorded' : `${p} of ${c.signedUp}`}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </section>
+
+          {/* 5. How new businesses get started: counts only. */}
+          <div className="co-wide co-funnel">
+            <SignupFunnel />
           </div>
 
-          <div className="field">
-            <label htmlFor="new-owner-email">Owner&apos;s email</label>
-            <input
-              id="new-owner-email"
-              type="email"
-              required
-              value={form.ownerEmail}
-              onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })}
-            />
-          </div>
+          {/* 6. Their clients booking: summed over every business. */}
+          <section className="co-card" aria-labelledby="co-activity">
+            <h2 id="co-activity" className="co-title">
+              Bookings on khloe
+            </h2>
+            <ul className="co-lines">
+              <Line
+                label="Bookings made"
+                value={String(o.activity.bookings)}
+                note={change(o.activity.bookings, o.activity.prevBookings)}
+              />
+              <Line
+                label="Businesses with a booking"
+                value={`${o.activity.businessesBooked} of ${o.activity.activeBusinesses}`}
+                note={change(o.activity.businessesBooked, o.activity.prevBusinessesBooked)}
+              />
+            </ul>
+            <p className="co-sub">Totals over every business. No business is shown on its own.</p>
+          </section>
 
-          <div className="actions">
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Creating…' : 'Create business'}
-            </button>
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => {
-                setCreating(false);
-                setForm({ ...EMPTY_FORM, timezone: localZone });
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          {/* 7. The founding offer running out. */}
+          <section className="co-card" aria-labelledby="co-founding">
+            <h2 id="co-founding" className="co-title">
+              Founding offer
+            </h2>
+            <p className="co-big">
+              {o.founding.taken} <span>of {o.founding.seats} places taken</span>
+            </p>
+            <div className="co-meter" aria-hidden="true">
+              <i style={{ width: `${Math.min(100, (o.founding.taken / Math.max(1, o.founding.seats)) * 100)}%` }} />
+            </div>
+          </section>
+
+          {/* 8. What running khloe uses: AI this month, failures. */}
+          <section className="co-card co-wide" aria-labelledby="co-costs">
+            <h2 id="co-costs" className="co-title">
+              Running costs
+            </h2>
+            <ul className="co-lines co-two">
+              {o.costs.ai.map((a) => (
+                <Line
+                  key={a.kind}
+                  label={AI_LABEL[a.kind] ?? a.kind}
+                  value={String(a.used)}
+                  note={`this month${a.businessesAtLimit ? ` · ${a.businessesAtLimit} at the monthly limit` : ''}`}
+                />
+              ))}
+              <Line label="Emails that failed" value={String(o.costs.failures.emails)} note="in this period" />
+              <Line label="Not added to a calendar" value={String(o.costs.failures.calendar)} note="bookings, right now" />
+            </ul>
+          </section>
+        </div>
       )}
-
-      <SignupFunnel />
-
-      {loading && <p className="status">Loading…</p>}
-
-      {!loading && tenants.length === 0 && !creating && (
-        <p className="notice notice-muted">No businesses yet.</p>
-      )}
-
-      {/* Every business as its own small flow, worst first, so the list is
-          a queue: where the line breaks is where to look. Counts, dates and
-          fixed phrases — no client, no address, no question, no answer.
-          Every support case worth chasing is a shape, and none of them
-          needs a name. */}
-      {!loading && tenants.length > 0 && <Businesses tenants={tenants} health={health} />}
     </>
   );
 }
 
-/** "3 days ago", or "never". Dates, not contents. */
-function sinceLabel(iso: string | null): string {
-  if (!iso) return 'never';
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days <= 0) return 'today';
-  if (days === 1) return 'yesterday';
-  return `${days} days ago`;
+function Line({ label, value, note }: { label: string; value: string; note?: string | null }) {
+  return (
+    <li className="co-line">
+      <span className="co-line-label">{label}</span>
+      <span className="co-line-value">{value}</span>
+      {note && <span className="co-line-note">{note}</span>}
+    </li>
+  );
 }
 
-
-function Businesses({ tenants, health }: { tenants: Tenant[]; health: HealthPayload | null }) {
-  const byId = new Map((health?.tenants ?? []).map((h) => [h.id, h]));
-  /* Health's order is worst first; anything it does not know about follows. */
-  const ordered = [
-    ...(health?.tenants ?? []).map((h) => tenants.find((t) => t.id === h.id)).filter((t): t is Tenant => !!t),
-    ...tenants.filter((t) => !byId.has(t.id)),
-  ];
-  const needsLook = (health?.tenants ?? []).filter((h) => h.findings.length > 0).length;
-
+/** One bar per month, one hue; the latest labelled, every bar has its tooltip. */
+function RevenueBars({ months }: { months: Array<{ month: string; minor: number; paying: number }> }) {
+  const max = Math.max(...months.map((m) => m.minor), 1);
+  const last = months[months.length - 1]!;
   return (
-    <>
-      <p className="section-note" style={{ maxWidth: '72ch' }}>
-        {tenants.length} {tenants.length === 1 ? 'business' : 'businesses'}
-        {health
-          ? needsLook === 0
-            ? ', none of them stuck.'
-            : `, ${needsLook} worth a look — worst first.`
-          : '.'}{' '}
-        Each is drawn as its own flow from counts alone: where the line breaks is what stops their bookings.
-        Never anybody&apos;s clients or answers.
-      </p>
-      <div className="biz-grid">
-        {ordered.map((t) => {
-          const h = byId.get(t.id);
-          const stopped = h?.findings.some((f) => f.severity === 'stopped');
-          return (
-            <article key={t.id} className={`biz-card${stopped ? ' is-stopped' : h && h.findings.length > 0 ? ' is-watch' : ''}`}>
-              <div className="biz-card-head">
-                <a href={`/console/${t.id}`}>{t.name}</a>
-                {/* Paused by us, not broken: a ring, like a paused service. */}
-                {t.status !== 'active' && (
-                  <span className="fc-state">
-                    <Lamp tone="off" />
-                    {STATUS_LABEL[t.status]}
-                  </span>
-                )}
-              </div>
-              <p className="biz-card-meta">
-                {t.slug} · {t.plan} · joined {dateFormat.format(new Date(t.createdAt))}
-              </p>
-              {h?.flow && <MiniFlow flow={h.flow} />}
-              {h?.flow && <p className="biz-card-sentence">{h.flow.sentence}</p>}
-              {h && h.findings.length > 1 && (
-                <ul className="biz-card-findings">
-                  {h.findings.slice(1).map((f) => (
-                    <li key={f.headline}>{f.headline}</li>
-                  ))}
-                </ul>
-              )}
-              <div className="biz-card-foot">
-                <a href={`/console/${t.id}`}>Open</a>
-                {/* Their booking page is public, so this is the one place a
-                    support person can see what a client sees without asking
-                    anybody's permission for anything. */}
-                <a href={`/${t.slug}`} target="_blank" rel="noreferrer">
-                  Their booking page →
-                </a>
-                {h?.activity && (
-                  <span className="wk-muted">
-                    Last booking {sinceLabel(h.activity.lastBookingAt)}
-                  </span>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </>
+    <div className="co-bars" role="list" aria-label="Monthly revenue by month">
+      {months.map((m) => (
+        <div key={m.month} className="co-bar" role="listitem" tabIndex={0} aria-label={`${monthName(m.month)}: ${euros(m.minor)}, ${m.paying} paying`}>
+          <span className="co-bar-tip" aria-hidden="true">
+            {monthName(m.month)} · {euros(m.minor)} · {m.paying} paying
+          </span>
+          {m === last && <span className="co-bar-value">{euros(m.minor)}</span>}
+          <i style={{ height: `${Math.max(2, (m.minor / max) * 100)}%` }} />
+          <span className="co-bar-month">{monthName(m.month)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
