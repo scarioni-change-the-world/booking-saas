@@ -28,6 +28,9 @@ const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: '
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit', timeZone: 'UTC' });
 const monthName = (ym: string) => monthFormat.format(new Date(`${ym}-01T00:00:00Z`));
 
+/** Today as YYYY-MM-DD, the latest day a custom period can end. */
+const today = () => new Date().toISOString().slice(0, 10);
+
 /** "+4", "−2", "same": the change against the period before, or nothing when unknown. */
 function change(now: number | null, before: number | null, format: (n: number) => string = String): string | null {
   if (now === null || before === null) return null;
@@ -46,6 +49,10 @@ function change(now: number | null, before: number | null, format: (n: number) =
 export default function ConsoleOverviewPage() {
   const [unit, setUnit] = useState<OverviewUnit>('month');
   const [offset, setOffset] = useState(0);
+  // Any two days (both included), instead of a unit; null while not chosen.
+  const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ from: '', to: '' });
   const [data, setData] = useState<ConsoleOverview | null>(null);
   const [site, setSite] = useState<SiteSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,14 +61,16 @@ export default function ConsoleOverviewPage() {
     setError(null);
     try {
       const r = await adminFetchJson<{ overview: ConsoleOverview; site: SiteSummary | null }>(
-        `/api/console/overview?unit=${unit}&offset=${offset}`,
+        custom
+          ? `/api/console/overview?from=${custom.from}&to=${custom.to}`
+          : `/api/console/overview?unit=${unit}&offset=${offset}`,
       );
       setData(r.overview);
       setSite(r.site ?? null);
     } catch (cause) {
       setError((cause as Error).message);
     }
-  }, [unit, offset]);
+  }, [unit, offset, custom]);
 
   useEffect(() => {
     void load();
@@ -79,7 +88,8 @@ export default function ConsoleOverviewPage() {
         </div>
       </div>
 
-      {/* The same period switch as Reports: a length, and arrows through it. */}
+      {/* The same period switch as Reports: a length and arrows through it,
+          or any two days. */}
       <div className="co-period">
         <div className="wk-mode" role="group" aria-label="Period">
           {UNITS.map((u) => (
@@ -87,8 +97,10 @@ export default function ConsoleOverviewPage() {
               key={u.id}
               type="button"
               className="filter-chip"
-              aria-pressed={unit === u.id}
+              aria-pressed={!custom && !editing && unit === u.id}
               onClick={() => {
+                setCustom(null);
+                setEditing(false);
                 setUnit(u.id);
                 setOffset(0);
               }}
@@ -96,26 +108,93 @@ export default function ConsoleOverviewPage() {
               {u.label}
             </button>
           ))}
-        </div>
-        <div className="co-step">
-          <button type="button" className="co-arrow" aria-label="Previous period" onClick={() => setOffset((n) => n + 1)}>
-            ←
-          </button>
-          <span className="co-label">
-            {o?.period.label ?? '…'}
-            {o?.period.current ? ' · so far' : ''}
-          </span>
           <button
             type="button"
-            className="co-arrow"
-            aria-label="Next period"
-            disabled={offset === 0}
-            onClick={() => setOffset((n) => Math.max(0, n - 1))}
+            className="filter-chip"
+            aria-pressed={!!custom || editing}
+            onClick={() => {
+              setDraft(custom ?? { from: o?.period.fromDay ?? '', to: o?.period.toDay ?? '' });
+              setEditing(true);
+            }}
           >
-            →
+            Custom
           </button>
         </div>
+
+        {editing ? (
+          <form
+            className="co-custom"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!draft.from || !draft.to) return;
+              setCustom({ ...draft });
+              setEditing(false);
+            }}
+          >
+            <label>
+              From
+              <input
+                type="date"
+                max={today()}
+                value={draft.from}
+                onChange={(e) => setDraft({ ...draft, from: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              To
+              <input
+                type="date"
+                min={draft.from || undefined}
+                max={today()}
+                value={draft.to}
+                onChange={(e) => setDraft({ ...draft, to: e.target.value })}
+                required
+              />
+            </label>
+            <button type="submit" className="btn-primary" disabled={!draft.from || !draft.to}>
+              Show
+            </button>
+            <button type="button" className="btn-link" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+          </form>
+        ) : custom ? (
+          <div className="co-step">
+            <span className="co-label">{o?.period.label ?? '…'}</span>
+            <button
+              type="button"
+              className="btn-link"
+              onClick={() => {
+                setDraft(custom);
+                setEditing(true);
+              }}
+            >
+              Change dates
+            </button>
+          </div>
+        ) : (
+          <div className="co-step">
+            <button type="button" className="co-arrow" aria-label="Previous period" onClick={() => setOffset((n) => n + 1)}>
+              ←
+            </button>
+            <span className="co-label">
+              {o?.period.label ?? '…'}
+              {o?.period.current ? ' · so far' : ''}
+            </span>
+            <button
+              type="button"
+              className="co-arrow"
+              aria-label="Next period"
+              disabled={offset === 0}
+              onClick={() => setOffset((n) => Math.max(0, n - 1))}
+            >
+              →
+            </button>
+          </div>
+        )}
       </div>
+      {o && <p className="co-compare">Compared with {o.period.previousLabel}, the same length just before.</p>}
 
       {error && (
         <div className="notice notice-error" role="alert">

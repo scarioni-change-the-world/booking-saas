@@ -12704,3 +12704,31 @@ body:has(.bk-embedded) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.co-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+.co-custom label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.co-custom input {
+  min-height: 40px;
+}
+.co-compare {
+  margin: -8px 0 18px;
+  font-size: 0.85rem;
+  color: var(--faint);
+}
+@media (max-width: 560px) {
+  .co-period .wk-mode {
+    max-width: 100%;
+  }
+  .co-period .wk-mode .filter-chip {
+    padding-inline: 11px;
+  }
+}

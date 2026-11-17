@@ -4,7 +4,8 @@ import { requirePlatformStaff } from '@/lib/auth';
 import { listAllTenants, loadPlatformTotals, loadSiteRows } from '@/lib/db/console';
 import { siteSummary } from '@/lib/site-hits';
 import { listBillingEvents } from '@/lib/db/billing-events';
-import { consoleOverview, overviewPeriod, type OverviewUnit } from '@/lib/console-overview';
+import { consoleOverview, MAX_CUSTOM_DAYS, periodFor, type OverviewUnit } from '@/lib/console-overview';
+import { BookingError } from '@/lib/booking-service';
 import { MONTHLY_LIMITS } from '@/lib/ai/limits';
 import { foundingSeats } from '@/lib/plans';
 import type { AiUsageKind } from '@/lib/db/types';
@@ -13,7 +14,8 @@ const UNITS: OverviewUnit[] = ['week', 'month', 'quarter', 'year'];
 
 /**
  * The console's Overview: how the khloe business is doing.
- * ?unit=week|month|quarter|year&offset=0 (periods back).
+ * ?unit=week|month|quarter|year&offset=0 (periods back), or
+ * ?from=YYYY-MM-DD&to=YYYY-MM-DD (any two days, both included).
  *
  * Account and billing facts, and platform-wide totals; nothing from inside
  * a business (console-overview.ts). Any staff member may look.
@@ -27,7 +29,17 @@ export async function GET(request: Request) {
     const offset = Math.min(Math.max(Number.parseInt(params.get('offset') ?? '0', 10) || 0, 0), 520);
 
     const now = new Date();
-    const period = overviewPeriod(unit, offset, now);
+    // ?from=YYYY-MM-DD&to=YYYY-MM-DD, both days included, replaces unit and offset.
+    const from = params.get('from');
+    const to = params.get('to');
+    const custom = from || to ? { from: from ?? '', to: to ?? '' } : undefined;
+    const period = periodFor({ unit, offset, custom, now });
+    if (!period) {
+      throw new BookingError(
+        `Choose two days, the first no later than the second and not in the future, at most ${MAX_CUSTOM_DAYS} days apart.`,
+        400,
+      );
+    }
     const monthStart = DateTime.fromJSDate(now, { zone: 'utc' }).startOf('month').toJSDate();
 
     const [tenants, events, totals, siteRows] = await Promise.all([
@@ -57,6 +69,7 @@ export async function GET(request: Request) {
       now,
       unit,
       offset,
+      custom,
       tenants: tenants.map((t) => ({
         id: t.id,
         name: t.name,

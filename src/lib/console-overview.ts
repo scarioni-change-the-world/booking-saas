@@ -35,6 +35,8 @@ export interface OverviewInput {
   now: Date;
   unit: OverviewUnit;
   offset: number;
+  /** Two calendar days, both included (YYYY-MM-DD); replaces unit and offset. */
+  custom?: { from: string; to: string };
   tenants: OverviewTenant[];
   /** Billing history (migration 0040), oldest first; null before it exists. */
   events: BillingEventRow[] | null;
@@ -52,7 +54,7 @@ export interface Range {
 }
 
 export interface Period extends Range {
-  unit: OverviewUnit;
+  unit: OverviewUnit | 'custom';
   offset: number;
   label: string;
   previous: Range;
@@ -84,6 +86,50 @@ export function overviewPeriod(unit: OverviewUnit, offset: number, now: Date): P
     previous: { from: prevStart.toJSDate(), to: start.toJSDate() },
     current: offset === 0,
   };
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The longest custom period the console reads at once, in days. */
+export const MAX_CUSTOM_DAYS = 1100;
+
+/**
+ * Any two calendar days, both included, compared with the stretch of the
+ * same length just before. Null when the dates are not real days, are in
+ * the wrong order, start in the future or span too long.
+ */
+export function customPeriod(fromDay: string, toDay: string, now: Date): Period | null {
+  if (!DAY.test(fromDay) || !DAY.test(toDay)) return null;
+  const start = DateTime.fromISO(fromDay, { zone: 'utc' });
+  const last = DateTime.fromISO(toDay, { zone: 'utc' });
+  if (!start.isValid || !last.isValid || last < start) return null;
+  if (start.toJSDate().getTime() > now.getTime()) return null;
+  const end = last.plus({ days: 1 });
+  const days = Math.round(end.diff(start, 'days').days);
+  if (days > MAX_CUSTOM_DAYS) return null;
+  const prevStart = start.minus({ days });
+  const label =
+    start.hasSame(last, 'day')
+      ? start.toFormat('d LLL yyyy')
+      : start.hasSame(last, 'year')
+        ? `${start.toFormat('d LLL')} – ${last.toFormat('d LLL yyyy')}`
+        : `${start.toFormat('d LLL yyyy')} – ${last.toFormat('d LLL yyyy')}`;
+  return {
+    unit: 'custom',
+    offset: 0,
+    label,
+    from: start.toJSDate(),
+    to: end.toJSDate(),
+    previous: { from: prevStart.toJSDate(), to: start.toJSDate() },
+    current: end.toJSDate().getTime() > now.getTime(),
+  };
+}
+
+/** The period an Overview asks for: custom days, or a unit and offset. */
+export function periodFor(input: Pick<OverviewInput, 'unit' | 'offset' | 'custom' | 'now'>): Period | null {
+  return input.custom
+    ? customPeriod(input.custom.from, input.custom.to, input.now)
+    : overviewPeriod(input.unit, input.offset, input.now);
 }
 
 const priceOf = (founding: boolean) => (founding ? FOUNDING_PRICE_MINOR : STANDARD_PRICE_MINOR);
@@ -131,7 +177,8 @@ function payingAt(histories: Map<string, BillingEventRow[]>, at: Date) {
 
 export function consoleOverview(input: OverviewInput) {
   const { now, tenants, events } = input;
-  const period = overviewPeriod(input.unit, input.offset, now);
+  const period = periodFor(input);
+  if (!period) throw new Error('That period is not a range of days the console can show.');
   const live = tenants.filter((t) => t.status !== 'deleted');
   const stateOf = (t: OverviewTenant) =>
     billingState({ plan: t.plan, free_access: t.freeAccess, subscription_status: t.subscriptionStatus });
@@ -234,7 +281,16 @@ export function consoleOverview(input: OverviewInput) {
   const foundingTaken = tenants.filter((t) => t.founding).length;
 
   return {
-    period: { unit: period.unit, offset: period.offset, label: period.label, current: period.current },
+    period: {
+      unit: period.unit,
+      offset: period.offset,
+      label: period.label,
+      current: period.current,
+      // Both days included, for the date fields.
+      fromDay: period.from.toISOString().slice(0, 10),
+      toDay: new Date(period.to.getTime() - 86_400_000).toISOString().slice(0, 10),
+      previousLabel: describeRange(period.previous),
+    },
     lines: {
       paying: { now: current?.count ?? null, before: before?.count ?? null },
       revenue: {
@@ -255,6 +311,16 @@ export function consoleOverview(input: OverviewInput) {
     costs: { ai: input.ai, failures: input.failures },
     history: { since: historySince?.toISOString() ?? null, revenue, cohorts },
   };
+}
+
+/** "3 – 16 Nov 2026": a range in words, both days included. */
+function describeRange(r: Range): string {
+  const a = DateTime.fromJSDate(r.from, { zone: 'utc' });
+  const b = DateTime.fromJSDate(r.to, { zone: 'utc' }).minus({ days: 1 });
+  if (a.hasSame(b, 'day')) return a.toFormat('d LLL yyyy');
+  if (a.hasSame(b, 'month')) return `${a.toFormat('d')} – ${b.toFormat('d LLL yyyy')}`;
+  if (a.hasSame(b, 'year')) return `${a.toFormat('d LLL')} – ${b.toFormat('d LLL yyyy')}`;
+  return `${a.toFormat('d LLL yyyy')} – ${b.toFormat('d LLL yyyy')}`;
 }
 
 export type ConsoleOverview = ReturnType<typeof consoleOverview>;

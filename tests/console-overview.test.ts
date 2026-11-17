@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consoleOverview, overviewPeriod, type OverviewInput, type OverviewTenant } from '../src/lib/console-overview';
+import { consoleOverview, customPeriod, overviewPeriod, type OverviewInput, type OverviewTenant } from '../src/lib/console-overview';
 import type { BillingEventRow } from '../src/lib/db/billing-events';
 
 const NOW = new Date('2026-11-17T12:00:00Z');
@@ -48,6 +48,32 @@ describe('overviewPeriod', () => {
     expect(overviewPeriod('month', 2, NOW).label).toBe('September 2026');
     expect(overviewPeriod('quarter', 0, NOW).label).toBe('Q4 2026');
     expect(overviewPeriod('week', 0, NOW).label).toBe('Week of 16 Nov 2026');
+  });
+});
+
+describe('customPeriod', () => {
+  it('takes both days, and compares with the same length just before', () => {
+    const p = customPeriod('2026-11-03', '2026-11-16', NOW)!;
+    expect(p.label).toBe('3 Nov – 16 Nov 2026');
+    expect(p.from.toISOString()).toBe('2026-11-03T00:00:00.000Z');
+    expect(p.to.toISOString()).toBe('2026-11-17T00:00:00.000Z');
+    expect(p.previous.from.toISOString()).toBe('2026-10-20T00:00:00.000Z');
+    expect(p.previous.to.toISOString()).toBe('2026-11-03T00:00:00.000Z');
+    expect(p.current).toBe(false);
+    expect(customPeriod('2026-11-17', '2026-11-17', NOW)!.current).toBe(true);
+  });
+
+  it('refuses dates the wrong way round, in the future, unreal or too far apart', () => {
+    expect(customPeriod('2026-11-10', '2026-11-01', NOW)).toBeNull();
+    expect(customPeriod('2026-12-01', '2026-12-05', NOW)).toBeNull();
+    expect(customPeriod('2026-02-30', '2026-03-05', NOW)).toBeNull();
+    expect(customPeriod('2020-01-01', '2026-11-01', NOW)).toBeNull();
+    expect(customPeriod('nope', '2026-11-01', NOW)).toBeNull();
+  });
+
+  it('drives the whole overview, with the previous range in words', () => {
+    const o = consoleOverview(base({ custom: { from: '2026-11-03', to: '2026-11-16' } }));
+    expect(o.period).toMatchObject({ unit: 'custom', fromDay: '2026-11-03', toDay: '2026-11-16', previousLabel: '20 Oct – 2 Nov 2026' });
   });
 });
 
