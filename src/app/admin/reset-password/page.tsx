@@ -36,6 +36,10 @@ export default function ResetPasswordPage() {
   const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // An account with two-step sign-in (console owners) must give its code
+  // before Supabase lets the password change: the link alone is one step.
+  const [factorId, setFactorId] = useState<string | null>(null);
+  const [code, setCode] = useState('');
 
   useEffect(() => {
     // Supabase puts a refusal — an expired or already-used link — in the same
@@ -66,6 +70,7 @@ export default function ResetPasswordPage() {
         if (session) {
           setState('ready');
           clearHash();
+          void findSecondStep();
           return;
         }
         // Null session at INITIAL_SESSION means start-up finished and found
@@ -86,6 +91,20 @@ export default function ResetPasswordPage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  /** A verified authenticator on this account means its code is needed too. */
+  async function findSecondStep() {
+    try {
+      const mfa = supabaseBrowser().auth.mfa;
+      const { data: level } = await mfa.getAuthenticatorAssuranceLevel();
+      if (level?.currentLevel === 'aal2') return;
+      const { data } = await mfa.listFactors();
+      const verified = data?.totp.find((f) => f.status === 'verified');
+      if (verified) setFactorId(verified.id);
+    } catch {
+      /* Asked for on submit instead, if Supabase says so. */
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -102,8 +121,22 @@ export default function ResetPasswordPage() {
     setBusy(true);
     try {
       const supabase = supabaseBrowser();
+      if (factorId) {
+        const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
+          factorId,
+          code: code.replace(/\s/g, ''),
+        });
+        if (verifyError) throw new Error('That code did not work. Codes change every 30 seconds: try the current one.');
+      }
       const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw new Error(updateError.message);
+      if (updateError) {
+        // Two-step sign-in found only now: ask for the code, then try again.
+        if (/aal2/i.test(updateError.message) && !factorId) {
+          await findSecondStep();
+          throw new Error('Your account uses two-step sign-in: enter the code from your authenticator app, then save.');
+        }
+        throw new Error(updateError.message);
+      }
 
       // Signed in already, on the strength of the recovery link — so the
       // same landing as a normal sign-in, rather than sending somebody back
@@ -206,6 +239,24 @@ export default function ResetPasswordPage() {
           onChange={setConfirmation}
           autoComplete="new-password"
         />
+
+        {factorId && (
+          <div className="field">
+            <label htmlFor="code">Code from your authenticator app</label>
+            <input
+              id="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123 456"
+              maxLength={7}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+            />
+            <p className="field-note">Your account uses two-step sign-in, so a new password needs the current code.</p>
+          </div>
+        )}
 
         {error && (
           <p className="signin-error" role="alert">
