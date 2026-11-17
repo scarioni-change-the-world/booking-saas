@@ -5,6 +5,7 @@ import { foundingOfferOpen, trialEndsAt } from '../plans';
 import { DEFAULT_HOURS, DEFAULT_WEEKDAYS } from '../setup';
 import type { FunnelInput } from '../signup-funnel';
 import { recordBillingState } from './billing-events';
+import type { SiteRow } from '../site-hits';
 
 /**
  * The console's own data access — every query here is deliberately unscoped,
@@ -516,4 +517,27 @@ export async function loadPlatformTotals(input: {
     aiRows: ai.error ? [] : ((ai.data ?? []) as Array<{ kind: AiUsageKind; tenant_id: string }>),
     failures: { emails: emails.error ? 0 : (emails.count ?? 0), calendar: calendar.error ? 0 : (calendar.count ?? 0) },
   };
+}
+
+/**
+ * khloe.io's own counter (migration 0041) for a period and the one before.
+ * Null before the migration. These rows describe visits to khloe's own
+ * website, never anything inside a business.
+ */
+export async function loadSiteRows(
+  range: { from: Date; to: Date },
+  previous: { from: Date; to: Date },
+): Promise<{ rows: SiteRow[]; previous: SiteRow[] } | null> {
+  const client = __unsafeServiceClient();
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+  const read = (r: { from: Date; to: Date }) =>
+    client
+      .from('site_hits')
+      .select('day, kind, source, place, device, visitor')
+      .gte('day', day(r.from))
+      .lt('day', day(r.to))
+      .limit(200_000);
+  const [now, before] = await Promise.all([read(range), read(previous)]);
+  if (now.error || before.error) return null;
+  return { rows: (now.data ?? []) as SiteRow[], previous: (before.data ?? []) as SiteRow[] };
 }

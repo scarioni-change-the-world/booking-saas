@@ -133,6 +133,16 @@ export default function PrivacyPage() {
             attached to your booking, and is deleted within about a day. We do not use advertising or
             analytics cookies, and there is no tracking pixel anywhere in this app.
           </p>
+          <p>
+            <strong>On khloe.io, our own website:</strong> we count visits with our own counter, not a
+            third-party service. For each page seen, or when you press &ldquo;Start free&rdquo;, &ldquo;Sign
+            in&rdquo; or try the demo booking, we keep the page, the site you came from (its name only, for
+            example &ldquo;instagram.com&rdquo;), whether you are on a phone, tablet or computer, and your
+            country. To count a visitor once a day, your IP address and browser are turned into a code that
+            cannot be turned back and changes every day; the IP address and browser themselves are not kept.
+            Nothing is stored on your device, no cookies are used, and if your browser asks not to be
+            tracked (Do Not Track or Global Privacy Control), you are not counted at all.
+          </p>
         </Section>
 
         <Section title="Google Calendar data">

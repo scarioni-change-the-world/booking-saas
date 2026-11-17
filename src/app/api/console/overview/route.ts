@@ -1,7 +1,8 @@
 import { DateTime } from 'luxon';
 import { handleError, ok } from '@/lib/api';
 import { requirePlatformStaff } from '@/lib/auth';
-import { listAllTenants, loadPlatformTotals } from '@/lib/db/console';
+import { listAllTenants, loadPlatformTotals, loadSiteRows } from '@/lib/db/console';
+import { siteSummary } from '@/lib/site-hits';
 import { listBillingEvents } from '@/lib/db/billing-events';
 import { consoleOverview, overviewPeriod, type OverviewUnit } from '@/lib/console-overview';
 import { MONTHLY_LIMITS } from '@/lib/ai/limits';
@@ -29,10 +30,11 @@ export async function GET(request: Request) {
     const period = overviewPeriod(unit, offset, now);
     const monthStart = DateTime.fromJSDate(now, { zone: 'utc' }).startOf('month').toJSDate();
 
-    const [tenants, events, totals] = await Promise.all([
+    const [tenants, events, totals, siteRows] = await Promise.all([
       listAllTenants(),
       listBillingEvents(),
       loadPlatformTotals({ range: period, previous: period.previous, monthStart }),
+      loadSiteRows(period, period.previous),
     ]);
 
     // AI use this month, summed per feature; per business only to count those at the limit.
@@ -72,7 +74,9 @@ export async function GET(request: Request) {
       failures: totals.failures,
       foundingSeats: foundingSeats(),
     });
-    return ok({ overview });
+    // khloe.io's own counter (migration 0041); null before it exists.
+    const site = siteRows ? siteSummary(siteRows.rows, siteRows.previous) : null;
+    return ok({ overview, site });
   } catch (error) {
     return handleError(error);
   }

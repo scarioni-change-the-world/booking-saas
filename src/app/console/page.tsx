@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { SignupFunnel } from '@/components/console/SignupFunnel';
 import type { ConsoleOverview, OverviewUnit } from '@/lib/console-overview';
+import type { SiteSummary } from '@/lib/site-hits';
 
 const UNITS: Array<{ id: OverviewUnit; label: string }> = [
   { id: 'week', label: 'Week' },
@@ -46,13 +47,17 @@ export default function ConsoleOverviewPage() {
   const [unit, setUnit] = useState<OverviewUnit>('month');
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<ConsoleOverview | null>(null);
+  const [site, setSite] = useState<SiteSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const r = await adminFetchJson<{ overview: ConsoleOverview }>(`/api/console/overview?unit=${unit}&offset=${offset}`);
+      const r = await adminFetchJson<{ overview: ConsoleOverview; site: SiteSummary | null }>(
+        `/api/console/overview?unit=${unit}&offset=${offset}`,
+      );
       setData(r.overview);
+      setSite(r.site ?? null);
     } catch (cause) {
       setError((cause as Error).message);
     }
@@ -239,6 +244,58 @@ export default function ConsoleOverviewPage() {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          {/* 5. khloe.io: who visits, from where, and who presses Start free. */}
+          <section className="co-card co-wide" aria-labelledby="co-site">
+            <h2 id="co-site" className="co-title">
+              Website
+            </h2>
+            {!site ? (
+              <p className="co-calm">Counting starts once migration 0041 is in and the website sends its visits.</p>
+            ) : (
+              <div className="co-site">
+                <ul className="co-lines">
+                  <Line
+                    label="Visitors"
+                    value={String(site.visitors.now)}
+                    note={['each counted once a day', change(site.visitors.now, site.visitors.before)].filter(Boolean).join(' · ')}
+                  />
+                  <Line label="Pages seen" value={String(site.pageviews)} />
+                  <Line
+                    label="Pressed Start free"
+                    value={String(site.startFree.now)}
+                    note={[
+                      site.startFreeRate !== null ? `${site.startFreeRate}% of visitors` : null,
+                      change(site.startFree.now, site.startFree.before),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  />
+                  <Line
+                    label="Tried the demo booking"
+                    value={String(site.demo.started)}
+                    note={`${site.demo.booked} reached “You’re booked”`}
+                  />
+                </ul>
+                <div>
+                  <p className="co-sub">Where visitors came from</p>
+                  {site.sources.length === 0 ? (
+                    <p className="co-calm">No visits yet.</p>
+                  ) : (
+                    <ul className="co-lines">
+                      {site.sources.map((s) => (
+                        <Line key={s.host} label={s.host} value={String(s.n)} />
+                      ))}
+                    </ul>
+                  )}
+                  <p className="co-sub co-devices">
+                    {site.devices.phone} on a phone · {site.devices.computer} on a computer · {site.devices.tablet} on a tablet
+                  </p>
+                </div>
+              </div>
+            )}
+            <p className="co-sub co-foot">No cookies, no addresses kept. Visitors who ask not to be tracked are not counted.</p>
           </section>
 
           {/* 5. How new businesses get started: counts only. */}
