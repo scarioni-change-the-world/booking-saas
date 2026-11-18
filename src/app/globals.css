@@ -12873,5 +12873,10 @@ body:has(.bk-embedded) {
   margin: 0 0 22px;
 }
 .admin-app .biz-tabs .filter-chip {
+  /* Links, not buttons like the other switches: centre them the same way. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
   text-decoration: none;
 }
