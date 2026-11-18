@@ -32,12 +32,12 @@ interface PastSummary {
 }
 
 const PLACE: Record<SummaryPlace, { label: string; href: string } | null> = {
-  services: { label: 'Services', href: 'flow' },
-  week: { label: 'Week', href: 'week' },
-  people: { label: 'People', href: 'people' },
-  questions: { label: 'Questions', href: 'screening' },
+  services: { label: 'Your services', href: 'flow' },
+  week: { label: 'Your calendar', href: 'week' },
+  people: { label: 'Your customers', href: 'people' },
+  questions: { label: 'Your filters', href: 'screening' },
   messages: { label: 'Messages', href: 'messages' },
-  account: { label: 'Account', href: 'account' },
+  account: { label: 'Your business', href: 'account' },
   none: null,
 };
 
@@ -555,7 +555,7 @@ export default function ReportsPage() {
             {r.cancellations.past > 0 && r.cancellations.marked < r.cancellations.past && (
               <p className="wk-side-hint">
                 Came or didn’t come is marked for {r.cancellations.marked} of {r.cancellations.past} sessions.
-                Mark them on the <a href={`/admin/${slug}/week`}>Week</a> — open a past booking — to see
+                Mark them on <a href={`/admin/${slug}/week`}>Your calendar</a> — open a past booking — to see
                 no-shows clearly.
               </p>
             )}

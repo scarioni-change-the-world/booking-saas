@@ -47,6 +47,8 @@ export function ServiceQuestions({
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
+  // What the last save now does, said once under the list.
+  const [notice, setNotice] = useState<string | null>(null);
   /* Last month's answers, loaded once: the editor replays them under every
      change, so flipping where an answer leads shows its effect at once. */
   const [replayData, setReplayData] = useState<ReplayData | null | 'unavailable'>(null);
@@ -101,6 +103,7 @@ export function ServiceQuestions({
       })),
     );
     if (!ok) return;
+    setNotice(savedLine(draft));
     setDraft(EMPTY_FORM);
     setOwn(true);
     setAdding(false);
@@ -112,11 +115,15 @@ export function ServiceQuestions({
     const ok = await run(() =>
       adminFetchJson(`${base}/questions/${id}`, json('PATCH', formToPayload({ ...editForm, prompt: editForm.prompt.trim() }))),
     );
-    if (ok) setEditing(null);
+    if (ok) {
+      setNotice(savedLine(editForm));
+      setEditing(null);
+    }
   }
 
   function openEditor(q: Question) {
     setAdding(false);
+    setNotice(null);
     if (editing === q.id) return setEditing(null);
     setEditing(q.id);
     setEditForm(questionToForm(q));
@@ -176,10 +183,10 @@ export function ServiceQuestions({
   return (
     <>
       <section className="card svc-card">
-        <div className="admin-card-title">What people answer before they book</div>
+        <div className="admin-card-title">Your filters</div>
         <p className="svc-lede">
-          Asked in this order, before the calendar. Their answers reach you with the booking, and can send the
-          wrong enquiries to your next steps instead of booking.
+          Questions people answer before they see your calendar, in this order. Choose where each answer leads: on to
+          book, or to your next steps. Their answers reach you with the booking.
         </p>
         {error && (
           <p className="notice notice-error" role="alert">
@@ -188,7 +195,7 @@ export function ServiceQuestions({
         )}
         {!questions && !error && <p className="status">Loading…</p>}
         {questions && questions.length === 0 && !adding && (
-          <p className="svc-empty">No questions yet: people go straight to the calendar.</p>
+          <p className="svc-empty">No filters: everyone goes straight to the calendar.</p>
         )}
         {shared.length > 0 && (
           <>
@@ -203,9 +210,15 @@ export function ServiceQuestions({
           </>
         )}
 
+        {notice && (
+          <p className="sq-saved" role="status">
+            ✓ {notice}
+          </p>
+        )}
+
         {adding ? (
           <form className="sq-form sq-add" onSubmit={add}>
-            <p className="sq-group">A new question</p>
+            <p className="sq-group">A new filter</p>
             <QuestionForm form={draft} setForm={setDraft} idPrefix="sq-new" />
             <label className="sh-also">
               <input type="checkbox" checked={!own} onChange={(e) => setOwn(!e.target.checked)} />
@@ -216,7 +229,7 @@ export function ServiceQuestions({
             </label>
             <div className="fl-actions">
               <button type="submit" className="btn-primary" disabled={busy || !draft.prompt.trim()}>
-                {busy ? 'Adding…' : 'Add question'}
+                {busy ? 'Adding…' : 'Add filter'}
               </button>
               <button
                 type="button"
@@ -240,7 +253,7 @@ export function ServiceQuestions({
                 setAdding(true);
               }}
             >
-              + Add a question
+              + Add a filter
             </button>
             <AiSetupCard
               slug={slug}
@@ -259,7 +272,6 @@ export function ServiceQuestions({
           answer sends someone to your next steps, this is what they see. */}
       {anyElsewhere && <NextStepsHere slug={slug} questions={questions ?? []} />}
 
-      <ClosingQuestion slug={slug} />
     </>
   );
 }
@@ -298,103 +310,13 @@ function NextStepsHere({ slug, questions }: { slug: string; questions: Question[
   );
 }
 
-/** The last box on the booking form, for every service, in the business's words. */
-function ClosingQuestion({ slug }: { slug: string }) {
-  const base = `/api/admin/${slug}/settings`;
-  const [saved, setSaved] = useState<{ question: string; required: boolean } | null>(null);
-  const [question, setQuestion] = useState('');
-  const [required, setRequired] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [business, setBusiness] = useState('');
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [r, me] = await Promise.all([
-          adminFetchJson<{ settings: { closingQuestion?: string | null; closingRequired?: boolean } | null }>(base),
-          adminFetchJson<{ name?: string }>(`/api/admin/${slug}/me`).catch(() => ({ name: '' })),
-        ]);
-        const s = { question: r.settings?.closingQuestion ?? '', required: !!r.settings?.closingRequired };
-        setSaved(s);
-        setQuestion(s.question);
-        setRequired(s.required);
-        setBusiness(me.name ?? '');
-      } catch (cause) {
-        setError((cause as Error).message);
-      }
-    })();
-  }, [base, slug]);
-
-  const dirty = !!saved && (question.trim() !== saved.question || required !== saved.required);
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    setDone(false);
-    try {
-      await adminFetchJson(base, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ closingQuestion: question.trim() || null, closingRequired: required }),
-      });
-      setSaved({ question: question.trim(), required });
-      setDone(true);
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const fallback = `Anything ${business || 'you'} should know?`;
-  return (
-    <form className="card svc-card" onSubmit={save}>
-      <div className="admin-card-title">The last box on the booking form</div>
-      <p className="svc-lede">
-        Under their name and email, for every service. Ask it your way, or leave it empty for “{fallback}”.
-      </p>
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="field">
-        <label htmlFor="closing-q">Your question</label>
-        <input
-          id="closing-q"
-          type="text"
-          maxLength={200}
-          placeholder={fallback}
-          value={question}
-          onChange={(e) => {
-            setQuestion(e.target.value);
-            setDone(false);
-          }}
-        />
-      </div>
-      <label className="sh-also">
-        <input
-          type="checkbox"
-          checked={required}
-          onChange={(e) => {
-            setRequired(e.target.checked);
-            setDone(false);
-          }}
-        />
-        <span>
-          Must be answered
-          <small>{required ? 'People cannot book without answering it.' : 'Shown as optional.'}</small>
-        </span>
-      </label>
-      <div className="fl-actions">
-        <button type="submit" className="btn-primary" disabled={busy || !dirty}>
-          {busy ? 'Saving…' : 'Save'}
-        </button>
-        {done && !dirty && <span className="ms-saved">Saved.</span>}
-      </div>
-    </form>
-  );
+/** What a filter does once saved, in one sentence. */
+function savedLine(form: FormState): string {
+  const prompt = `“${form.prompt.trim()}”`;
+  if (form.kind === 'text') return `Saved. ${prompt} is asked, and the answer reaches you; it filters nobody.`;
+  const options = formToPayload(form).options;
+  const away = options.filter((o) => o.outcomePathType === 'other').map((o) => `“${o.label}”`);
+  if (away.length === 0) return `Saved. Every answer to ${prompt} goes on to book.`;
+  if (away.length === options.length) return `Saved. Every answer to ${prompt} goes to your next steps, so nobody can book.`;
+  return `Saved. People who answer ${away.join(' or ')} to ${prompt} see your next steps.`;
 }

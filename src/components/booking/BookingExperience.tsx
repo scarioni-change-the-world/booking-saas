@@ -560,20 +560,6 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
               <p className="bk-hint">Your confirmation and any changes go here.</p>
             </div>
 
-            {/* The last box, in the business's own words when it has some
-                (Services → a service → Questions), and required when it chose. */}
-            <div className="field">
-              <label htmlFor="notes">
-                {config?.closing?.question ?? `Anything ${config?.name ?? 'we'} should know?`}
-              </label>
-              <textarea
-                id="notes"
-                required={!!config?.closing?.required}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-              {!config?.closing?.required && <p className="bk-hint">Optional.</p>}
-            </div>
 
             <p className="bk-privacy">
               Your details are used to arrange and manage this booking, and are shared with{' '}
@@ -711,7 +697,7 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
             </div>
             {notes.trim() !== '' && (
               <div className="bk-review-row">
-                <dt>{config?.closing?.question ? 'Your answer' : 'Your note'}</dt>
+                <dt>Your note</dt>
                 <dd className="bk-review-note">{notes}</dd>
               </div>
             )}

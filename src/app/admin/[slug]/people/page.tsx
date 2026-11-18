@@ -770,7 +770,7 @@ function HistoryItem({ event, slug, timezone }: { event: PersonEvent; slug: stri
             {b.status === 'cancelled' ? ' · cancelled' : ''}
           </small>
           <a className="pp-hist-link" href={`/admin/${slug}/week?from=${date}`}>
-            On the Week
+            On your calendar
           </a>
         </div>
       </div>

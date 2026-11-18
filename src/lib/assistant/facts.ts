@@ -65,7 +65,7 @@ export async function loadAssistantFacts(tenant: TenantRow, scope: TenantScope) 
         minutes: x.durationMinutes,
         price: x.priceMinor === null ? null : x.priceMinor / 10 ** digits,
         programmeSessions: x.bookingMode === 'pack' ? x.packSize : null,
-        status: !x.active ? 'paused' : x.availableToProspects || x.availableToExistingClients ? 'taking bookings' : 'not offered to anyone yet',
+        status: !x.active ? 'paused' : x.availableToProspects || x.availableToExistingClients ? 'taking bookings' : 'not finished yet (not offered)',
         offeredTo: [x.availableToProspects && 'new clients (booking page)', x.availableToExistingClients && 'existing clients (own link)']
           .filter(Boolean)
           .join(' and ') || 'nobody',

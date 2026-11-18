@@ -42,7 +42,7 @@ function describe(action: AssistantAction, answer: Answer): { title: string; det
     case 'add_service':
       return {
         title: `Add “${action.name}”`,
-        detail: `${lengthWords(action.durationMinutes)} · ${price(action.price)} · not offered yet`,
+        detail: `${lengthWords(action.durationMinutes)} · ${price(action.price)} · not finished yet`,
       };
     case 'update_service': {
       const parts = [
@@ -207,7 +207,7 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
       {action.type === 'time_off' && inside !== null && inside > 0 && state !== 'done' && (
         <p className="ak-card-warn">
           {inside === 1 ? '1 appointment is' : `${inside} appointments are`} already booked on these days. They stay: you
-          can see {inside === 1 ? 'it' : 'them'} on the Week.
+          can see {inside === 1 ? 'it' : 'them'} on your calendar.
         </p>
       )}
       {error && (
@@ -217,8 +217,8 @@ function ActionCard({ slug, action, answer }: { slug: string; action: AssistantA
       )}
       {state === 'done' && action.type === 'add_service' && (
         <p className="ak-card-note">
-          It is not on your booking page yet. Open it, check the details, then press “Offer it” at the top of its
-          page.
+          It is not on your booking page yet. Open it to finish its three steps: about it, your filters, who can
+          book. Finish puts it on your booking page.
         </p>
       )}
       {state === 'done' ? (

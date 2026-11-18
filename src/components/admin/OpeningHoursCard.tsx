@@ -51,9 +51,9 @@ function problem(windows: Window[]): string | null {
 /**
  * The usual weekly opening hours, as a plain form: each day open or closed,
  * with its hours, and more than one range for a day with a break. The same
- * hours the Week's "Paint usual hours" edits; this is the place people look
+ * hours, set only here, in Your business; this is the place people look
  * for them first. One-off changes (a closed day, a late evening) stay on the
- * Week, on that date.
+ * calendar, on that date.
  */
 export function OpeningHoursCard({
   slug,
@@ -242,7 +242,7 @@ export function OpeningHoursCard({
         {done && !dirty && <span className="ms-saved">Saved.</span>}
       </div>
       <p className="field-note">
-        A day off, a holiday or different hours on one date: set it on the <a href={weekHref}>Week</a>, on that day.
+        A day off, a holiday or different hours on one date: set it on <a href={weekHref}>Your calendar</a>, on that day.
       </p>
     </form>
   );

@@ -12813,3 +12813,101 @@ body:has(.bk-embedded) {
   width: 140px;
   flex: 0 0 auto;
 }
+/* What a saved filter now does: said once, quietly. */
+.sq-saved {
+  margin: 4px 0 10px;
+  font-size: 0.86rem;
+  color: var(--positive, var(--emphasis-ink));
+}
+/* ── A service in three steps ── */
+.admin-app .svc-steps .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.svc-step-n {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--soft-border);
+  color: var(--ink);
+}
+.svc-step-n.is-done {
+  background: var(--selected-mineral);
+  color: var(--emphasis-ink);
+}
+.svc-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 18px 0 0;
+}
+.svc-who {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.svc-who-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: var(--radius-sm);
+}
+.svc-who-row small {
+  display: block;
+  color: var(--faint);
+}
+.svc-ready {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--selected-mineral);
+  display: grid;
+  gap: 8px;
+}
+.svc-ready-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.svc-ready-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.svc-ready-sub {
+  margin: 0;
+  color: var(--muted);
+}
+.svc-ready-link {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+.svc-ready .svc-next {
+  margin-top: 4px;
+}
+/* Your business: its four parts, the pill switch, as links. */
+.admin-app .biz-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  margin: 0 0 22px;
+}
+.admin-app .biz-tabs .filter-chip {
+  text-decoration: none;
+}

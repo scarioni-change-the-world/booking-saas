@@ -539,7 +539,7 @@ function WhenEditor({
         </>
       )}
       <p className="field-note">
-        <a href={`/admin/${slug}/account#opening-hours`}>Your opening hours</a> are for the whole business, on Account.
+        <a href={`/admin/${slug}/account#opening-hours`}>Your opening hours</a> are for the whole business, in Your business.
       </p>
     </SettingForm>
   );

@@ -82,7 +82,7 @@ export function DeleteService({
           <div className="fl-actions">
             {check.upcoming > 0 && (
               <a className="btn-secondary" href={`/admin/${slug}/week?view=list`}>
-                See them on the Week
+                See them on your calendar
               </a>
             )}
             {check.owedSessions > 0 && (

@@ -85,7 +85,6 @@ export default function AccountPage() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const a = (path: string) => `/admin/${slug}/${path}`;
 
   return (
     <>
@@ -102,12 +101,6 @@ export default function AccountPage() {
         <>
           <SettingsPanel key={hashKey} label="Your account" settings={accountSettings(slug, account, hours, load, loadHours)} initial={fromHash()} />
 
-          {/* Everything else lives where it takes effect. */}
-          <p className="acct-elsewhere">
-            Elsewhere: <a href={a('week')}>Week</a> for days off, notice and your calendar ·{' '}
-            <a href={a('share')}>Share</a> for your link and website code · <a href={a('messages')}>Messages</a> for
-            emails and where replies land · <a href={a('flow')}>Services</a> for each service’s price and length.
-          </p>
         </>
       )}
     </>

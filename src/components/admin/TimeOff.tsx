@@ -244,7 +244,7 @@ export function TimeOffPanel({
                   {preview.bookings.length === 1
                     ? '1 booking falls on these days. It stays booked'
                     : `${preview.bookings.length} bookings fall on these days. They stay booked`}{' '}
-                  — open each one on the Week to move or cancel it.
+                  — open each one on your calendar to move or cancel it.
                 </p>
                 <ul>
                   {preview.bookings.slice(0, 6).map((b) => (

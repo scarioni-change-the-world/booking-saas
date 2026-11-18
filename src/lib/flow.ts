@@ -328,7 +328,7 @@ export function settingsNeeds(lane: Lane): Stage[] {
 
 /** Whether people can book this service now, in two or three words. */
 export function laneState(model: FlowModel, lane: Lane): LaneState {
-  if (!lane.fromPage && !lane.fromClients) return { label: 'Not offered yet', live: false };
+  if (!lane.fromPage && !lane.fromClients) return { label: 'Not finished yet', live: false };
   if (lane.blocking.length > 0 || model.calendar.noHours) return { label: 'Not bookable yet', live: false };
   return { label: 'Taking bookings', live: true };
 }
@@ -440,7 +440,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   if (!lane.fromPage && lane.fromClients) {
     questions = {
       id: 'questions',
-      label: 'Questions',
+      label: 'Your filters',
       short: 'Skipped',
       flag: null,
       title: 'No questions',
@@ -453,7 +453,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
   } else if (!asks) {
     questions = {
       id: 'questions',
-      label: 'Questions',
+      label: 'Your filters',
       short: 'None asked',
       flag: null,
       title: 'No questions',
@@ -492,7 +492,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
     }
     questions = {
       id: 'questions',
-      label: 'Questions',
+      label: 'Your filters',
       short: `${n} asked`,
       flag: model.elsewhere.said ? null : 'Next step not written',
       title: `They answer ${n} ${n === 1 ? 'question' : 'questions'}`,
@@ -555,7 +555,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
       label: lane.bookedPeople === 1 ? 'person' : 'people',
       sub: extra ? `${lane.booked} appointments` : undefined,
     },
-    change: { label: 'Change', href: `${settings}?tab=messages` },
+    change: { label: 'Change', href: 'messages' },
     notes: [
       ...(model.booked.flag
         ? [{ tone: 'need' as const, text: `${model.booked.flag} in the last 30 days.`, action: { label: 'See which', href: 'messages' } }]

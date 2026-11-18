@@ -15,18 +15,18 @@
  */
 
 export const PLACES = {
-  services: { label: 'Services', href: 'flow' },
-  week: { label: 'Week', href: 'week' },
-  calendar: { label: 'Your calendar', href: 'week#calendar' },
-  people: { label: 'People', href: 'people' },
+  services: { label: 'Your services', href: 'flow' },
+  week: { label: 'Your calendar', href: 'week' },
+  calendar: { label: 'Your connected calendar', href: 'week#calendar' },
+  people: { label: 'Your customers', href: 'people' },
   messages: { label: 'Messages', href: 'messages' },
-  questions: { label: 'Questions', href: 'screening' },
+  questions: { label: 'Your filters', href: 'screening' },
   reports: { label: 'Reports', href: 'reports' },
   share: { label: 'Share', href: 'share' },
-  account: { label: 'Account', href: 'account' },
+  account: { label: 'Your business', href: 'account' },
   hours: { label: 'Opening hours', href: 'account#opening-hours' },
   look: { label: 'Your booking page’s look', href: 'account#booking-page' },
-  payments: { label: 'Getting paid', href: 'account' },
+  payments: { label: 'Getting paid', href: 'account#payments' },
 } as const;
 
 export type PlaceId = keyof typeof PLACES | 'service';

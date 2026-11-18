@@ -7,36 +7,29 @@ import { supabaseBrowser } from "@/lib/supabase-browser";
 import { ServiceMarksProvider } from "@/components/admin/ServiceMarks";
 
 /**
- * Three places, and the account.
+ * Four places, said as the owner's: Your services, Your calendar, Your
+ * customers, Your business. The first three are the everyday work; the
+ * fourth gathers what is set once or looked at now and then (the business's
+ * settings, its booking page and sharing, its messages, its reports) under
+ * one name, with a pill switch between them. Seven places became four.
  *
- * The sidebar listed eight screens, and every one of them answered one of
- * three questions: how does somebody reach me, when am I available, and who
- * has been through. Each question has one place now — Services (the Flow
- * screen), Week, People — and what is left is housekeeping, in Account.
- * See docs/roadmap.md. The first is labelled "Services", not "Flow": it is
- * what somebody looking for their services clicks, and its page is titled
- * "Your services", so the bar and the page say the same word.
- *
- * Messages — every email a client gets, and the words on the page — is a
- * place of its own too: reached only through Flow, it was the screen people
- * could not find when they wanted to change a confirmation email.
- *
- * Four still fit a phone's width as tabs, so the phone gets the same bar
- * the desktop does rather than a menu to open first. Account and signing
- * out sit at the right, and under a menu button on a phone.
- *
- * A service's own settings and Questions are still pages of their own,
- * reached from the part of a service's flow they belong to. While on one,
- * Services stays the lit place and a way back to it sits above the page,
- * so nobody is somewhere the bar does not explain.
+ * Opening hours are the business's, in Your business; Your calendar holds
+ * only the exceptions (days off, a different day, notice, the connected
+ * calendar).
  */
 const PLACES = [
-  { href: "flow", label: "Services" },
-  { href: "week", label: "Week" },
-  { href: "people", label: "People" },
+  { href: "flow", label: "Your services" },
+  { href: "week", label: "Your calendar" },
+  { href: "people", label: "Your customers" },
+  { href: "account", label: "Your business" },
+];
+
+/** The parts of Your business, in the order of its switch. */
+export const BUSINESS_PARTS = [
+  { href: "account", label: "Settings" },
+  { href: "share", label: "Share" },
   { href: "messages", label: "Messages" },
   { href: "reports", label: "Reports" },
-  { href: "share", label: "Share" },
 ];
 
 /** Routes that are parts of the flow, opened from it. */
@@ -61,8 +54,9 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
     return pathname === base || pathname.startsWith(`${base}/`);
   };
   const inFlowPart = FLOW_PARTS.some(under);
+  const businessPart = BUSINESS_PARTS.find((p) => under(p.href)) ?? null;
   const isActive = (href: string) =>
-    under(href) || (href === "flow" && inFlowPart);
+    under(href) || (href === "flow" && inFlowPart) || (href === "account" && !!businessPart);
 
   async function signOut() {
     await supabaseBrowser().auth.signOut();
@@ -90,13 +84,6 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
           </nav>
           <div className="shell-account">
             <span className="shell-tenant">{tenantName}</span>
-            <a
-              href={`/admin/${slug}/account`}
-              className={`shell-link${under("account") ? " active" : ""}`}
-              aria-current={under("account") ? "page" : undefined}
-            >
-              Account
-            </a>
             <button
               type="button"
               className="btn-link shell-link"
@@ -108,7 +95,7 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
           <button
             type="button"
             className="shell-menu-btn"
-            aria-label={menuOpen ? "Close account menu" : "Open account menu"}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
           >
@@ -133,9 +120,6 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
         {menuOpen && (
           <div className="shell-menu">
             <span className="shell-tenant">{tenantName}</span>
-            <a href={`/admin/${slug}/account`} className="shell-link">
-              Account
-            </a>
             <button
               type="button"
               className="btn-link shell-link"
@@ -152,8 +136,24 @@ export default function AdminShell({ slug, tenantName, children }: Props) {
             the first version, in small grey type, was missed. */}
           {inFlowPart && (
             <a className="shell-back" href={`/admin/${slug}/flow`}>
-              <span aria-hidden="true">←</span> Back to Services
+              <span aria-hidden="true">←</span> Back to your services
             </a>
+          )}
+          {/* Your business: its four parts, one pill switch above each. */}
+          {businessPart && (
+            <nav className="wk-mode biz-tabs" aria-label="Your business">
+              {BUSINESS_PARTS.map((p) => (
+                <a
+                  key={p.href}
+                  href={`/admin/${slug}/${p.href}`}
+                  className="filter-chip"
+                  aria-pressed={p === businessPart}
+                  aria-current={p === businessPart ? "page" : undefined}
+                >
+                  {p.label}
+                </a>
+              ))}
+            </nav>
           )}
           {children}
         </main>

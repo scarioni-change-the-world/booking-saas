@@ -793,7 +793,7 @@ function RatingSwitch({ slug, on, onSaved }: { slug: string; on: boolean; onSave
         <input type="checkbox" checked={on} disabled={busy} onChange={() => void flip()} />
         <span>
           <strong>{on ? 'On — clients are asked after each session' : 'Off — nobody is asked'}</strong>
-          <small>Their answers appear in Reports, by service, and beside the booking on the Week.</small>
+          <small>Their answers appear in Reports, by service, and beside the booking on your calendar.</small>
         </span>
       </label>
       {error && (

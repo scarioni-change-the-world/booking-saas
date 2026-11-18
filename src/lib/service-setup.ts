@@ -124,7 +124,7 @@ function questionsStage(facts: ServiceFacts): Stage {
   if (total === 0) {
     return {
       id: 'questions',
-      label: 'Questions',
+      label: 'Your filters',
       purpose: 'What you need to know before you will open your calendar.',
       done: false,
       note: 'Nobody is asked anything. This service is a calendar with a booking form in front of it.',
@@ -136,7 +136,7 @@ function questionsStage(facts: ServiceFacts): Stage {
 
   return {
     id: 'questions',
-    label: 'Questions',
+    label: 'Your filters',
     purpose: 'What you need to know before you will open your calendar.',
     done: true,
     note:

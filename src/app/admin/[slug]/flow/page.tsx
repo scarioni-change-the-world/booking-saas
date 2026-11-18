@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
-import { formatMoney, parseOptionalMoney, priceRefusal, toMoneyInput } from '@/lib/money';
-import { lengthText } from '@/components/admin/ServiceDetails';
+import { formatMoney, parseOptionalMoney, toMoneyInput } from '@/lib/money';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { share } from '@/lib/enquiry-analysis';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
@@ -29,7 +28,7 @@ import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-
 import { DeleteService } from '@/components/admin/DeleteService';
 import { openAskKhloe } from '@/components/admin/AskKhloe';
 import { SiteDraftPanel } from '@/components/admin/SiteDraft';
-import { SERVICE_TYPES, hoursSummary, serviceTypeBody, type HoursRule } from '@/lib/setup';
+import { SERVICE_TYPES, serviceTypeBody, type HoursRule } from '@/lib/setup';
 
 interface NextUp {
   id: string;
@@ -787,12 +786,12 @@ function StepDetail({
         {data.syncFailures > 0 && (
           <p className="wk-warning">
             {data.syncFailures === 1 ? '1 booking is' : `${data.syncFailures} bookings are`} not in your Google
-            Calendar. They are outlined in red on the Week.
+            Calendar. They are outlined in red on Your calendar.
           </p>
         )}
         <div className="wk-actions">
           <a className="btn-secondary" href={a('week')}>
-            Open the Week
+            Open your calendar
           </a>
           {data.calendarStatus !== 'active' && <a href={a('week#calendar')}>Connect Google or Outlook</a>}
         </div>
@@ -827,9 +826,9 @@ function StepDetail({
       )}
       <div className="wk-actions">
         <a className="btn-secondary" href={a('week')}>
-          Open the Week
+          Open your calendar
         </a>
-        <a href={a(`sessions/${lane.id}?tab=messages`)}>What they’re told</a>
+        <a href={a('messages')}>What they’re told</a>
       </div>
     </div>
   );
@@ -968,7 +967,6 @@ function AddService({
   // propose it (nothing is saved until it is confirmed in her panel).
   const [way, setWay] = useState<'self' | 'khloe' | 'site'>('self');
   const [described, setDescribed] = useState('');
-  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [typeId, setTypeId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [minutes, setMinutes] = useState('60');
@@ -991,29 +989,20 @@ function AddService({
   const n = Number(minutes);
   const lengthOk = Number.isInteger(n) && n >= 5 && n <= 1440;
   const parsedPrice = parseOptionalMoney(price, currency);
-  const priceText = !parsedPrice.ok
-    ? price
-    : parsedPrice.minor === null
-      ? 'no price shown'
-      : parsedPrice.minor === 0
-        ? 'Free'
-        : formatMoney(parsedPrice.minor, currency);
-  const hoursText = hours && hours.length > 0 ? hoursSummary(hours) : null;
 
   async function create() {
-    if (!name.trim()) return setStep(1);
-    if (!lengthOk) return setStep(2);
-    if (!parsedPrice.ok) {
-      setStep(2);
-      return setError(priceRefusal(price, currency));
-    }
+    if (!name.trim()) return;
     setSaving(true);
     setError(null);
     try {
       const result = await adminFetchJson<{ eventType: { id: string } }>(`/api/admin/${slug}/event-types`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...serviceTypeBody(type, name), durationMinutes: n, priceMinor: parsedPrice.minor }),
+        body: JSON.stringify({
+          ...serviceTypeBody(type, name),
+          durationMinutes: lengthOk ? n : 60,
+          priceMinor: parsedPrice.ok ? parsedPrice.minor : null,
+        }),
       });
       router.push(`/admin/${slug}/sessions/${result.eventType.id}`);
     } catch (cause) {
@@ -1034,24 +1023,6 @@ function AddService({
       </div>
     );
   }
-
-  /* Three steps side by side: the finished ones read as their answer, the
-     current one is open, the next waits. Nothing moves as you go. */
-  const head = (k: 1 | 2 | 3, title: string, answer: string) => (
-    <button
-      type="button"
-      className="ns-head"
-      aria-current={step === k ? 'step' : undefined}
-      disabled={k > step && !(k === 2 && name.trim()) && !(k === 3 && name.trim() && lengthOk)}
-      onClick={() => setStep(k)}
-    >
-      <span className="ns-n" aria-hidden="true">
-        {k < step ? '✓' : k}
-      </span>
-      <span className="ns-title">{title}</span>
-      {step !== k && answer && <span className="ns-answer">{answer}</span>}
-    </button>
-  );
 
   return (
     <section className="card ns" id="add-service" aria-label="A new service">
@@ -1119,132 +1090,50 @@ function AddService({
           </div>
         </form>
       ) : (
-      <ol className="ns-steps">
-        <li className={`ns-step${step === 1 ? ' is-open' : step > 1 ? ' is-done' : ''}`}>
-          {head(1, 'What it is', name.trim())}
-          {step === 1 && (
-            <form
-              className="ns-body"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (name.trim()) setStep(2);
-              }}
+      /* Only what it is and its name: the rest (length, price, when, its
+         filters, who can book) are the three steps on its own page, which
+         this opens on. Asking for length here too was the same question
+         twice. */
+      <form
+        className="ns-body ns-one"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void create();
+        }}
+      >
+        <div className="ns-kinds" role="radiogroup" aria-label="What kind of service">
+          {SERVICE_TYPES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={typeId === t.id}
+              className="filter-chip"
+              aria-pressed={typeId === t.id}
+              onClick={() => choose(t.id)}
             >
-              <div className="ns-kinds" role="radiogroup" aria-label="What kind of service">
-                {SERVICE_TYPES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={typeId === t.id}
-                    className="filter-chip"
-                    aria-pressed={typeId === t.id}
-                    onClick={() => choose(t.id)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <div className="field">
-                <label htmlFor="ns-name">Its name</label>
-                <input
-                  id="ns-name"
-                  type="text"
-                  placeholder="e.g. Website design"
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <button type="submit" className="btn-primary" disabled={!name.trim()}>
-                Next
-              </button>
-            </form>
-          )}
-        </li>
-
-        <li className={`ns-step${step === 2 ? ' is-open' : step > 2 ? ' is-done' : ''}`}>
-          {head(2, 'Length and price', step > 2 ? `${lengthText(n)} · ${priceText}` : '')}
-          {step === 2 && (
-            <form
-              className="ns-body"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!parsedPrice.ok) return setError(priceRefusal(price, currency));
-                setError(null);
-                if (lengthOk) setStep(3);
-              }}
-            >
-              <div className="field">
-                <label htmlFor="ns-length">Length</label>
-                <div className="sp-inline">
-                  <input
-                    id="ns-length"
-                    type="number"
-                    min={5}
-                    max={1440}
-                    step={5}
-                    className="sp-short"
-                    autoFocus
-                    value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
-                  />
-                  <span>minutes</span>
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="ns-price">Price</label>
-                <div className="sp-inline">
-                  <input
-                    id="ns-price"
-                    type="text"
-                    inputMode="decimal"
-                    className="sp-short"
-                    placeholder="Not shown"
-                    value={price}
-                    onChange={(e) => {
-                      setPrice(e.target.value);
-                      setError(null);
-                    }}
-                  />
-                  <span>{currency}</span>
-                </div>
-                <p className="field-note">Empty shows no price; 0 shows Free.</p>
-              </div>
-              <button type="submit" className="btn-primary" disabled={!lengthOk}>
-                Next
-              </button>
-            </form>
-          )}
-        </li>
-
-        <li className={`ns-step${step === 3 ? ' is-open' : ''}`}>
-          {head(3, 'When', '')}
-          {step === 3 && (
-            <div className="ns-body">
-              <p className="ns-say">
-                {hoursText ? (
-                  <>
-                    Whenever you&apos;re open: <b>{hoursText}</b>. To offer it only on some days or times, choose
-                    them on its page once it is added.
-                  </>
-                ) : (
-                  'You have no opening hours yet. They are your business’s, on Account: add the service now and set them there.'
-                )}
-              </p>
-              {!hoursText && (
-                <a className="btn-link" href={`/admin/${slug}/account#opening-hours`}>
-                  Set your opening hours
-                </a>
-              )}
-              <button type="button" className="btn-primary" disabled={saving} onClick={() => void create()}>
-                {saving ? 'Adding…' : 'Add the service'}
-              </button>
-            </div>
-          )}
-          {step < 3 && <p className="ns-wait">{hoursText ?? 'Your opening hours'}</p>}
-        </li>
-      </ol>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="field">
+          <label htmlFor="ns-name">Its name</label>
+          <input
+            id="ns-name"
+            type="text"
+            placeholder="e.g. Website design"
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="sp-keys">
+          <button type="submit" className="btn-primary" disabled={!name.trim() || saving}>
+            {saving ? 'Adding…' : 'Add it and set it up'}
+          </button>
+          <span className="field-note">Next: its length, price and when; your filters; who can book.</span>
+        </div>
+      </form>
       )}
     </section>
   );

@@ -146,7 +146,7 @@ describe('laneState', () => {
     const live = buildFlow(input({}));
     expect(laneState(live, live.lanes[0]!)).toEqual({ label: 'Taking bookings', live: true });
     const nobody = buildFlow(input({ services: [service({ availableToProspects: false })] }));
-    expect(laneState(nobody, nobody.lanes[0]!).label).toBe('Not offered yet');
+    expect(laneState(nobody, nobody.lanes[0]!).label).toBe('Not finished yet');
     const noHours = buildFlow(input({ availabilityRuleCount: 0 }));
     expect(laneState(noHours, noHours.lanes[0]!).label).toBe('Not bookable yet');
   });
@@ -267,7 +267,7 @@ describe('the chips', () => {
   };
 
   it('names each chip in two or three words', () => {
-    expect(chips().map((s) => s.label)).toEqual(['Your page', 'Questions', 'Choose a time', 'Booked']);
+    expect(chips().map((s) => s.label)).toEqual(['Your page', 'Your filters', 'Choose a time', 'Booked']);
   });
 
   it('puts a few words on the chip where something needs doing, and nowhere else', () => {

@@ -166,7 +166,7 @@ export function SiteDraftPanel({
     <div className="ns-site">
       <p className="fl-type-label">
         From {found.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
-        <small>Tick what to add, and correct anything khloe read wrong. They start not offered: you offer each one from its page.</small>
+        <small>Tick what to add, and correct anything khloe read wrong. Each one waits for you to finish its three steps on its page.</small>
       </p>
 
       {rows.length === 0 ? (
@@ -246,7 +246,7 @@ export function SiteDraftPanel({
           <span>
             Use these opening hours:{' '}
             {hoursSummary(hours.days.map((d) => ({ weekday: d, startTime: hours.start, endTime: hours.end })))}
-            <small>They replace your current ones. Change them any time on Account.</small>
+            <small>They replace your current ones. Change them any time in Your business.</small>
           </span>
         </label>
       )}
