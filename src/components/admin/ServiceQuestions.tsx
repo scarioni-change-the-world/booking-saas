@@ -2,31 +2,25 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { adminFetchJson } from '@/lib/admin-fetch';
-
-interface Question {
-  id: string;
-  prompt: string;
-  kind: 'text' | 'yes_no' | 'single_choice';
-  required: boolean;
-  eventTypeId: string | null;
-}
-
-const KIND_LABEL: Record<Question['kind'], string> = {
-  text: 'Written answer',
-  yes_no: 'Yes or no',
-  single_choice: 'Choice',
-};
+import {
+  EMPTY_FORM,
+  QuestionForm,
+  formToPayload,
+  questionSummary,
+  questionToForm,
+  routesElsewhere,
+  type FormState,
+  type Question,
+} from '@/components/admin/QuestionForm';
 
 /**
  * A service's Questions tab: what people answer before they book it, in
- * the order they are asked, editable right here. Shared questions (asked
- * for every service) and this service's own are told apart, since changing
- * a shared one changes it everywhere.
- *
- * The everyday edits are here: add a question with a written or yes/no
- * answer, reword one, make it optional, remove it. Choices, and answers
- * that send people elsewhere instead of to the calendar, stay on the
- * Questions page, linked: they are rules, not just words.
+ * the order they are asked, edited right here with the same editor as the
+ * Questions page. That includes where each answer leads: on to the
+ * calendar, or to your next steps instead, which is how a business keeps
+ * the wrong enquiries from booking. Shared questions (asked for every
+ * service) and this service's own are told apart, since changing a shared
+ * one changes it everywhere.
  *
  * Below them, the last box on the booking form (migration 0039), in the
  * business's own words.
@@ -46,9 +40,10 @@ export function ServiceQuestions({
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ prompt: '', kind: 'text' as 'text' | 'yes_no', required: true, own: true });
+  const [draft, setDraft] = useState<FormState>(EMPTY_FORM);
+  const [own, setOwn] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
+  const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -64,15 +59,17 @@ export function ServiceQuestions({
     void load();
   }, [load]);
 
-  async function run(work: () => Promise<unknown>) {
+  async function run(work: () => Promise<unknown>): Promise<boolean> {
     setBusy(true);
     setError(null);
     try {
       await work();
       await load();
       onChanged();
+      return true;
     } catch (cause) {
       setError((cause as Error).message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -87,93 +84,80 @@ export function ServiceQuestions({
   async function add(event: React.FormEvent) {
     event.preventDefault();
     if (!draft.prompt.trim()) return;
-    await run(() =>
+    const ok = await run(() =>
       adminFetchJson(`${base}/questions`, json('POST', {
-        prompt: draft.prompt.trim(),
-        kind: draft.kind,
-        required: draft.required,
-        ...(draft.own ? { eventTypeId: serviceId } : {}),
-        // A yes/no added here only collects the answer: both lead to the calendar.
-        ...(draft.kind === 'yes_no'
-          ? { options: [{ outcomePathType: 'meeting' }, { outcomePathType: 'meeting' }] }
-          : {}),
+        ...formToPayload({ ...draft, prompt: draft.prompt.trim() }),
+        ...(own ? { eventTypeId: serviceId } : {}),
       })),
     );
-    setDraft({ prompt: '', kind: 'text', required: true, own: true });
+    if (!ok) return;
+    setDraft(EMPTY_FORM);
+    setOwn(true);
     setAdding(false);
   }
 
+  async function save(event: React.FormEvent, id: string) {
+    event.preventDefault();
+    if (!editForm.prompt.trim()) return;
+    const ok = await run(() =>
+      adminFetchJson(`${base}/questions/${id}`, json('PATCH', formToPayload({ ...editForm, prompt: editForm.prompt.trim() }))),
+    );
+    if (ok) setEditing(null);
+  }
+
+  function openEditor(q: Question) {
+    setAdding(false);
+    if (editing === q.id) return setEditing(null);
+    setEditing(q.id);
+    setEditForm(questionToForm(q));
+  }
+
   const shared = questions?.filter((q) => q.eventTypeId === null) ?? [];
-  const own = questions?.filter((q) => q.eventTypeId === serviceId) ?? [];
+  const mine = questions?.filter((q) => q.eventTypeId === serviceId) ?? [];
+  const anyElsewhere =
+    (questions ?? []).some((q) => q.options.some((o) => o.outcomePathType === 'other')) ||
+    (adding && routesElsewhere(draft)) ||
+    (editing !== null && routesElsewhere(editForm));
 
   const row = (q: Question) => (
-    <li key={q.id} className="sq-row">
-      {editing === q.id ? (
-        <form
-          className="sq-edit"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!editText.trim()) return;
-            void run(() => adminFetchJson(`${base}/questions/${q.id}`, json('PATCH', { prompt: editText.trim() })));
-            setEditing(null);
+    <li key={q.id} className={`sq-row${editing === q.id ? ' is-open' : ''}`}>
+      <div className="sq-main">
+        <p className="sq-prompt">{q.prompt}</p>
+        <p className="sq-meta">{questionSummary(q)}</p>
+      </div>
+      <div className="sq-keys">
+        <button type="button" className="btn-link" aria-expanded={editing === q.id} onClick={() => openEditor(q)}>
+          {editing === q.id ? 'Close' : 'Edit'}
+        </button>
+        <button
+          type="button"
+          className="btn-link"
+          disabled={busy}
+          onClick={() => {
+            if (window.confirm(`Remove “${q.prompt}”?${q.eventTypeId === null ? ' It is asked for every service.' : ''}`)) {
+              if (editing === q.id) setEditing(null);
+              void run(() => adminFetchJson(`${base}/questions/${q.id}`, { method: 'DELETE' }));
+            }
           }}
         >
-          <input
-            type="text"
-            aria-label="Question"
-            value={editText}
-            maxLength={500}
-            autoFocus
-            onChange={(e) => setEditText(e.target.value)}
-          />
-          <button type="submit" className="btn-primary" disabled={busy || !editText.trim()}>
-            Save
-          </button>
-          <button type="button" className="btn-link" onClick={() => setEditing(null)}>
-            Cancel
-          </button>
+          Remove
+        </button>
+      </div>
+      {editing === q.id && (
+        <form className="sq-form" onSubmit={(e) => void save(e, q.id)}>
+          {q.eventTypeId === null && (
+            <p className="notice notice-muted">Asked for every service: a change here changes it everywhere.</p>
+          )}
+          <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`sq-edit-${q.id}`} />
+          <div className="fl-actions">
+            <button type="submit" className="btn-primary" disabled={busy || !editForm.prompt.trim()}>
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" className="btn-link" onClick={() => setEditing(null)}>
+              Cancel
+            </button>
+          </div>
         </form>
-      ) : (
-        <>
-          <div className="sq-main">
-            <p className="sq-prompt">{q.prompt}</p>
-            <p className="sq-meta">
-              {KIND_LABEL[q.kind]} · {q.required ? 'Must be answered' : 'Optional'}
-            </p>
-          </div>
-          <div className="sq-keys">
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => {
-                setEditing(q.id);
-                setEditText(q.prompt);
-              }}
-            >
-              Reword
-            </button>
-            <button
-              type="button"
-              className="btn-link"
-              disabled={busy}
-              onClick={() => void run(() => adminFetchJson(`${base}/questions/${q.id}`, json('PATCH', { required: !q.required })))}
-            >
-              {q.required ? 'Make optional' : 'Make required'}
-            </button>
-            <button
-              type="button"
-              className="btn-link"
-              disabled={busy}
-              onClick={() => {
-                if (window.confirm(`Remove “${q.prompt}”?${q.eventTypeId === null ? ' It is asked for every service.' : ''}`)) {
-                  void run(() => adminFetchJson(`${base}/questions/${q.id}`, { method: 'DELETE' }));
-                }
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        </>
       )}
     </li>
   );
@@ -183,7 +167,8 @@ export function ServiceQuestions({
       <section className="card svc-card">
         <div className="admin-card-title">What people answer before they book</div>
         <p className="svc-lede">
-          Asked in this order, before the calendar. Their answers reach you with the booking.
+          Asked in this order, before the calendar. Their answers reach you with the booking, and can send the
+          wrong enquiries to your next steps instead of booking.
         </p>
         {error && (
           <p className="notice notice-error" role="alert">
@@ -191,7 +176,7 @@ export function ServiceQuestions({
           </p>
         )}
         {!questions && !error && <p className="status">Loading…</p>}
-        {questions && questions.length === 0 && (
+        {questions && questions.length === 0 && !adding && (
           <p className="svc-empty">No questions yet: people go straight to the calendar.</p>
         )}
         {shared.length > 0 && (
@@ -200,50 +185,19 @@ export function ServiceQuestions({
             <ol className="sq-list">{shared.map(row)}</ol>
           </>
         )}
-        {own.length > 0 && (
+        {mine.length > 0 && (
           <>
             <p className="sq-group">Only for {serviceName}</p>
-            <ol className="sq-list">{own.map(row)}</ol>
+            <ol className="sq-list">{mine.map(row)}</ol>
           </>
         )}
 
         {adding ? (
-          <form className="sq-add" onSubmit={add}>
-            <div className="field">
-              <label htmlFor="sq-prompt">The question</label>
-              <input
-                id="sq-prompt"
-                type="text"
-                placeholder="e.g. Tell me briefly how I can support you"
-                maxLength={500}
-                autoFocus
-                value={draft.prompt}
-                onChange={(e) => setDraft({ ...draft, prompt: e.target.value })}
-              />
-            </div>
-            <div className="wk-mode sq-kind" role="group" aria-label="Kind of answer">
-              {(['text', 'yes_no'] as const).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  className="filter-chip"
-                  aria-pressed={draft.kind === k}
-                  onClick={() => setDraft({ ...draft, kind: k })}
-                >
-                  {KIND_LABEL[k]}
-                </button>
-              ))}
-            </div>
+          <form className="sq-form sq-add" onSubmit={add}>
+            <p className="sq-group">A new question</p>
+            <QuestionForm form={draft} setForm={setDraft} idPrefix="sq-new" />
             <label className="sh-also">
-              <input
-                type="checkbox"
-                checked={draft.required}
-                onChange={(e) => setDraft({ ...draft, required: e.target.checked })}
-              />
-              <span>Must be answered</span>
-            </label>
-            <label className="sh-also">
-              <input type="checkbox" checked={!draft.own} onChange={(e) => setDraft({ ...draft, own: !e.target.checked })} />
+              <input type="checkbox" checked={!own} onChange={(e) => setOwn(!e.target.checked)} />
               <span>
                 Ask it for every service
                 <small>Otherwise only for {serviceName}.</small>
@@ -253,22 +207,38 @@ export function ServiceQuestions({
               <button type="submit" className="btn-primary" disabled={busy || !draft.prompt.trim()}>
                 {busy ? 'Adding…' : 'Add question'}
               </button>
-              <button type="button" className="btn-link" onClick={() => setAdding(false)}>
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => {
+                  setAdding(false);
+                  setDraft(EMPTY_FORM);
+                }}
+              >
                 Cancel
               </button>
             </div>
           </form>
         ) : (
           <div className="fl-actions">
-            <button type="button" className="btn-secondary" onClick={() => setAdding(true)}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setEditing(null);
+                setAdding(true);
+              }}
+            >
               + Add a question
             </button>
           </div>
         )}
-        <p className="svc-more">
-          Choices, and answers that send people elsewhere instead of booking:{' '}
-          <a href={`/admin/${slug}/screening?service=${encodeURIComponent(serviceId)}`}>on the Questions page</a>.
-        </p>
+        {anyElsewhere && (
+          <p className="svc-more">
+            People sent to your next steps don&apos;t see the calendar; they see your next steps message.{' '}
+            <a href={`/admin/${slug}/messages?m=next_steps`}>Change what they&apos;re told</a>.
+          </p>
+        )}
       </section>
 
       <ClosingQuestion slug={slug} />

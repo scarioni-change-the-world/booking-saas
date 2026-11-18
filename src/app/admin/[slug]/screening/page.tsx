@@ -3,228 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { adminFetchJson } from '@/lib/admin-fetch';
-import Toggle from '@/components/admin/Toggle';
 import { useNarrow } from '@/components/admin/SettingsPanel';
 import { replay, routingChanged, type Capacity, type ReplayQuestion, type ReplayResponse } from '@/lib/replay';
-
-type Kind = 'text' | 'yes_no' | 'single_choice';
-type PathType = 'meeting' | 'other';
-
-interface Option {
-  label: string;
-  outcomePathType: PathType;
-}
-
-interface Question {
-  id: string;
-  prompt: string;
-  kind: Kind;
-  options: Option[];
-  required: boolean;
-  sortOrder: number;
-  /** null = asked for every service; set = only when booking that one
-   * (migration 0016). Fixed at creation — moving a question between scopes
-   * isn't supported yet; remove and re-add it in the right section. */
-  eventTypeId: string | null;
-}
-
-interface FormState {
-  prompt: string;
-  kind: Kind;
-  required: boolean;
-  yesNo: [Option, Option];
-  choices: Option[];
-}
-
-const EMPTY_FORM: FormState = {
-  prompt: '',
-  kind: 'text',
-  required: true,
-  yesNo: [
-    { label: 'Yes', outcomePathType: 'meeting' },
-    { label: 'No', outcomePathType: 'meeting' },
-  ],
-  choices: [{ label: '', outcomePathType: 'meeting' }],
-};
-
-const KIND_LABEL: Record<Kind, string> = {
-  text: 'Free text',
-  yes_no: 'Yes / no',
-  single_choice: 'Choose one',
-};
-
-function formToPayload(form: FormState) {
-  return {
-    prompt: form.prompt,
-    kind: form.kind,
-    required: form.required,
-    options: form.kind === 'yes_no' ? form.yesNo : form.kind === 'single_choice' ? form.choices : [],
-  };
-}
-
-function questionToForm(q: Question): FormState {
-  return {
-    prompt: q.prompt,
-    kind: q.kind,
-    required: q.required,
-    yesNo:
-      q.kind === 'yes_no' && q.options.length === 2
-        ? [q.options[0]!, q.options[1]!]
-        : EMPTY_FORM.yesNo,
-    choices: q.kind === 'single_choice' && q.options.length > 0 ? q.options : EMPTY_FORM.choices,
-  };
-}
-
-/**
- * The form fields for one question — shared between "add" and "edit", since
- * a second, slightly-different copy of this is exactly how the two would
- * drift apart the first time someone fixes a bug in only one of them.
- */
-function QuestionForm({
-  form,
-  setForm,
-  idPrefix,
-}: {
-  form: FormState;
-  setForm: (f: FormState) => void;
-  idPrefix: string;
-}) {
-  return (
-    <>
-      <div className="field">
-        <label htmlFor={`${idPrefix}-prompt`}>Question</label>
-        <textarea
-          id={`${idPrefix}-prompt`}
-          required
-          value={form.prompt}
-          onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-        />
-      </div>
-
-      <div className="field">
-        <label htmlFor={`${idPrefix}-kind`}>Type of answer</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {(Object.keys(KIND_LABEL) as Kind[]).map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              style={{ whiteSpace: 'nowrap' }}
-              className={form.kind === kind ? 'btn-primary' : 'btn-secondary'}
-              onClick={() => setForm({ ...form, kind })}
-            >
-              {KIND_LABEL[kind]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {form.kind === 'text' && (
-        <p className="notice notice-muted">
-          Free text is recorded but never routes anyone — there is no reliable way to judge it
-          automatically.
-        </p>
-      )}
-
-      {form.kind === 'yes_no' && (
-        <div className="field">
-          <label>Does each answer continue on, or send someone down the other path?</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {form.yesNo.map((opt, i) => (
-              <div
-                key={opt.label}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  padding: '10px 13px',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                }}
-              >
-                <span>{opt.label}</span>
-                <Toggle
-                  on={opt.outcomePathType === 'meeting'}
-                  label={opt.outcomePathType === 'meeting' ? 'Continues' : 'Other path'}
-                  onClick={() => {
-                    const yesNo = [...form.yesNo] as [Option, Option];
-                    yesNo[i] = {
-                      ...yesNo[i]!,
-                      outcomePathType: yesNo[i]!.outcomePathType === 'meeting' ? 'other' : 'meeting',
-                    };
-                    setForm({ ...form, yesNo });
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {form.kind === 'single_choice' && (
-        <div className="field">
-          <label>Answers</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {form.choices.map((opt, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input
-                  type="text"
-                  placeholder={`Answer ${i + 1}`}
-                  value={opt.label}
-                  style={{ flex: 1 }}
-                  onChange={(e) => {
-                    const choices = [...form.choices];
-                    choices[i] = { ...choices[i]!, label: e.target.value };
-                    setForm({ ...form, choices });
-                  }}
-                />
-                <Toggle
-                  on={opt.outcomePathType === 'meeting'}
-                  label={opt.outcomePathType === 'meeting' ? 'Continues' : 'Other path'}
-                  onClick={() => {
-                    const choices = [...form.choices];
-                    choices[i] = {
-                      ...choices[i]!,
-                      outcomePathType: choices[i]!.outcomePathType === 'meeting' ? 'other' : 'meeting',
-                    };
-                    setForm({ ...form, choices });
-                  }}
-                />
-                {form.choices.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn-link"
-                    onClick={() => setForm({ ...form, choices: form.choices.filter((_, j) => j !== i) })}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ marginTop: 10 }}
-            onClick={() =>
-              setForm({ ...form, choices: [...form.choices, { label: '', outcomePathType: 'meeting' }] })
-            }
-          >
-            Add an answer
-          </button>
-        </div>
-      )}
-
-      <div style={{ margin: '18px 0' }}>
-        <Toggle
-          on={form.required}
-          label="Required"
-          onClick={() => setForm({ ...form, required: !form.required })}
-        />
-      </div>
-    </>
-  );
-}
+import {
+  EMPTY_FORM,
+  KIND_LABEL,
+  QuestionForm,
+  formToPayload,
+  questionSummary,
+  questionToForm,
+  type FormState,
+  type Kind,
+  type Option,
+  type PathType,
+  type Question,
+} from '@/components/admin/QuestionForm';
 
 /** ~25s to answer any one question, rounded up — just enough to give a
  * prospect a fair "about N minutes" estimate, not a real timing study. */
@@ -768,17 +561,6 @@ function ReplayPanel({
       </p>
     </aside>
   );
-}
-
-/** What a question's row says under it: the kind, and where answers lead. */
-function questionSummary(q: Question): string {
-  const parts = [KIND_LABEL[q.kind], q.required ? 'required' : 'optional'];
-  if (q.options.length > 0) {
-    const elsewhere = q.options.filter((o) => o.outcomePathType !== 'meeting').length;
-    if (q.kind === 'single_choice') parts.push(`${q.options.length} answers`);
-    if (elsewhere > 0) parts.push(`${elsewhere} ${elsewhere === 1 ? 'answer sends' : 'answers send'} people elsewhere`);
-  }
-  return parts.join(' · ');
 }
 
 /**

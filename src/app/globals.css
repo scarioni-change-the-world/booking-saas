@@ -11425,16 +11425,6 @@ body:has(.bk-embedded) {
   gap: 4px 14px;
   font-size: 0.85rem;
 }
-.sq-edit {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  width: 100%;
-}
-.sq-edit input {
-  flex: 1 1 260px;
-  min-width: 0;
-}
 .sq-add {
   display: grid;
   gap: 10px;
@@ -11442,9 +11432,6 @@ body:has(.bk-embedded) {
 }
 .sq-add .field {
   margin: 0;
-}
-.sq-kind {
-  width: fit-content;
 }
 /* Room under every admin page, so the last button scrolls clear of the
    Ask khloe key in the corner. */
@@ -12731,4 +12718,54 @@ body:has(.bk-embedded) {
   .co-period .wk-mode .filter-chip {
     padding-inline: 11px;
   }
+}
+
+/* ── One question's editor (Questions page and a service's Questions tab) ── */
+.qf-kind {
+  width: fit-content;
+  max-width: 100%;
+}
+.qf-answers {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.qf-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.qf-answer-label {
+  flex: 1 1 auto;
+}
+.qf-answer input[type='text'] {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.qf-more {
+  margin-top: 10px;
+}
+.qf-required {
+  margin: 14px 0;
+}
+.sq-row.is-open {
+  background: var(--selected-mineral);
+}
+.sq-form {
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--soft-border);
+}
+.sq-form .field {
+  margin: 0 0 12px;
+}
+.sq-add {
+  border-top: 0;
+  padding-top: 0;
 }
