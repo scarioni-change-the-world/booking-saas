@@ -88,7 +88,7 @@ export default function AccountPage() {
 
   return (
     <>
-      <PageHeader title={account?.business.name ?? 'Account'} />
+      <PageHeader title="Settings" description={account?.business.name} />
 
       {error && (
         <div className="notice notice-error" role="alert">
@@ -160,7 +160,7 @@ function accountSettings(
       editor: (
         <p className="sp-purpose">
           Your booking page is at <b>khloe.io/{account.business.slug}</b>. It is fixed, so links you have already
-          shared keep working. <a href={`/admin/${slug}/share`}>Share it</a>.
+          shared keep working.
         </p>
       ),
     },
@@ -238,7 +238,9 @@ function accountSettings(
               </li>
             ))}
           </ul>
-          <p className="field-note">Adding or removing someone is done by support for now. Just ask.</p>
+          <p className="field-note">
+            To add or remove someone, write to <a href="mailto:support@khloe.io">support@khloe.io</a>.
+          </p>
         </div>
       ),
     },

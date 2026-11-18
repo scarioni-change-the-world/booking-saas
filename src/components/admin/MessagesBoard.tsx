@@ -738,7 +738,7 @@ export function NextStepsEditor({
         </dl>
         {shown > 0 && (
           <p className="wk-side-hint">
-            <a href={`/admin/${slug}/people?show=elsewhere`}>See the people sent elsewhere, in People</a>
+            <a href={`/admin/${slug}/people?show=elsewhere`}>See the people sent elsewhere, in Your customers</a>
           </p>
         )}
       </div>

@@ -38,7 +38,7 @@ export const MOMENTS: Moment[] = [
   { id: 'day-before', title: 'Day before', about: 'Each morning, a reminder for every appointment the next day.', tone: 'on', messages: ['booking_reminder'] },
   { id: 'changes', title: 'Changes plans', about: 'When a booking is moved or cancelled, by the client or by you.', tone: 'on', messages: ['booking_rescheduled', 'booking_cancelled'] },
   { id: 'after', title: 'After', about: 'The morning after a session, one question: how was it? You can turn it off.', tone: 'booked', messages: ['session_rating'] },
-  { id: 'link', title: 'Invitations', about: 'Only when you press “Send link” on a client in People.', tone: 'booked', messages: ['client_invite'] },
+  { id: 'link', title: 'Invitations', about: 'Only when you press “Send link” on a client in Your customers.', tone: 'booked', messages: ['client_invite'] },
 ];
 
 /** The automatic journey, in order: what the Messages switch moves along. */
@@ -128,7 +128,7 @@ export const MESSAGES: Record<MessageId, MessageInfo> = {
     label: 'Invitation to book',
     to: 'client',
     channel: 'email',
-    when: 'Only when you press “Send link” on a client in People. Their link lets them book straight away, without answering your questions again.',
+    when: 'Only when you press “Send link” on a client in Your customers. Their link lets them book straight away, without answering your questions again.',
     alwaysAdded: ['Their personal booking link'],
   },
 };

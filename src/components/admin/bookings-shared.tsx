@@ -227,7 +227,7 @@ export function useBookingActions(slug: string, onDone: () => Promise<void> | vo
           ? `${booking.name} has their own link — it's on its way to them.`
           : `${booking.name} has their own link, but the email didn't go out${
               result.inviteStatus === 'not_configured' ? ' (email isn’t set up yet)' : ''
-            }. Copy it from their row in People and send it yourself.`,
+            }. Copy it from their row in Your customers and send it yourself.`,
       );
     });
   }

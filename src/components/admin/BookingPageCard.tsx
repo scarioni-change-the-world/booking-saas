@@ -250,9 +250,6 @@ export function BookingPageCard({
             <a href={`/${slug}`} target="_blank" rel="noreferrer" className="bp-open">
               Open your page
             </a>
-            <a href={`/admin/${slug}/share`} className="bp-open">
-              Share it or put it on your website
-            </a>
           </div>
         </div>
 

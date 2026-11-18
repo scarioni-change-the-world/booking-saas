@@ -12880,3 +12880,17 @@ body:has(.bk-embedded) {
   line-height: 1.2;
   text-decoration: none;
 }
+/* Share: what to share, as the pill switch; wraps with many services. */
+.admin-app .sh-choose {
+  display: inline-flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin: 4px 0 6px;
+  border-radius: 22px;
+}
+.sh-guide .sh-more {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--soft-border);
+}

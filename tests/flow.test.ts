@@ -347,7 +347,7 @@ describe('sessions owed', () => {
     expect(booked.notes).toContainEqual({
       tone: 'need',
       text: 'Lucía has 1 session paid for and not booked yet.',
-      action: { label: 'See in People', href: 'people?person=lucia%40x.com' },
+      action: { label: 'See in Your customers', href: 'people?person=lucia%40x.com' },
     });
   });
 

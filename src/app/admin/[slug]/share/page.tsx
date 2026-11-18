@@ -36,29 +36,24 @@ interface ShareState {
 }
 
 /**
- * Share: the link for anywhere text goes, and a three-step guide for
- * putting booking on the business's own website.
+ * Share: one question first, "what do you want to share?" (all your
+ * services, or one of them), and then the three ways to share it, in
+ * order, for that choice: its link, its QR code, and on your website (a
+ * three-step guide: your website, how it looks, add it).
  *
- *   1. Your website: saved to Account, allowed to show the booking page
- *      from then on, and read to find the tool it is made with.
- *   2. How it should look: a "Book now" button (just the link, no code)
- *      or the booking page as a section of a page (the code).
- *   3. The steps for that tool and that choice, nothing else, with a way
- *      to email them to whoever runs the site, and, once the code is up,
- *      whether it is working there (embed.js reports back).
+ * It used to be two panels side by side, the whole page on the left and
+ * one service on the right, each with its own link, its own code and its
+ * own steps. Two of everything, and nothing said which one to use.
  *
- * The list of other allowed sites is still here, folded away: most people
- * never need it, because their website is allowed on its own.
- *
- * All of that is the whole booking page. One service (its own link, its
- * own code) is a panel on the right, "Share one service", so the two never
- * get mixed up.
+ * Services offered only to existing clients have no public link: each
+ * client books them from their own, sent from Your customers.
  */
 export default function SharePage() {
   const { slug } = useParams<{ slug: string }>();
   const startOn = useSearchParams().get('service');
   const [services, setServices] = useState<Service[] | null>(null);
   const [share, setShare] = useState<ShareState | null>(null);
+  // null = all your services; otherwise one service's slug or id.
   const [chosen, setChosen] = useState<string | null>(startOn);
   // A page about one service usually wants that service alone.
   const [only, setOnly] = useState(true);
@@ -67,7 +62,7 @@ export default function SharePage() {
   const [detecting, setDetecting] = useState(false);
   const [origin, setOrigin] = useState('');
   const [error, setError] = useState<string | null>(null);
-  // The open step: the first one until there is a website, then the second.
+  // The open website step: the first one until there is a website, then the second.
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => setOrigin(window.location.origin), []);
@@ -107,23 +102,23 @@ export default function SharePage() {
     })();
   }, [slug, detect]);
 
-  // Only services open to new clients are on the public page; the others are
-  // booked from each client's own link, so they cannot be shared here.
+  // Only services open to new clients are on the public page.
   const open = services?.filter((s) => s.availableToProspects) ?? [];
   const clientsOnly = services?.filter((s) => !s.availableToProspects && s.availableToExistingClients) ?? [];
-  // ?service= may carry a service's web address or its id (Services links by id).
-  const service = open.find((s) => s.slug === chosen || s.id === chosen) ?? open[0] ?? null;
-  // The left side is the whole booking page; one service lives in the panel.
-  const link = origin ? `${origin}/${slug}` : '';
-  const code = origin ? embedSnippet(origin, slug) : '';
-  const perService = open.length > 1;
+  // ?service= may carry a service's web address or its id.
+  const target = chosen ? open.find((s) => s.slug === chosen || s.id === chosen) ?? null : null;
+  // With one service there is nothing else to show alongside it.
+  const alone = only || open.length < 2;
+  const link = !origin ? '' : target ? `${origin}/${slug}${serviceQuery(target.slug, alone)}` : `${origin}/${slug}`;
+  const code = !origin ? '' : target ? embedSnippet(origin, slug, target.slug, alone) : embedSnippet(origin, slug);
+  const what = target ? target.name : 'your booking page';
   const tool = BUILDERS[builder ?? 'other'];
 
   return (
     <>
       <PageHeader
-        title="Share your booking page"
-        description="Send people your link, or add booking to your own website in three steps."
+        title="Share"
+        description="Choose what to share, then send its link, print its QR code, or put it on your website."
       />
 
       {error && (
@@ -134,286 +129,208 @@ export default function SharePage() {
       {(!services || !share) && !error && <p className="status">Loading…</p>}
 
       {services && share && (
-        <div className="sh has-panel">
-          <ServicePanel
-            services={open}
-            clientsOnly={clientsOnly}
-            servicesHref={`/admin/${slug}/flow`}
-            service={service}
-            only={only}
-            origin={origin}
-            slug={slug}
-            onChoose={setChosen}
-            onOnly={setOnly}
-          />
-
-          <section className="card sh-card sh-main-link" aria-labelledby="sh-link">
-            <p className="wk-side-eyebrow" id="sh-link">
-              Your link
+        <div className="sh">
+          {/* What is being shared: everything, or one service. */}
+          <section className="card sh-card" aria-labelledby="sh-what">
+            <p className="wk-side-eyebrow" id="sh-what">
+              What do you want to share?
             </p>
-            <p className="wk-side-hint sh-lead">
-              All your services, in one place. For your Instagram bio, WhatsApp, emails and your email signature.
-            </p>
-            <div className="sh-row">
-              <code className="sh-link">{link}</code>
-              <CopyButton text={link} label="Copy link" />
-              <a className="btn-link" href={link} target="_blank" rel="noreferrer">
-                Open
-              </a>
-            </div>
+            {open.length === 0 ? (
+              <p className="notice notice-muted">
+                None of your services is on your booking page yet. Finish one in Your services, and it can be
+                shared here.
+              </p>
+            ) : (
+              <div className="wk-mode sh-choose" role="group" aria-label="What to share">
+                <button type="button" className="filter-chip" aria-pressed={!target} onClick={() => setChosen(null)}>
+                  All your services
+                </button>
+                {open.length > 1 &&
+                  open.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="filter-chip"
+                      aria-pressed={target?.id === s.id}
+                      onClick={() => setChosen(s.id)}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+              </div>
+            )}
+            {target && open.length > 1 && (
+              <label className="sh-also">
+                <input type="checkbox" checked={!only} onChange={(e) => setOnly(!e.target.checked)} />
+                <span>
+                  Show your other services too
+                  <small>
+                    {only
+                      ? `People see ${target.name} and nothing else.`
+                      : `${target.name} opens first; the rest are one step back.`}
+                  </small>
+                </span>
+              </label>
+            )}
+            {clientsOnly.length > 0 && (
+              <p className="wk-side-hint">
+                {clientsOnly.map((s) => s.name).join(', ')} {clientsOnly.length === 1 ? 'is' : 'are'} for your
+                clients only, so {clientsOnly.length === 1 ? 'it has' : 'they have'} no public link: each client
+                books from their own, sent from Your customers.
+              </p>
+            )}
           </section>
 
-          <section className="card sh-card sh-guide" aria-labelledby="sh-guide">
-            <h2 className="sh-guide-title" id="sh-guide">
-              Add <b className="sh-khloe">khloe</b> to your website
-            </h2>
-
-            {/* The three steps side by side: each says its answer, the open
-                one's content sits full width beneath them. Nothing moves. */}
-            <ol className="sh-heads">
-              <StepHead n={1} step={step} done={!!share.website} title="Your website" answer={share.website ? `${hostOf(share.website)}${builder && builder !== 'other' ? ` · ${tool.name}` : ''}` : 'Not added yet'} onOpen={setStep} />
-              <StepHead n={2} step={step} done={step > 2} title="How it looks" answer={method === 'button' ? 'A “Book now” button' : 'Booking on your page'} onOpen={setStep} />
-              <StepHead n={3} step={step} done={false} title={`Add it in ${tool.id === 'other' ? 'your website' : tool.name}`} answer="" onOpen={setStep} />
-            </ol>
-
-            <div className="sh-open" aria-live="polite">
-              {step === 1 && (
-                <>
-              <WebsiteStep
-                slug={slug}
-                website={share.website}
-                onSaved={async () => {
-                  await loadShare();
-                  void detect();
-                  setStep(2);
-                }}
-              />
-              {share.website && (
-                <p className="wk-side-hint sh-tool">
-                  {detecting ? (
-                    'Looking at your website…'
-                  ) : (
-                    <>
-                      Made with{' '}
-                      <select
-                        aria-label="Your website is made with"
-                        value={builder ?? 'other'}
-                        onChange={(e) => setBuilder(e.target.value as BuilderId)}
-                      >
-                        {BUILDER_ORDER.map((id) => (
-                          <option key={id} value={id}>
-                            {BUILDERS[id].name}
-                          </option>
-                        ))}
-                      </select>
-                      {builder === 'other' && ' (we couldn’t tell; pick yours if it’s listed)'}
-                    </>
-                  )}
+          {open.length > 0 && (
+            <>
+              <section className="card sh-card" aria-labelledby="sh-link">
+                <p className="wk-side-eyebrow" id="sh-link">
+                  Link
                 </p>
-              )}
-                  {share.website && (
-                    <button type="button" className="btn-primary" onClick={() => setStep(2)}>
-                      Next
-                    </button>
-                  )}
-                </>
-              )}
-              {step === 2 && (
-                <>
-              {perService && (
-                <p className="wk-side-hint sh-which">
-                  This shows all your services. For a page about one of them, take its code from{' '}
-                  <b>Share one service</b>; the steps below are the same.
+                <p className="wk-side-hint sh-lead">
+                  {target
+                    ? `Opens straight on ${target.name}: for a post, an ad or a message.`
+                    : 'All your services, in one place. For your Instagram bio, WhatsApp, emails and your email signature.'}
                 </p>
-              )}
-              <div className="sh-methods" role="radiogroup" aria-label="How it should look">
-                <MethodCard
-                  checked={method === 'button'}
-                  onPick={() => setMethod('button')}
-                  title="A “Book now” button"
-                  text="Opens your booking page. Just a link: no code, works with any website."
-                />
-                <MethodCard
-                  checked={method === 'section'}
-                  onPick={() => setMethod('section')}
-                  title="Booking on your page"
-                  text="Your booking page as part of your page, so people book without leaving your site."
-                />
-              </div>
-              {method === 'button' ? (
                 <div className="sh-row">
                   <code className="sh-link">{link}</code>
                   <CopyButton text={link} label="Copy link" />
+                  <a className="btn-link" href={link} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
                 </div>
-              ) : (
-                <>
-                  <pre className="embed-snippet">{code}</pre>
-                  <div className="sh-row">
-                    <CopyButton text={code} label="Copy code" />
-                  </div>
-                </>
-              )}
-                  <button type="button" className="btn-primary" onClick={() => setStep(3)}>
-                    Next
-                  </button>
-                </>
-              )}
-              {step === 3 && (
-                <>
-              <ol className="sh-steps">
-                {(method === 'button' ? tool.button : tool.section).map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
-              <EmailSteps
-                slug={slug}
-                builder={builder ?? 'other'}
-                method={method}
-                service={null}
-                only={false}
-              />
-              {method === 'section' && (
-                <LiveStatus slug={slug} share={share} onChanged={loadShare} />
-              )}
-                </>
-              )}
-            </div>
-          </section>
+              </section>
 
-          <details className="card sh-card sh-more">
-            <summary>Other sites that may show your booking page</summary>
-            <AllowedSites slug={slug} share={share} onSaved={loadShare} />
-          </details>
+              <section className="card sh-card" aria-labelledby="sh-qr">
+                <p className="wk-side-eyebrow" id="sh-qr">
+                  QR code
+                </p>
+                <QrCode text={link} name={target ? `${slug}-${target.slug}` : slug} label={target?.name ?? 'your booking page'} />
+              </section>
+
+              <section className="card sh-card sh-guide" aria-labelledby="sh-guide">
+                <p className="wk-side-eyebrow" id="sh-guide">
+                  On your website
+                </p>
+                <p className="wk-side-hint sh-lead">
+                  {target
+                    ? `Put ${target.name} on its own page of your website, in three steps.`
+                    : 'Put your booking page on your website, in three steps.'}
+                </p>
+
+                {/* The three steps side by side: each says its answer, the open
+                    one's content sits full width beneath them. Nothing moves. */}
+                <ol className="sh-heads">
+                  <StepHead n={1} step={step} done={!!share.website} title="Your website" answer={share.website ? `${hostOf(share.website)}${builder && builder !== 'other' ? ` · ${tool.name}` : ''}` : 'Not added yet'} onOpen={setStep} />
+                  <StepHead n={2} step={step} done={step > 2} title="How it looks" answer={method === 'button' ? 'A “Book now” button' : `${target ? target.name : 'Booking'} on your page`} onOpen={setStep} />
+                  <StepHead n={3} step={step} done={false} title={`Add it in ${tool.id === 'other' ? 'your website' : tool.name}`} answer="" onOpen={setStep} />
+                </ol>
+
+                <div className="sh-open" aria-live="polite">
+                  {step === 1 && (
+                    <>
+                      <WebsiteStep
+                        slug={slug}
+                        website={share.website}
+                        onSaved={async () => {
+                          await loadShare();
+                          void detect();
+                          setStep(2);
+                        }}
+                      />
+                      {share.website && (
+                        <p className="wk-side-hint sh-tool">
+                          {detecting ? (
+                            'Looking at your website…'
+                          ) : (
+                            <>
+                              Made with{' '}
+                              <select
+                                aria-label="Your website is made with"
+                                value={builder ?? 'other'}
+                                onChange={(e) => setBuilder(e.target.value as BuilderId)}
+                              >
+                                {BUILDER_ORDER.map((id) => (
+                                  <option key={id} value={id}>
+                                    {BUILDERS[id].name}
+                                  </option>
+                                ))}
+                              </select>
+                              {builder === 'other' && ' (we couldn’t tell; pick yours if it’s listed)'}
+                            </>
+                          )}
+                        </p>
+                      )}
+                      {share.website && (
+                        <button type="button" className="btn-primary" onClick={() => setStep(2)}>
+                          Next
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {step === 2 && (
+                    <>
+                      <div className="sh-methods" role="radiogroup" aria-label="How it should look">
+                        <MethodCard
+                          checked={method === 'button'}
+                          onPick={() => setMethod('button')}
+                          title="A “Book now” button"
+                          text={`Opens ${what}. Just a link: no code, works with any website.`}
+                        />
+                        <MethodCard
+                          checked={method === 'section'}
+                          onPick={() => setMethod('section')}
+                          title={target ? `${target.name} on your page` : 'Booking on your page'}
+                          text="As part of your page, so people book without leaving your site."
+                        />
+                      </div>
+                      {method === 'button' ? (
+                        <div className="sh-row">
+                          <code className="sh-link">{link}</code>
+                          <CopyButton text={link} label="Copy link" />
+                        </div>
+                      ) : (
+                        <>
+                          <pre className="embed-snippet">{code}</pre>
+                          <div className="sh-row">
+                            <CopyButton text={code} label="Copy code" />
+                          </div>
+                        </>
+                      )}
+                      <button type="button" className="btn-primary" onClick={() => setStep(3)}>
+                        Next
+                      </button>
+                    </>
+                  )}
+                  {step === 3 && (
+                    <>
+                      <ol className="sh-steps">
+                        {(method === 'button' ? tool.button : tool.section).map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ol>
+                      <EmailSteps
+                        slug={slug}
+                        builder={builder ?? 'other'}
+                        method={method}
+                        service={target?.slug ?? null}
+                        only={alone}
+                      />
+                      {method === 'section' && <LiveStatus slug={slug} share={share} onChanged={loadShare} />}
+                    </>
+                  )}
+                </div>
+
+                <details className="sh-more">
+                  <summary>Other sites that may show your booking page</summary>
+                  <AllowedSites slug={slug} share={share} onSaved={loadShare} />
+                </details>
+              </section>
+            </>
+          )}
         </div>
       )}
     </>
-  );
-}
-
-/**
- * Share one service: pick it from the list, take its link or its code.
- *
- * Kept apart from the rest of the page on purpose. The left side is the
- * whole booking page; this is one service, for a post, an ad or that
- * service's own page on a website. Mixing the two (one picker driving both)
- * is how the every-service code ends up on a page about one service.
- *
- * A service opens alone by default: someone who clicked a link about
- * portraits wants portraits. Ticking the box keeps the other services one
- * step back.
- */
-function ServicePanel({
-  services,
-  clientsOnly,
-  servicesHref,
-  service,
-  only,
-  origin,
-  slug,
-  onChoose,
-  onOnly,
-}: {
-  services: Service[];
-  clientsOnly: Service[];
-  servicesHref: string;
-  service: Service | null;
-  only: boolean;
-  origin: string;
-  slug: string;
-  onChoose: (slug: string) => void;
-  onOnly: (only: boolean) => void;
-}) {
-  // With one service there is nothing else to show alongside it.
-  const alone = only || services.length < 2;
-  const link = service && origin ? `${origin}/${slug}${serviceQuery(service.slug, alone)}` : '';
-  const code = service && origin ? embedSnippet(origin, slug, service.slug, alone) : '';
-  return (
-    <aside className="card sh-card sh-panel" aria-labelledby="sh-one">
-      <h2 className="sh-panel-title" id="sh-one">
-        Share one service
-      </h2>
-      <p className="wk-side-hint sh-lead">
-        A link or code that opens straight on one service: for a post, an ad, or its own page on your website.
-      </p>
-
-      {!service && (
-        <p className="notice notice-muted sh-none">
-          None of your services is open to new clients yet, so there is nothing to share. Open one to new clients in{' '}
-          <a href={servicesHref}>Services</a>.
-        </p>
-      )}
-
-      <div className="sh-svc-list" role="radiogroup" aria-label="Service to share">
-        {services.map((s) => {
-          const on = s.slug === service?.slug;
-          return (
-            <label key={s.slug} className={`sh-svc${on ? ' is-on' : ''}`}>
-              <input type="radio" name="sh-svc" checked={on} onChange={() => onChoose(s.slug)} />
-              <span className="sh-svc-name">{s.name}</span>
-              {s.durationMinutes ? <span className="sh-svc-meta">{length(s.durationMinutes)}</span> : null}
-            </label>
-          );
-        })}
-        {clientsOnly.map((s) => (
-          <div key={s.slug} className="sh-svc is-off" aria-disabled="true">
-            <span className="sh-svc-name">{s.name}</span>
-            <span className="sh-svc-meta">Your clients only</span>
-          </div>
-        ))}
-      </div>
-      {clientsOnly.length > 0 && (
-        <p className="wk-side-hint sh-svc-note">
-          Services for your clients only have no public link: each client books them from their own, sent from{' '}
-          <b>People</b>.
-        </p>
-      )}
-
-      {service && (
-        <>
-          {services.length > 1 && (
-            <label className="sh-also">
-              <input type="checkbox" checked={!only} onChange={(e) => onOnly(!e.target.checked)} />
-              <span>
-                Show your other services too
-                <small>
-                  {only
-                    ? `People see ${service.name} and nothing else.`
-                    : `${service.name} opens first; the rest are one step back.`}
-                </small>
-              </span>
-            </label>
-          )}
-
-          <div className="sh-out">
-            <p className="sh-out-label">Link</p>
-            <code className="sh-link">{link}</code>
-            <div className="sh-row">
-              <CopyButton text={link} label="Copy link" />
-              <a className="btn-link" href={link} target="_blank" rel="noreferrer">
-                Open
-              </a>
-            </div>
-          </div>
-
-          <div className="sh-out">
-            <p className="sh-out-label">QR code</p>
-            <QrCode text={link} name={`${slug}-${service.slug}`} label={service.name} />
-          </div>
-
-          <div className="sh-out">
-            <p className="sh-out-label">On your website</p>
-            <p className="wk-side-hint">Paste it on the page about {service.name}, following the steps in “Add khloe to your website”.</p>
-            <div className="sh-row">
-              <CopyButton text={code} label="Copy code" />
-            </div>
-            <details className="sh-peek">
-              <summary>See the code</summary>
-              <pre className="embed-snippet">{code}</pre>
-            </details>
-          </div>
-        </>
-      )}
-    </aside>
   );
 }
 
@@ -835,13 +752,6 @@ function QrCode({ text, name, label }: { text: string; name: string; label: stri
 }
 
 /** 20 min, 1 h 30, 8 h. */
-function length(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
-}
-
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (

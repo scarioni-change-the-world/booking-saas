@@ -263,7 +263,6 @@ export interface Finding {
   title: string;
   detail: string;
   /** Relative to /admin/<slug>/. */
-  action?: { label: string; href: string };
 }
 
 export interface Report {
@@ -830,8 +829,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'need',
       title: `Most visitors leave before starting — ${visited - started} of ${visited}`,
       detail:
-        'They open your page and go. Look at it as a stranger would: is it clear what you offer, for whom, and what it costs?',
-      action: { label: 'Try your booking page', href: 'flow' },
+        'They open your page and go. Look at it as a stranger would (See it as a client, on any of your services): is it clear what you offer, for whom, and what it costs?',
     });
   }
   if (started !== undefined && through !== undefined && started >= 10 && through / started < 0.5) {
@@ -846,8 +844,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
         ? `“${worst.prompt}” does most of it: ${worst.sentElsewhere} of ${worst.answered}${
             worst.routingAnswers[0] ? `, mostly answering “${worst.routingAnswers[0].answer}”` : ''
           }. If that is who you want to reach, change the rule.`
-        : 'If the people turned away are people you would like to meet, loosen the rule on the question that does it.',
-      action: { label: 'Review your questions', href: 'screening' },
+        : 'If the people turned away are people you would like to meet, loosen the filter that does it, in that service’s Your filters.',
     });
   }
   if (through !== undefined && through >= 8 && booked / through < 0.5) {
@@ -856,8 +853,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'need',
       title: `Half of those offered your calendar don’t book — ${through - booked} of ${through}`,
       detail:
-        'They got through your questions and then did not find a time. Usually there are not enough of them, or not the right ones.',
-      action: { label: 'Open more hours', href: 'week' },
+        'They got through your filters and then did not find a time. Usually there are not enough times, or not the right ones: your opening hours are in Your business.',
     });
   }
 
@@ -878,8 +874,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
         (visited
           ? `${visited} ${visited === 1 ? 'person' : 'people'} visited your page, and nobody booked.`
           : `Your ${hours} open hours were all free.`) +
-        ' More people need to find you: share your link, or put booking on your website.',
-      action: { label: 'Share your booking page', href: 'share' },
+        ' More people need to find you: share your link, or put booking on your website (Your business → Share).',
     });
   }
   const full = r.demand.full[0];
@@ -889,8 +884,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'good',
       title: `${bandName(full.weekday, full.part)} are ${pct(full.fill)} booked`,
       detail:
-        'That is where people want you. Opening a little more there is the likeliest way to more bookings.',
-      action: { label: 'Paint more hours', href: 'week' },
+        'That is where people want you. Opening a little more there, in your opening hours, is the likeliest way to more bookings.',
     });
   }
   const quiet = r.demand.quiet[0];
@@ -900,8 +894,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'need',
       title: `${bandName(quiet.weekday, quiet.part)}: ${quiet.openHours} open hours, nothing booked`,
       detail:
-        'Nobody chose them in this period. Close them and give the time to what is full, or keep them as your own.',
-      action: { label: 'Change your hours', href: 'week' },
+        'Nobody chose them in this period. Close them in your opening hours and give the time to what is full, or keep them as your own.',
     });
   }
   const utilisation = r.headline.utilisation.value;
@@ -913,7 +906,6 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
         title: `You were ${pct(utilisation)} booked`,
         detail:
           'Nearly full. This is the moment to raise a price or open more hours, not to find more clients.',
-        action: { label: 'Review your prices', href: 'flow' },
       });
     } else if (utilisation < 0.25 && r.headline.hoursOpen.value >= 20) {
       need.push({
@@ -921,7 +913,6 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
         tone: 'need',
         title: `${Math.round(r.headline.hoursOpen.value - r.headline.hoursBooked.value)} open hours went unbooked`,
         detail: `${utilisation < 0.01 ? 'Less than 1%' : `Only ${pct(utilisation)}`} of the time you offered was taken. Fewer, better-placed hours make a page look in demand.`,
-        action: { label: 'Look at your week', href: 'week' },
       });
     }
   }
@@ -935,9 +926,8 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'need',
       title: `${pct(c.noShowRate)} of people didn’t come`,
       detail:
-        'A small deposit when booking is the surest cure; a reminder the day before already goes out.' +
+        'A small deposit when booking is the surest cure (a service’s Payment line); a reminder the day before already goes out.' +
         (worst && worst.noShows > 0 ? ` Most were for ${worst.name}.` : ''),
-      action: worst ? { label: 'Ask for a deposit', href: `sessions/${worst.id}` } : undefined,
     });
   }
   if (c.count >= 5 && c.late / c.count >= 0.3) {
@@ -946,8 +936,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'need',
       title: `${c.late} of ${c.count} cancellations came late`,
       detail:
-        'Inside your minimum notice, when the time is hard to fill again. A deposit that is kept on late cancellation changes this.',
-      action: { label: 'See payment settings', href: 'account' },
+        'Inside your minimum notice, when the time is hard to fill again. A deposit, set on a service’s Payment line, changes this.',
     });
   }
 
@@ -962,8 +951,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
         id: 'low-value-service',
         tone: 'need',
         title: `${worst.name} earns ${formatMinor(worst.valuePerHourMinor!, currency)} an hour; ${best.name} ${formatMinor(best.valuePerHourMinor!, currency)}`,
-        detail: 'Same hour of your time, a fraction of the return. Reprice it, shorten it, or offer it less.',
-        action: { label: `Open ${worst.name}`, href: `sessions/${worst.id}` },
+        detail: 'Same hour of your time, a fraction of the return. Reprice it, shorten it, or offer it less, on its page in Your services.',
       });
     }
   }
@@ -995,8 +983,7 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       tone: 'need',
       title: `${r.clients.quiet.length} clients haven’t been back in over six weeks`,
       detail:
-        'People who have worked with you before are the easiest to book. Send them their own link — it takes a click.',
-      action: { label: 'Open People', href: 'people' },
+        'People who have worked with you before are the easiest to book. Send them their own link from Your customers.',
     });
   }
   if (r.clients.programmes.stalled.length >= 1) {
@@ -1007,7 +994,6 @@ export function findings(r: Omit<Report, 'findings'>, currency: string): Finding
       title: n === 1 ? '1 programme has stalled' : `${n} programmes have stalled`,
       detail:
         'Sessions paid for or promised, and nothing booked for three weeks. A short message usually restarts it.',
-      action: { label: 'Open People', href: 'people' },
     });
   }
 

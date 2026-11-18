@@ -535,7 +535,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         figure: counted ? { value: String(lane.qualified), label: 'could book' } : null,
         change: { label: 'Change', href: `${settings}?tab=details&open=when` },
         notes: model.calendar.flag
-          ? [{ tone: 'need', text: `${model.calendar.flag}.`, action: { label: 'Open the Week', href: 'week#calendar' } }]
+          ? [{ tone: 'need', text: `${model.calendar.flag}.`, action: { label: 'Open your calendar', href: 'week#calendar' } }]
           : [],
       };
 
@@ -564,7 +564,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
       ...lane.owed.map((o) => ({
         tone: 'need' as const,
         text: `${o.name || o.email} ${o.sessions === 1 ? 'has 1 session' : `has ${o.sessions} sessions`} paid for and not booked yet.`,
-        action: { label: 'See in People', href: `people?person=${encodeURIComponent(o.email)}` },
+        action: { label: 'See in Your customers', href: `people?person=${encodeURIComponent(o.email)}` },
       })),
     ],
   };

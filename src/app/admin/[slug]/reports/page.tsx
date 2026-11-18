@@ -35,9 +35,9 @@ const PLACE: Record<SummaryPlace, { label: string; href: string } | null> = {
   services: { label: 'Your services', href: 'flow' },
   week: { label: 'Your calendar', href: 'week' },
   people: { label: 'Your customers', href: 'people' },
-  questions: { label: 'Your filters', href: 'screening' },
-  messages: { label: 'Messages', href: 'messages' },
-  account: { label: 'Your business', href: 'account' },
+  questions: { label: 'Your services → Your filters', href: 'screening' },
+  messages: { label: 'Your business → Messages', href: 'messages' },
+  account: { label: 'Your business → Settings', href: 'account' },
   none: null,
 };
 
@@ -247,22 +247,12 @@ export default function ReportsPage() {
                 </p>
               ) : (
                 <ul className="rep-findings">
-                  {r.findings.map((f, i) => (
+                  {r.findings.map((f) => (
                     <li key={f.id} className={f.tone === 'need' ? 'is-need' : undefined}>
                       <span className={`lamp is-${f.tone === 'need' ? 'need' : 'here'}`} aria-hidden="true" />
                       <div>
                         <p className="rep-finding-title">{f.title}</p>
                         <p className="rep-finding-detail">{f.detail}</p>
-                        {f.action && (
-                          /* One solid Ochre key — the first thing to do. The
-                             rest keep their Ochre lamp, not a second shout. */
-                          <a
-                            className={`btn-secondary${f.tone === 'need' && i === 0 ? ' is-need' : ''}`}
-                            href={`/admin/${slug}/${f.action.href}`}
-                          >
-                            {f.action.label}
-                          </a>
-                        )}
                       </div>
                     </li>
                   ))}
@@ -397,9 +387,6 @@ export default function ReportsPage() {
                     ))}
                   </ul>
                 )}
-                <a className="btn-link" href={`/admin/${slug}/week`}>
-                  Change your hours
-                </a>
               </div>
               <div>
                 <p className="wk-side-eyebrow">How far ahead people book</p>
@@ -472,9 +459,6 @@ export default function ReportsPage() {
                 )}
               </div>
             </div>
-            <a className="btn-secondary" href={`/admin/${slug}/people`}>
-              Open People
-            </a>
           </Section>
 
           <Section
@@ -555,8 +539,7 @@ export default function ReportsPage() {
             {r.cancellations.past > 0 && r.cancellations.marked < r.cancellations.past && (
               <p className="wk-side-hint">
                 Came or didn’t come is marked for {r.cancellations.marked} of {r.cancellations.past} sessions.
-                Mark them on <a href={`/admin/${slug}/week`}>Your calendar</a> — open a past booking — to see
-                no-shows clearly.
+                Mark them on Your calendar (open a past booking) to see no-shows clearly.
               </p>
             )}
             {r.cancellations.reasons.length > 0 && (
@@ -620,7 +603,7 @@ export default function ReportsPage() {
                 {r.tracking.ratings === 0
                   ? 'Clients are asked the morning after each session. Their answers appear here.'
                   : 'No ratings in this period.'}{' '}
-                <a href={`/admin/${slug}/messages`}>The email is in Messages</a>.
+                The email is in Messages.
               </p>
             ) : (
               <div className="rep-cols">
@@ -663,8 +646,8 @@ export default function ReportsPage() {
           {r.questions.length > 0 && (
             <Section
               id="questions"
-              title="Your questions"
-              lede="Which questions send people somewhere other than your calendar, and with which answer."
+              title="Your filters"
+              lede="Which filters send people somewhere other than your calendar, and with which answer."
             >
               <ul className="rep-questions">
                 {r.questions.slice(0, 6).map((q) => (
@@ -680,9 +663,6 @@ export default function ReportsPage() {
                   </li>
                 ))}
               </ul>
-              <a className="btn-secondary" href={`/admin/${slug}/screening`}>
-                Review your questions
-              </a>
             </Section>
           )}
         </div>
@@ -861,12 +841,7 @@ function SummaryPlate({
                   <p className="rep-finding-title">{p.title}</p>
                   <p className="rep-finding-detail">
                     {p.detail}
-                    {place && (
-                      <>
-                        {' '}
-                        <a href={`/admin/${slug}/${place.href}`}>Open {place.label}</a>
-                      </>
-                    )}
+                    {place && <span className="rep-where"> · {place.label}</span>}
                   </p>
                 </li>
               );

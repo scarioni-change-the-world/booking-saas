@@ -149,8 +149,8 @@ export default function PeoplePage() {
   return (
     <>
       <PageHeader
-        title="Everyone, with the route they took"
-        description="Everyone who answered, booked or was added by you in the last year, most recent first."
+        title="Your customers"
+        description="Everyone who answered your filters, booked, or was added by you in the last year, newest first."
         actions={
           !adding ? (
             <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
@@ -218,7 +218,7 @@ export default function PeoplePage() {
                   setFilter(e.target.value as PeopleFilter | 'all');
                 }}
               >
-                {figure && <option value="">From Overview</option>}
+                {figure && <option value="">From your link</option>}
                 {FILTERS.map((f) => (
                   <option key={f.key} value={f.key} disabled={f.key !== 'all' && counts[f.key] === 0 && filter !== f.key}>
                     {f.label} ({counts[f.key]})
@@ -243,7 +243,7 @@ export default function PeoplePage() {
                One person can give two answers, and when they have, the
                difference is said rather than left to look like an error. */
             <div className="notice notice-muted pp-figure" role="status">
-              <span className="pp-figure-label">From Overview: {FIGURES[figure]}</span>
+              <span className="pp-figure-label">{FIGURES[figure]}</span>
               <span>
                 {figure === 'returning' ? 'Answers from people you already knew' : 'New enquiries'}, last{' '}
                 {FIGURE_DAYS} days · {figureTotal === 1 ? '1 answer' : `${figureTotal} answers`}
@@ -362,7 +362,7 @@ function Summary({ people }: { people: Person[] }) {
       <p className="wk-side-eyebrow">Everyone</p>
       <dl className="wk-facts">
         <div>
-          <dt>People</dt>
+          <dt>In total</dt>
           <dd>{people.length}</dd>
         </div>
         <div>

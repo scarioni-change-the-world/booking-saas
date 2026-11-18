@@ -11,8 +11,8 @@ export default function MessagesPage() {
   return (
     <>
       <PageHeader
-        title="What people are told, and when"
-        description="Every email is ready and goes out on its own. Choose a moment to read or change what people are told."
+        title="Messages"
+        description="What people are told, and when. Every email is ready and goes out on its own, the same for every service."
       />
       <MessagesBoard slug={slug} initial={search.get('m')} />
     </>

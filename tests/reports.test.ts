@@ -121,7 +121,7 @@ describe('buildReport', () => {
     expect(ids).not.toContain('band-quiet');
     expect(ids).not.toContain('mostly-empty');
     const note = r.findings.find((f) => f.id === 'nothing-booked')!;
-    expect(note.action?.href).toBe('share');
+    expect(note.detail).toContain('Share');
     expect(note.detail).not.toMatch(/0%/);
   });
 
