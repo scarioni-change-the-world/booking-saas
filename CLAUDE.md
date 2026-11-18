@@ -23,6 +23,7 @@ How this applies in the admin:
 - **Hierarchy follows the job.** The page's content comes first; status notes are quiet lines, never full-width banners above it.
 - **Ask khloe is an assistant, not a step.** It lives in the corner of every page. Where creating something, it is offered as an equal alternative ("Set it up myself", "Describe it to khloe", "From my website"), never as a gate.
 - **One way in for every service.** No separate setup wizard: a new account lands on Services with "Add your first service" open. Every new service starts not offered; "Offer it" on its page puts it on the booking page.
+- **No detours (user's rule).** A service's page holds every step of setting it up: details, opening hours, payments (Stripe connects from there and comes back there), questions with where each answer leads, the next-steps message, the emails, who can book. Shared things (hours, messages, shared questions) are edited in place with the same component as their own page, and say that a change applies to every service. A flow never sends someone to another page to finish a step; links out are only for looking at records (a person, a booking). There is no separate Questions page: /screening forwards to a service's Questions tab.
 - **Collections are cards side by side** (services), with "Add" as the last card where the next one will appear.
 - **One Ochre key per view**, and only for something that needs the person (`btn-secondary is-need`). Everything else is plain.
 - **Exclusive views use the pill switch** (`.wk-mode` with `.filter-chip[aria-pressed]`).

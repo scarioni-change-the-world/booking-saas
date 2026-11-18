@@ -1,6 +1,7 @@
 import { fail, handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { baseUrl } from '@/lib/base-url';
+import { returnPath } from '@/lib/payment-return';
 import { updateTenantBilling } from '@/lib/db/billing';
 import { stripe, stripeConfigured } from '@/lib/stripe';
 
@@ -36,15 +37,18 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       });
     }
 
-    const back = `${baseUrl()}/admin/${encodeURIComponent(slug)}/account`;
+    // Back where they started: Account, or the service they were setting up.
+    const body = (await request.json().catch(() => ({}))) as { returnTo?: unknown };
+    const back = `${baseUrl()}/admin/${encodeURIComponent(slug)}/${returnPath(body.returnTo)}`;
     const link = await stripe().accountLinks.create({
       account,
       type: 'account_onboarding',
-      refresh_url: `${back}?stripe=again`,
-      return_url: `${back}?stripe=back`,
+      refresh_url: `${back}${back.includes('?') ? '&' : '?'}stripe=again`,
+      return_url: `${back}${back.includes('?') ? '&' : '?'}stripe=back`,
     });
     return ok({ url: link.url });
   } catch (error) {
     return handleError(error);
   }
 }
+

@@ -10,6 +10,8 @@ import { ServiceDetails } from '@/components/admin/ServiceDetails';
 import { SettingForm, SettingsPanel, type Setting } from '@/components/admin/SettingsPanel';
 import { DeleteService } from '@/components/admin/DeleteService';
 import { ServiceQuestions } from '@/components/admin/ServiceQuestions';
+import { MessagesBoard } from '@/components/admin/MessagesBoard';
+import type { PaymentsInfo } from '@/components/admin/BillingCards';
 import { setupStages, type ServiceFacts, type StageId } from '@/lib/service-setup';
 import type { SerializedEventType } from '@/lib/admin-serializers';
 
@@ -52,13 +54,20 @@ export default function ServicePage() {
   const [payload, setPayload] = useState<SetupPayload | null>(null);
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [hours, setHours] = useState<HoursRule[] | null>(null);
+  const [account, setAccount] = useState<{ timezone: string; payments: PaymentsInfo } | null>(null);
+  // Which Details line opens first ("set your opening hours" opens When).
+  const [openLine, setOpenLine] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTabState] = useState<Tab>('details');
   // ?tab= opens a tab directly (links from the checklist, Ask khloe, the flow).
   useEffect(() => {
-    const asked = new URLSearchParams(window.location.search).get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const asked = params.get('tab');
     if (asked === 'details' || asked === 'questions' || asked === 'messages' || asked === 'who') setTabState(asked);
+    // ?open=when opens that Details line (opening hours, from the flow).
+    const line = params.get('open');
+    if (line && /^[a-z]+$/.test(line)) setOpenLine(line);
   }, []);
   const setTab = (next: Tab) => {
     setTabState(next);
@@ -70,13 +79,15 @@ export default function ServicePage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [setup, settings, rules] = await Promise.all([
+      const [setup, settings, rules, acct] = await Promise.all([
         adminFetchJson<SetupPayload>(`${base}/service-setup`),
         adminFetchJson<{ settings: { currency: string } }>(`${base}/settings`),
         adminFetchJson<{ rules: HoursRule[] }>(`${base}/availability-rules`).catch(() => null),
+        adminFetchJson<{ business: { timezone: string }; payments: PaymentsInfo }>(`${base}/account`).catch(() => null),
       ]);
       setPayload(setup);
       setHours(rules?.rules ?? null);
+      setAccount(acct ? { timezone: acct.business.timezone, payments: acct.payments } : null);
       setCurrency(settings.settings.currency);
     } catch (cause) {
       setError((cause as Error).message);
@@ -136,7 +147,7 @@ export default function ServicePage() {
   // What stops it being booked even once offered: said before offering.
   const blockers: Blocker[] = [];
   if (payload.availabilityRuleCount === 0)
-    blockers.push({ text: 'set your opening hours', href: `/admin/${slug}/account#opening-hours` });
+    blockers.push({ text: 'set your opening hours', tab: 'details', open: 'when' });
   if (stages.find((st) => st.id === 'rules')?.blocking) blockers.push({ text: 'choose how many sessions are in the pack', tab: 'details' });
 
   async function patch(body: Record<string, unknown>) {
@@ -156,7 +167,6 @@ export default function ServicePage() {
     { id: 'messages', label: 'Messages', needed: neededIn(['messages']) },
     { id: 'who', label: 'Who can book', needed: neededIn(['review']) },
   ];
-  const messagesStage = stages.find((s) => s.id === 'messages');
 
   return (
     <>
@@ -164,7 +174,18 @@ export default function ServicePage() {
           Ask khloe is the assistant in the corner, not a step on the page. */}
       <PageHeader
         title={service.name}
-        description={<OfferState slug={slug} service={service} live={live} blockers={blockers} onTab={setTab} />}
+        description={
+          <OfferState
+            slug={slug}
+            service={service}
+            live={live}
+            blockers={blockers}
+            onTab={(t, line) => {
+              setOpenLine(line);
+              setTab(t);
+            }}
+          />
+        }
         actions={
           <>
             {/* Offering is the one thing a new service needs from you, so it
@@ -223,6 +244,9 @@ export default function ServicePage() {
           hours={hours && hours.length > 0 ? hoursSummary(hours) : null}
           packBroken={!!stages.find((st) => st.id === 'rules')?.blocking}
           onSave={patch}
+          account={account}
+          onAccountChanged={load}
+          open={openLine}
         />
       )}
 
@@ -230,20 +254,15 @@ export default function ServicePage() {
         <ServiceQuestions slug={slug} serviceId={service.id} serviceName={service.name} onChanged={() => void load()} />
       )}
 
+      {/* The messages themselves, edited here: the same for every service,
+          so a change here is a change everywhere, and the lede says so. */}
       {tab === 'messages' && (
-        <section className="card svc-card">
-          <div className="admin-card-title">The emails people get</div>
-          <p className="svc-lede">
-            A confirmation when they book, a reminder the day before, a note if plans change, and a question after.
-            They are the same for every service, written in your words on Messages.
+        <>
+          <p className="svc-lede svc-tab-lede">
+            What people are told, and when. The same for every service, so a change here changes it everywhere.
           </p>
-          {messagesStage?.note && <p className="svc-note">{messagesStage.note}</p>}
-          <div className="fl-actions">
-            <a className="btn-secondary" href={`/admin/${slug}/messages`}>
-              Open Messages
-            </a>
-          </div>
-        </section>
+          <MessagesBoard slug={slug} service={{ id: service.id, onQuestions: () => setTab('questions') }} />
+        </>
       )}
 
       {tab === 'who' && (
@@ -290,8 +309,9 @@ type Saver = (body: Record<string, unknown>) => Promise<void>;
 
 interface Blocker {
   text: string;
-  href?: string;
-  tab?: Tab;
+  tab: Tab;
+  /** The Details line to open, when it is one. */
+  open?: string;
 }
 
 /**
@@ -311,7 +331,7 @@ function OfferState({
   service: SerializedEventType;
   live: boolean;
   blockers: Blocker[];
-  onTab: (tab: Tab) => void;
+  onTab: (tab: Tab, line?: string) => void;
 }) {
   if (!service.active) {
     return (
@@ -358,13 +378,9 @@ function OfferState({
         {blockers.map((b, i) => (
           <span key={b.text}>
             {i > 0 && ' and '}
-            {b.href ? (
-              <a href={b.href}>{b.text}</a>
-            ) : (
-              <button type="button" className="btn-link" onClick={() => b.tab && onTab(b.tab)}>
-                {b.text}
-              </button>
-            )}
+            <button type="button" className="btn-link" onClick={() => onTab(b.tab, b.open)}>
+              {b.text}
+            </button>
           </span>
         ))}
         .

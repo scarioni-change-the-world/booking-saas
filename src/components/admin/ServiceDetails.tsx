@@ -7,6 +7,8 @@ import { amountDue, paymentSettingProblem, type PaymentMode } from '@/lib/paymen
 import type { SerializedEventType } from '@/lib/admin-serializers';
 import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
 import { SettingForm, SettingsPanel, type Setting } from './SettingsPanel';
+import { OpeningHoursCard } from './OpeningHoursCard';
+import { GettingPaidCard, type PaymentsInfo } from './BillingCards';
 
 type Saver = (body: Record<string, unknown>) => Promise<void>;
 
@@ -30,6 +32,9 @@ export function ServiceDetails({
   hours,
   packBroken,
   onSave,
+  account,
+  onAccountChanged,
+  open,
 }: {
   slug: string;
   service: SerializedEventType;
@@ -40,6 +45,12 @@ export function ServiceDetails({
   /** A pack with no size: the one service setting that stops booking. */
   packBroken: boolean;
   onSave: Saver;
+  /** What the shared editors here need: the time zone and Stripe's state. */
+  account: { timezone: string; payments: PaymentsInfo } | null;
+  /** Opening hours or Stripe changed: everything shared is read again. */
+  onAccountChanged: () => Promise<void>;
+  /** Which line opens first, e.g. "when" from "set your opening hours". */
+  open?: string;
 }) {
   const s = service;
   const price =
@@ -88,7 +99,17 @@ export function ServiceDetails({
       label: 'Payment',
       value: payment,
       empty: payment === 'Not online',
-      editor: <PaymentEditor slug={slug} service={s} currency={currency} takesPayments={takesPayments} onSave={onSave} />,
+      editor: (
+        <PaymentEditor
+          slug={slug}
+          service={s}
+          currency={currency}
+          takesPayments={takesPayments}
+          payments={account?.payments ?? null}
+          onPaymentsChanged={onAccountChanged}
+          onSave={onSave}
+        />
+      ),
     },
     {
       id: 'when',
@@ -96,11 +117,11 @@ export function ServiceDetails({
       value: hours ?? 'No opening hours',
       needed: hours === null,
       empty: hours === null,
-      editor: <WhenEditor slug={slug} hours={hours} />,
+      editor: <WhenEditor slug={slug} timezone={account?.timezone ?? null} onSaved={onAccountChanged} />,
     },
   ];
 
-  return <SettingsPanel label={`${s.name}: settings`} settings={settings} />;
+  return <SettingsPanel key={open ?? ''} label={`${s.name}: settings`} settings={settings} initial={open} />;
 }
 
 /* ── The editors, one setting each ────────────────────────────────────── */
@@ -296,24 +317,38 @@ function PaymentEditor({
   service,
   currency,
   takesPayments,
+  payments,
+  onPaymentsChanged,
   onSave,
 }: {
   slug: string;
   service: SerializedEventType;
   currency: string;
   takesPayments: boolean;
+  payments: PaymentsInfo | null;
+  onPaymentsChanged: () => Promise<void>;
   onSave: Saver;
 }) {
   const [mode, setMode] = useState<PaymentMode>(service.paymentMode);
   const savedDeposit = toMoneyInput(service.depositMinor, currency);
   const [deposit, setDeposit] = useState(savedDeposit);
 
+  /* Not taking payments yet: connect Stripe right here, and come back here. */
   if (!takesPayments) {
     return (
-      <p className="sp-purpose">
-        Clients book without paying online. To have them pay when they book,{' '}
-        <a href={`/admin/${slug}/account#payments`}>connect Stripe on your Account page</a>.
-      </p>
+      <div className="sp-form">
+        <p className="sp-purpose">Clients book without paying online. To have them pay when they book, connect Stripe.</p>
+        {payments ? (
+          <GettingPaidCard
+            slug={slug}
+            payments={payments}
+            onChanged={onPaymentsChanged}
+            returnTo={`sessions/${service.id}?tab=details`}
+          />
+        ) : (
+          <p className="status">Loading…</p>
+        )}
+      </div>
     );
   }
 
@@ -388,22 +423,17 @@ function PaymentEditor({
   );
 }
 
-function WhenEditor({ slug, hours }: { slug: string; hours: string | null }) {
+/**
+ * When it can be booked: the opening hours every service shares, edited
+ * right here. Changing them here changes them for every service, and the
+ * line says so.
+ */
+function WhenEditor({ slug, timezone, onSaved }: { slug: string; timezone: string | null; onSaved: () => Promise<void> }) {
+  if (!timezone) return <p className="status">Loading…</p>;
   return (
     <div className="sp-form">
-      <p className="sp-purpose">
-        {hours
-          ? `Within your opening hours, which every service shares: ${hours}.`
-          : 'You have no opening hours yet, so nothing can be booked.'}
-      </p>
-      <div className="sp-keys">
-        <a className={`btn-secondary${hours ? '' : ' is-need'}`} href={`/admin/${slug}/account#opening-hours`}>
-          {hours ? 'Change opening hours' : 'Set opening hours'}
-        </a>
-        <a className="btn-link" href={`/admin/${slug}/week`}>
-          Close a day, or time off
-        </a>
-      </div>
+      <p className="sp-purpose">Within your opening hours. Every service shares them, so a change here changes them all.</p>
+      <OpeningHoursCard slug={slug} timezone={timezone} weekHref={`/admin/${slug}/week`} onSaved={() => void onSaved()} />
     </div>
   );
 }

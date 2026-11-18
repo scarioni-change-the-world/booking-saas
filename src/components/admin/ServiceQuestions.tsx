@@ -12,6 +12,8 @@ import {
   type FormState,
   type Question,
 } from '@/components/admin/QuestionForm';
+import { AiSetupCard, ReplayPanel, type ReplayData } from '@/components/admin/QuestionTools';
+import { NextStepsEditor, type NextSteps, type StepsDraft } from '@/components/admin/MessagesBoard';
 
 /**
  * A service's Questions tab: what people answer before they book it, in
@@ -45,6 +47,14 @@ export function ServiceQuestions({
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
+  /* Last month's answers, loaded once: the editor replays them under every
+     change, so flipping where an answer leads shows its effect at once. */
+  const [replayData, setReplayData] = useState<ReplayData | null | 'unavailable'>(null);
+  useEffect(() => {
+    adminFetchJson<ReplayData>(`${base}/replay`)
+      .then(setReplayData)
+      .catch(() => setReplayData('unavailable'));
+  }, [base]);
 
   const load = useCallback(async () => {
     try {
@@ -149,6 +159,7 @@ export function ServiceQuestions({
             <p className="notice notice-muted">Asked for every service: a change here changes it everywhere.</p>
           )}
           <QuestionForm form={editForm} setForm={setEditForm} idPrefix={`sq-edit-${q.id}`} />
+          <ReplayPanel saved={q} form={editForm} questions={questions ?? []} data={replayData} />
           <div className="fl-actions">
             <button type="submit" className="btn-primary" disabled={busy || !editForm.prompt.trim()}>
               {busy ? 'Saving…' : 'Save'}
@@ -231,18 +242,59 @@ export function ServiceQuestions({
             >
               + Add a question
             </button>
+            <AiSetupCard
+              slug={slug}
+              eventTypes={[{ id: serviceId, name: serviceName, availableToProspects: true }]}
+              defaultServiceId={serviceId}
+              onQuestionsAdded={() => {
+                void load();
+                onChanged();
+              }}
+            />
           </div>
-        )}
-        {anyElsewhere && (
-          <p className="svc-more">
-            People sent to your next steps don&apos;t see the calendar; they see your next steps message.{' '}
-            <a href={`/admin/${slug}/messages?m=next_steps`}>Change what they&apos;re told</a>.
-          </p>
         )}
       </section>
 
+      {/* Where the wrong enquiries go, written right here: whenever an
+          answer sends someone to your next steps, this is what they see. */}
+      {anyElsewhere && <NextStepsHere slug={slug} questions={questions ?? []} />}
+
       <ClosingQuestion slug={slug} />
     </>
+  );
+}
+
+/** The next-steps message, the same one Messages shows, edited in place. */
+function NextStepsHere({ slug, questions }: { slug: string; questions: Question[] }) {
+  const [saved, setSaved] = useState<{ nextSteps: NextSteps | null; shownElsewhere: number } | null>(null);
+  const [draft, setDraft] = useState<StepsDraft | null>(null);
+  const load = useCallback(async () => {
+    try {
+      setSaved(await adminFetchJson<{ nextSteps: NextSteps | null; shownElsewhere: number }>(`/api/admin/${slug}/messages`));
+    } catch {
+      setSaved({ nextSteps: null, shownElsewhere: 0 });
+    }
+  }, [slug]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!saved?.nextSteps) return null;
+  return (
+    <div className="sq-next">
+      <p className="sq-group">What people sent to your next steps see</p>
+      <NextStepsEditor
+        slug={slug}
+        saved={saved.nextSteps}
+        draft={draft}
+        setDraft={setDraft}
+        shown={saved.shownElsewhere}
+        questions={questions}
+        onSaved={async () => {
+          setDraft(null);
+          await load();
+        }}
+      />
+    </div>
   );
 }
 

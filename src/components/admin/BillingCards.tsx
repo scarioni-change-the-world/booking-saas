@@ -27,11 +27,12 @@ export interface PaymentsInfo {
 
 const day = (iso: string) => DateTime.fromISO(iso).toFormat('d LLLL');
 
-async function go(url: string, setError: (e: string) => void, setBusy: (b: boolean) => void) {
+async function go(url: string, setError: (e: string) => void, setBusy: (b: boolean) => void, body?: unknown) {
   setBusy(true);
   try {
     const { url: next } = await adminFetchJson<{ url: string }>(url, {
       method: 'POST',
+      ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
     });
     window.location.href = next;
   } catch (cause) {
@@ -165,10 +166,13 @@ export function GettingPaidCard({
   slug,
   payments,
   onChanged,
+  returnTo,
 }: {
   slug: string;
   payments: PaymentsInfo;
   onChanged: () => Promise<void>;
+  /** Where Stripe sends them back: a service's page, when connected from there. */
+  returnTo?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,7 +188,7 @@ export function GettingPaidCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, []);
 
-  const connect = () => void go(`/api/admin/${slug}/payments/connect`, setError, setBusy);
+  const connect = () => void go(`/api/admin/${slug}/payments/connect`, setError, setBusy, returnTo ? { returnTo } : undefined);
 
   return (
     <section className="card acct-card">

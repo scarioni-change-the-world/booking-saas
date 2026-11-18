@@ -99,6 +99,9 @@ describe('client bundle', () => {
 
   /** What such a module must never import at runtime. */
   const SERVER_ONLY = ['./booking-service', './db', './db/client', './email', 'node:'];
+  /** Under a banned path but plain data: the email wording and its tokens,
+   * which the Messages editor previews in the browser. Imports nothing. */
+  const BROWSER_SAFE = ['./email/templates'];
 
   it('finds the lib modules the browser actually loads', () => {
     // A guard on the guard: if this ever comes back empty the assertions
@@ -118,6 +121,7 @@ describe('client bundle', () => {
       }
 
       for (const specifier of runtimeImports(source)) {
+        if (BROWSER_SAFE.includes(specifier)) continue;
         if (SERVER_ONLY.some((banned) => specifier.startsWith(banned))) {
           offenders.push(`@/lib/${lib} imports ${specifier}`);
         }

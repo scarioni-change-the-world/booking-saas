@@ -219,7 +219,7 @@ describe('serviceSteps', () => {
     expect(step(list, 'questions').notes).toContainEqual({
       tone: 'need',
       text: '13 people were sent to your other next step, but it isn’t written yet, so they saw nothing.',
-      action: { label: 'Write it', href: 'messages?m=next_steps' },
+      action: { label: 'Write it', href: 'sessions/s1?tab=questions' },
     });
   });
 
@@ -240,7 +240,7 @@ describe('serviceSteps', () => {
 
   it('draws no hours as the missing step, with the way to set them', () => {
     const list = steps({ availabilityRuleCount: 0 });
-    expect(step(list, 'times')).toMatchObject({ state: 'missing', change: { label: 'Set your hours', href: 'week' } });
+    expect(step(list, 'times')).toMatchObject({ state: 'missing', change: { label: 'Set your hours', href: 'sessions/s1?tab=details&open=when' } });
     expect(step(list, 'booked').state).toBe('waiting');
   });
 
@@ -249,7 +249,7 @@ describe('serviceSteps', () => {
     expect(step(list, 'questions')).toMatchObject({
       state: 'set',
       title: 'No questions',
-      change: { label: 'Add questions', href: 'screening?service=s1' },
+      change: { label: 'Add questions', href: 'sessions/s1?tab=questions' },
     });
   });
 

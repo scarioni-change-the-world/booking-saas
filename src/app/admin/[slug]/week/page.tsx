@@ -10,6 +10,7 @@ import { BookingList } from '@/components/admin/BookingList';
 import { ReconsideredMark } from '@/components/admin/ReconsideredMark';
 import { ServiceBadge } from '@/components/admin/ServiceBadge';
 import { BookingRules } from '@/components/admin/BookingRules';
+import { OpeningHoursCard } from '@/components/admin/OpeningHoursCard';
 import { CalendarConnection } from '@/components/admin/CalendarConnection';
 import { TimeOffPanel, TimeOffPlate } from '@/components/admin/TimeOff';
 import { useServiceMark } from '@/components/admin/ServiceMarks';
@@ -491,6 +492,7 @@ export default function WeekPage() {
                         bookings={bookings.length}
                         bookedMinutes={placements.reduce((sum, p) => sum + (p.endMinutes - p.startMinutes), 0)}
                         owed={owed}
+                        onHoursSaved={() => void load()}
                       />
                     </section>
                     <section className="wk-plate wk-rules">
@@ -765,13 +767,16 @@ function WeekSummary({
   bookings,
   bookedMinutes,
   owed,
+  onHoursSaved,
 }: {
   slug: string;
   week: WeekPayload;
   bookings: number;
   bookedMinutes: number;
   owed: Owed[];
+  onHoursSaved: () => void;
 }) {
+  const [settingHours, setSettingHours] = useState(false);
   const openMinutes = week.days.reduce((sum, d) => sum + coveredMinutes(d.windows), 0);
   const blocked = week.days.reduce((sum, d) => sum + d.blocks.length, 0);
   const exceptions = week.days.filter((d) => d.override).length;
@@ -799,10 +804,27 @@ function WeekSummary({
       </p>
       <p className="wk-reading-sub">{also.join(' · ')}</p>
       {openMinutes === 0 && (
-        <p className="wk-warning">
-          No hours are open this week, so your booking page offers nothing. Set your opening hours in{' '}
-          <a href={`/admin/${slug}/account#opening-hours`}>Account</a>, or choose Paint usual hours.
-        </p>
+        <>
+          <p className="wk-warning">
+            No hours are open this week, so your booking page offers nothing.{' '}
+            {!settingHours && (
+              <button type="button" className="btn-link" onClick={() => setSettingHours(true)}>
+                Set your opening hours
+              </button>
+            )}
+          </p>
+          {settingHours && (
+            <OpeningHoursCard
+              slug={slug}
+              timezone={week.timezone}
+              weekHref={`/admin/${slug}/week`}
+              onSaved={() => {
+                setSettingHours(false);
+                onHoursSaved();
+              }}
+            />
+          )}
+        </>
       )}
       {/* Somebody owed a session has no time on the grid to point at, so
           they are named here instead — quietly, in the side panel, not as

@@ -29,6 +29,7 @@ import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-
 import { DeleteService } from '@/components/admin/DeleteService';
 import { openAskKhloe } from '@/components/admin/AskKhloe';
 import { SiteDraftPanel } from '@/components/admin/SiteDraft';
+import { OpeningHoursCard } from '@/components/admin/OpeningHoursCard';
 import { SERVICE_TYPES, hoursSummary, serviceTypeBody, type HoursRule } from '@/lib/setup';
 
 interface NextUp {
@@ -350,6 +351,7 @@ export default function FlowPage() {
                   activeCount={activeCount}
                   currency={data.tenant.currency}
                   hours={data.setup?.hours ?? null}
+                  timezone={data.timezone}
                   first={noServices}
                   onAdded={() => {
                     setAdding(false);
@@ -766,7 +768,7 @@ function StepDetail({
           <p className="wk-side-hint">
             People sent elsewhere see your next-steps message
             {model.elsewhere.label ? `, with a link: “${model.elsewhere.label}”` : ''}. It is the same for every
-            service. <a href={a('messages?m=next_steps')}>Change what they’re told</a>
+            service. <a href={a(`sessions/${lane.id}?tab=questions`)}>Change what they’re told</a>
           </p>
         )}
       </div>
@@ -829,7 +831,7 @@ function StepDetail({
         <a className="btn-secondary" href={a('week')}>
           Open the Week
         </a>
-        <a href={a('messages')}>What they’re told</a>
+        <a href={a(`sessions/${lane.id}?tab=messages`)}>What they’re told</a>
       </div>
     </div>
   );
@@ -950,6 +952,7 @@ function AddService({
   activeCount,
   currency,
   hours,
+  timezone,
   first,
   onAdded,
   onCancel,
@@ -958,6 +961,7 @@ function AddService({
   activeCount: number;
   currency: string;
   hours: HoursRule[] | null;
+  timezone: string;
   /** The account has no services yet: say hello, and there is no Cancel. */
   first: boolean;
   onAdded: () => void;
@@ -975,6 +979,9 @@ function AddService({
   const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Opening hours, set right here when there are none (or changed).
+  const [editHours, setEditHours] = useState(false);
+  const [freshHours, setFreshHours] = useState<HoursRule[] | null>(null);
   const atCap = !withinServiceLimit(activeCount);
   const type = SERVICE_TYPES.find((t) => t.id === typeId) ?? SERVICE_TYPES.find((t) => t.id === 'other')!;
 
@@ -998,7 +1005,8 @@ function AddService({
       : parsedPrice.minor === 0
         ? 'Free'
         : formatMoney(parsedPrice.minor, currency);
-  const hoursText = hours && hours.length > 0 ? hoursSummary(hours) : null;
+  const knownHours = freshHours ?? hours;
+  const hoursText = knownHours && knownHours.length > 0 ? hoursSummary(knownHours) : null;
 
   async function create() {
     if (!name.trim()) return setStep(1);
@@ -1228,12 +1236,26 @@ function AddService({
                     Within your opening hours, shared by every service: <b>{hoursText}</b>.
                   </>
                 ) : (
-                  'You have no opening hours yet. Add the service now and set them next.'
+                  'You have no opening hours yet. Set them here, or add the service now and set them on its page.'
                 )}
               </p>
-              <a className="btn-link" href={`/admin/${slug}/account#opening-hours`}>
-                {hoursText ? 'Change opening hours' : 'Set opening hours'}
-              </a>
+              {editHours ? (
+                <OpeningHoursCard
+                  slug={slug}
+                  timezone={timezone}
+                  weekHref={`/admin/${slug}/week`}
+                  onSaved={() => {
+                    void adminFetchJson<{ rules: HoursRule[] }>(`/api/admin/${slug}/availability-rules`)
+                      .then((r) => setFreshHours(r.rules))
+                      .catch(() => undefined);
+                    setEditHours(false);
+                  }}
+                />
+              ) : (
+                <button type="button" className="btn-link" onClick={() => setEditHours(true)}>
+                  {hoursText ? 'Change opening hours' : 'Set opening hours'}
+                </button>
+              )}
               <button type="button" className="btn-primary" disabled={saving} onClick={() => void create()}>
                 {saving ? 'Adding…' : 'Add the service'}
               </button>

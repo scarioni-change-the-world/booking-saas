@@ -436,7 +436,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
 
   /* 2 · The questions */
   let questions: FlowStep;
-  const questionsHref = `screening?service=${encodeURIComponent(lane.id)}`;
+  const questionsHref = `${settings}?tab=questions`;
   if (!lane.fromPage && lane.fromClients) {
     questions = {
       id: 'questions',
@@ -487,7 +487,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
           sent > 0
             ? `${people(sent)} ${was} sent to your other next step, but it isn’t written yet, so they saw nothing.`
             : 'If an answer sends someone to your other next step, they will see nothing: it isn’t written yet.',
-        action: { label: 'Write it', href: 'messages?m=next_steps' },
+        action: { label: 'Write it', href: `${settings}?tab=questions` },
       });
     }
     questions = {
@@ -521,7 +521,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         detail: 'You haven’t set any hours, so there is nothing to choose.',
         state: 'missing',
         figure: null,
-        change: { label: 'Set your hours', href: 'week' },
+        change: { label: 'Set your hours', href: `${settings}?tab=details&open=when` },
         notes: [],
       }
     : {
@@ -533,7 +533,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         detail: `From your usual hours, ${hoursWords(model.calendar.weeklyMinutes)} a week`,
         state: 'set',
         figure: counted ? { value: String(lane.qualified), label: 'could book' } : null,
-        change: { label: 'Change', href: 'week' },
+        change: { label: 'Change', href: `${settings}?tab=details&open=when` },
         notes: model.calendar.flag
           ? [{ tone: 'need', text: `${model.calendar.flag}.`, action: { label: 'Open the Week', href: 'week#calendar' } }]
           : [],
@@ -555,7 +555,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
       label: lane.bookedPeople === 1 ? 'person' : 'people',
       sub: extra ? `${lane.booked} appointments` : undefined,
     },
-    change: { label: 'Change', href: 'messages' },
+    change: { label: 'Change', href: `${settings}?tab=messages` },
     notes: [
       ...(model.booked.flag
         ? [{ tone: 'need' as const, text: `${model.booked.flag} in the last 30 days.`, action: { label: 'See which', href: 'messages' } }]
