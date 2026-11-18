@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cellsToWindows,
   coveredMinutes,
   mondayOf,
   placeBooking,
-  rulesToCells,
   shiftWeek,
   visibleRange,
   weekDates,
-  wouldShift,
-  type WeeklyRule,
 } from '@/lib/week';
 
 const range = { startMinutes: 8 * 60, endMinutes: 18 * 60 };
@@ -45,84 +41,6 @@ describe('visibleRange', () => {
 
   it('stretches to whole hours around a late one', () => {
     expect(visibleRange([{ startMinutes: 19 * 60, endMinutes: 20 * 60 + 15 }]).endMinutes).toBe(21 * 60);
-  });
-});
-
-describe('painting usual hours', () => {
-  const nineToFive: WeeklyRule[] = [{ weekday: 2, startTime: '09:00', endTime: '17:00' }];
-
-  it('turns a rule into the cells it covers', () => {
-    const cells = rulesToCells(nineToFive, 2, range);
-    expect(cells).toHaveLength(20); // 08:00 to 18:00 in halves
-    expect(cells.filter(Boolean)).toHaveLength(16);
-    expect(cells[0]).toBe(false); // 08:00
-    expect(cells[2]).toBe(true); // 09:00
-    expect(cells[17]).toBe(true); // 16:30
-    expect(cells[18]).toBe(false); // 17:00
-  });
-
-  it('leaves other weekdays alone', () => {
-    expect(rulesToCells(nineToFive, 3, range).some(Boolean)).toBe(false);
-  });
-
-  it('never widens a rule that starts off the half hour', () => {
-    /* 09:15 must not become 09:00: that would offer clients a quarter of an
-       hour the business never said they were free. */
-    const cells = rulesToCells([{ weekday: 1, startTime: '09:15', endTime: '12:00' }], 1, range);
-    expect(cells[2]).toBe(false); // 09:00–09:30 only partly covered
-    expect(cells[3]).toBe(true); // 09:30
-  });
-
-  it('round-trips a split day into the same two rules', () => {
-    const split: WeeklyRule[] = [
-      { weekday: 4, startTime: '09:00', endTime: '13:00' },
-      { weekday: 4, startTime: '15:00', endTime: '17:30' },
-    ];
-    expect(cellsToWindows(rulesToCells(split, 4, range), range)).toEqual([
-      { startTime: '09:00', endTime: '13:00' },
-      { startTime: '15:00', endTime: '17:30' },
-    ]);
-  });
-
-  it('merges painted neighbours into one window', () => {
-    const cells = Array(20).fill(false);
-    cells[2] = cells[3] = cells[4] = true;
-    expect(cellsToWindows(cells, range)).toEqual([{ startTime: '09:00', endTime: '10:30' }]);
-  });
-
-  it('closes a run that reaches the bottom of the grid', () => {
-    const cells = Array(20).fill(false);
-    cells[18] = cells[19] = true;
-    expect(cellsToWindows(cells, range)).toEqual([{ startTime: '17:00', endTime: '18:00' }]);
-  });
-
-  it('stores a window that reaches midnight as 23:59, which the database accepts', () => {
-    const late = { startMinutes: 22 * 60, endMinutes: 24 * 60 };
-    expect(cellsToWindows([false, true, true, true], late)).toEqual([
-      { startTime: '22:30', endTime: '23:59' },
-    ]);
-  });
-
-  it('saves an empty day as no windows at all', () => {
-    expect(cellsToWindows(Array(20).fill(false), range)).toEqual([]);
-  });
-});
-
-describe('wouldShift', () => {
-  it('is quiet about hours already on the half hour', () => {
-    expect(wouldShift([{ weekday: 1, startTime: '09:00', endTime: '17:30' }], 1, range)).toBe(false);
-  });
-
-  it('warns about a start off the half hour', () => {
-    expect(wouldShift([{ weekday: 1, startTime: '08:45', endTime: '17:00' }], 1, range)).toBe(true);
-  });
-
-  it('warns about hours outside what the grid shows', () => {
-    expect(wouldShift([{ weekday: 1, startTime: '07:00', endTime: '12:00' }], 1, range)).toBe(true);
-  });
-
-  it('only looks at the weekday asked about', () => {
-    expect(wouldShift([{ weekday: 2, startTime: '08:45', endTime: '17:00' }], 1, range)).toBe(false);
   });
 });
 

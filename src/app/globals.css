@@ -4738,9 +4738,6 @@ body:has(.bk-embedded) {
   position: relative;
   user-select: none;
 }
-.wk-grid.is-painting {
-  touch-action: none;
-}
 
 .wk-corner {
   border-bottom: 1px solid var(--soft-border);
@@ -4882,10 +4879,6 @@ body:has(.bk-embedded) {
   outline: 2px solid var(--ink);
   outline-offset: 1px;
 }
-.wk-booking.is-ghost {
-  opacity: 0.35;
-  pointer-events: none;
-}
 .wk-b-name {
   font-size: 0.78rem;
   font-weight: 600;
@@ -4901,25 +4894,6 @@ body:has(.bk-embedded) {
   opacity: 0.88;
 }
 
-.wk-cell {
-  position: absolute;
-  left: 0;
-  right: 0;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--rule);
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-}
-.wk-cell.is-on {
-  background: var(--selected-mineral);
-}
-.wk-cell:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
 
 .wk-now {
   position: absolute;
@@ -7542,16 +7516,6 @@ body:has(.bk-embedded) {
 }
 .admin-app .wk-dayhead.is-selected {
   box-shadow: none;
-}
-/* Painting: the instruction sits on the grid itself, where the hand is. */
-.wk-paint-tip {
-  margin: 0 0 10px;
-  padding: 10px 14px;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--selected-mineral);
-  color: var(--ink);
-  font-size: 0.9rem;
 }
 /* Closed time is a plain, slightly deeper tint; open hours are a clear
    plate over it. (It used to be ruled like a speaker grille — every 12px,

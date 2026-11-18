@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DateTime } from 'luxon';
 import { PageHeader } from '@/components/ui';
@@ -25,16 +25,12 @@ import {
 } from '@/components/admin/bookings-shared';
 import { minutesToTimeLabel } from '@/lib/blocked-slots';
 import {
-  CELL_MINUTES,
-  cellsToWindows,
   coveredMinutes,
   mondayOf,
   placeBooking,
-  rulesToCells,
   shiftWeek,
   visibleRange,
   weekDates,
-  wouldShift,
   type Window,
 } from '@/lib/week';
 
@@ -50,10 +46,9 @@ import {
  * bookings themselves. Choosing a booking or a day opens it beside the grid
  * rather than on another screen.
  *
- * Painting changes the USUAL week — the hours that repeat. One-off changes
- * to a single date (closing it, special hours, blocking an hour) stay where
- * they were, in the day's own panel, because "every Tuesday" and "this
- * Tuesday" are different decisions and one gesture should not make both.
+ * The usual week is the business's opening hours, set in Your business.
+ * This page holds only the exceptions: a single date (closing it, special
+ * hours, blocking an hour) in the day's own panel, and time off.
  */
 
 interface DayData {
@@ -127,10 +122,7 @@ export default function WeekPage() {
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
 
-  const [painting, setPainting] = useState(false);
   const [timeOffVersion, setTimeOffVersion] = useState(0);
-  const [draft, setDraft] = useState<Record<number, boolean[]> | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -192,9 +184,8 @@ export default function WeekPage() {
     [bookings, tz],
   );
 
-  /* What the grid shows. Wider while painting, so hours outside the usual
-     working day — a 07:00 start, a Thursday evening — can be painted at all. */
-  const lookRange = useMemo(() => {
+  /* What the grid shows: the hours anything happens in this week. */
+  const range = useMemo(() => {
     const everything: Window[] = [
       ...(week?.days.flatMap((d) => [...d.windows, ...d.blocks]) ?? []),
       ...placements.map((p) => ({ startMinutes: p.startMinutes, endMinutes: p.endMinutes })),
@@ -202,65 +193,6 @@ export default function WeekPage() {
     return visibleRange(everything);
   }, [week, placements]);
 
-  const paintRange = useMemo(
-    () => ({
-      startMinutes: Math.min(6 * 60, lookRange.startMinutes),
-      endMinutes: Math.max(22 * 60, lookRange.endMinutes),
-    }),
-    [lookRange],
-  );
-
-  const range = painting ? paintRange : lookRange;
-
-  const original = useMemo(() => {
-    if (!week) return null;
-    const cells: Record<number, boolean[]> = {};
-    for (let wd = 1; wd <= 7; wd++) cells[wd] = rulesToCells(week.rules, wd, paintRange);
-    return cells;
-  }, [week, paintRange]);
-
-  const changedWeekdays = useMemo(() => {
-    if (!draft || !original) return [];
-    return [1, 2, 3, 4, 5, 6, 7].filter(
-      (wd) => draft[wd]!.some((on, i) => on !== original[wd]![i]),
-    );
-  }, [draft, original]);
-
-  function startPainting() {
-    if (!original) return;
-    setDraft(Object.fromEntries(Object.entries(original).map(([k, v]) => [k, [...v]])));
-    setPainting(true);
-    setSelection(null);
-  }
-
-  function stopPainting() {
-    setPainting(false);
-    setDraft(null);
-  }
-
-  async function saveHours() {
-    if (!draft || changedWeekdays.length === 0) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await adminFetchJson(`/api/admin/${slug}/availability-rules`, {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          days: changedWeekdays.map((wd) => ({
-            weekday: wd,
-            windows: cellsToWindows(draft[wd]!, paintRange),
-          })),
-        }),
-      });
-      stopPainting();
-      await load();
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const selectedBooking =
     selection?.kind === 'booking' ? bookings.find((b) => b.id === selection.id) ?? null : null;
@@ -292,10 +224,7 @@ export default function WeekPage() {
               type="button"
               className="filter-chip"
               aria-pressed={view === 'list'}
-              onClick={() => {
-                stopPainting();
-                setView('list');
-              }}
+              onClick={() => setView('list')}
             >
               List
             </button>
@@ -314,19 +243,11 @@ export default function WeekPage() {
           )}
 
           <div className="wk-toolbar">
-            {painting ? (
-              /* Usual hours are the same every week, so there is no week to
-                 move to — said, rather than left as two dead arrows. */
-              <div className="wk-nav">
-                <span className="wk-range">Every week</span>
-              </div>
-            ) : (
             <div className="wk-nav">
               <button
                 type="button"
                 className="btn-secondary"
                 aria-label="Previous week"
-                disabled={painting}
                 onClick={() => {
                   setSelection(null);
                   setMonday(shiftWeek(monday, -1));
@@ -339,7 +260,6 @@ export default function WeekPage() {
                 type="button"
                 className="btn-secondary"
                 aria-label="Next week"
-                disabled={painting}
                 onClick={() => {
                   setSelection(null);
                   setMonday(shiftWeek(monday, 1));
@@ -351,14 +271,12 @@ export default function WeekPage() {
                 <button
                   type="button"
                   className="btn-link"
-                  disabled={painting}
                   onClick={() => setMonday(mondayOf(today))}
                 >
                   This week
                 </button>
               )}
             </div>
-            )}
 
             {/* Your usual week is the business's opening hours, set in Your
                 business; this calendar holds only the exceptions. */}
@@ -369,7 +287,7 @@ export default function WeekPage() {
             <button
               type="button"
               className={`btn-secondary${selection?.kind === 'time-off' ? ' is-selected' : ''}`}
-              disabled={painting || !week}
+              disabled={!week}
               onClick={() => setSelection({ kind: 'time-off' })}
             >
               Time off
@@ -397,12 +315,6 @@ export default function WeekPage() {
           {week && (
             <div className="wk-layout">
               <div className="wk-grid-wrap">
-                {painting && (
-                  <p className="wk-paint-tip" role="status">
-                    <b>Click and drag</b> across the hours to open them, or over open hours to close them. Then{' '}
-                    <b>Save</b>.
-                  </p>
-                )}
                 <WeekGrid
                   week={week}
                   dates={dates}
@@ -410,29 +322,16 @@ export default function WeekPage() {
                   tz={tz}
                   range={range}
                   placements={placements}
-                  painting={painting}
-                  draft={draft}
-                  onDraft={setDraft}
                   selection={selection}
                   onSelect={setSelection}
                 />
               </div>
 
               <aside
-                className={`wk-side${!painting && !selectedBooking && selection?.kind !== 'day' && selection?.kind !== 'time-off' ? ' is-plates' : ''}`}
+                className={`wk-side${!selectedBooking && selection?.kind !== 'day' && selection?.kind !== 'time-off' ? ' is-plates' : ''}`}
                 aria-live="polite"
               >
-                {painting && draft && original ? (
-                  <PaintPanel
-                    changed={changedWeekdays}
-                    shifting={changedWeekdays.filter((wd) => wouldShift(week.rules, wd, paintRange))}
-                    before={Object.values(original).flat().filter(Boolean).length}
-                    after={Object.values(draft).flat().filter(Boolean).length}
-                    saving={saving}
-                    onSave={saveHours}
-                    onDiscard={stopPainting}
-                  />
-                ) : selectedBooking ? (
+                {selectedBooking ? (
                   <BookingPanel
                     slug={slug}
                     booking={selectedBooking}
@@ -521,9 +420,6 @@ function WeekGrid({
   tz,
   range,
   placements,
-  painting,
-  draft,
-  onDraft,
   selection,
   onSelect,
 }: {
@@ -533,9 +429,6 @@ function WeekGrid({
   tz: string;
   range: Window;
   placements: Array<{ booking: Booking; date: string; startMinutes: number; endMinutes: number }>;
-  painting: boolean;
-  draft: Record<number, boolean[]> | null;
-  onDraft: (next: Record<number, boolean[]>) => void;
   selection: Selection;
   onSelect: (s: Selection) => void;
 }) {
@@ -548,62 +441,10 @@ function WeekGrid({
   const now = DateTime.now().setZone(tz);
   const nowMinutes = now.hour * 60 + now.minute;
 
-  /* Painting: a drag sets every cell it crosses to the state of the first
-     one flipped, so sweeping over a mix of open and closed hours does one
-     thing rather than toggling each cell it passes. */
-  const dragging = useRef<{ to: boolean } | null>(null);
-
-  function setCell(weekday: number, index: number, to: boolean) {
-    if (!draft) return;
-    if (draft[weekday]![index] === to) return;
-    const next = { ...draft, [weekday]: [...draft[weekday]!] };
-    next[weekday]![index] = to;
-    onDraft(next);
-  }
-
-  function cellFrom(el: Element | null): { wd: number; i: number } | null {
-    const cell = el?.closest<HTMLElement>('[data-cell]');
-    if (!cell) return null;
-    return { wd: Number(cell.dataset.wd), i: Number(cell.dataset.i) };
-  }
-
-  function onPointerDown(e: React.PointerEvent) {
-    if (!painting || !draft) return;
-    const hit = cellFrom(e.target as Element);
-    if (!hit) return;
-    e.preventDefault();
-    const to = !draft[hit.wd]![hit.i];
-    dragging.current = { to };
-    setCell(hit.wd, hit.i, to);
-  }
-
-  function onPointerMove(e: React.PointerEvent) {
-    if (!dragging.current) return;
-    const hit = cellFrom(document.elementFromPoint(e.clientX, e.clientY));
-    if (hit) setCell(hit.wd, hit.i, dragging.current.to);
-  }
-
-  useEffect(() => {
-    const stop = () => {
-      dragging.current = null;
-    };
-    window.addEventListener('pointerup', stop);
-    window.addEventListener('pointercancel', stop);
-    return () => {
-      window.removeEventListener('pointerup', stop);
-      window.removeEventListener('pointercancel', stop);
-    };
-  }, []);
-
   const mark = useServiceMark();
-  const cellsPerDay = (range.endMinutes - range.startMinutes) / CELL_MINUTES;
 
   return (
-    <div
-      className={`wk-grid${painting ? ' is-painting' : ''}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-    >
+    <div className="wk-grid">
       <div className="wk-corner" />
       {dates.map((date, i) => {
         const day = week.days[i]!;
@@ -614,13 +455,11 @@ function WeekGrid({
             type="button"
             className={`wk-dayhead${date === today ? ' is-today' : ''}${isSelected ? ' is-selected' : ''}`}
             onClick={() => onSelect({ kind: 'day', date })}
-            disabled={painting}
             aria-label={`${WEEKDAY_NAMES[i]} ${DateTime.fromISO(date).toFormat('d LLLL')}, open this day`}
           >
             <span className="wk-dow">{WEEKDAY_NAMES[i]!.slice(0, 3)}</span>
-            {/* Painting is the week that repeats, so no date belongs to it. */}
-            {!painting && <span className="wk-dnum">{DateTime.fromISO(date).day}</span>}
-            {day.override && !painting && (
+            <span className="wk-dnum">{DateTime.fromISO(date).day}</span>
+            {day.override && (
               <span className="wk-exception">{day.override.isClosed ? 'Closed' : 'Own hours'}</span>
             )}
           </button>
@@ -637,22 +476,18 @@ function WeekGrid({
 
       {dates.map((date, i) => {
         const day = week.days[i]!;
-        const weekday = i + 1;
         const past = date < today;
         return (
           <div
             key={date}
-            // Painting edits the week that repeats, not these dates: no
-            // faded past, no today.
-            className={`wk-col${!painting && past ? ' is-past' : ''}${!painting && date === today ? ' is-today' : ''}`}
+            className={`wk-col${past ? ' is-past' : ''}${date === today ? ' is-today' : ''}`}
             style={{ height }}
           >
             {hours.map((m) => (
               <span key={m} className="wk-line" style={{ top: y(m) }} aria-hidden="true" />
             ))}
 
-            {!painting &&
-              day.windows.map((w, k) => (
+            {day.windows.map((w, k) => (
                 <span
                   key={k}
                   className="wk-open"
@@ -661,8 +496,7 @@ function WeekGrid({
                 />
               ))}
 
-            {!painting &&
-              day.blocks.map((b) => (
+            {day.blocks.map((b) => (
                 <span
                   key={b.id}
                   className="wk-blocked"
@@ -670,32 +504,6 @@ function WeekGrid({
                   title={b.reason ? `Blocked: ${b.reason}` : 'Blocked'}
                 />
               ))}
-
-            {painting &&
-              draft &&
-              Array.from({ length: cellsPerDay }, (_, k) => {
-                const start = range.startMinutes + k * CELL_MINUTES;
-                const on = draft[weekday]![k]!;
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    data-cell=""
-                    data-wd={weekday}
-                    data-i={k}
-                    className={`wk-cell${on ? ' is-on' : ''}`}
-                    style={{ top: y(start), height: (CELL_MINUTES / 60) * HOUR_PX }}
-                    aria-pressed={on}
-                    aria-label={`${WEEKDAY_NAMES[i]}s ${minutesToTimeLabel(start)}`}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setCell(weekday, k, !on);
-                      }
-                    }}
-                  />
-                );
-              })}
 
             {placements
               .filter((p) => p.date === date)
@@ -711,9 +519,8 @@ function WeekGrid({
                     type="button"
                     className={`wk-booking${b.pack ? ' is-programme' : ''}${selected ? ' is-selected' : ''}${
                       trouble ? ' has-trouble' : ''
-                    }${painting ? ' is-ghost' : ''}`}
+                    }`}
                     style={{ top, height: h }}
-                    disabled={painting}
                     onClick={() => onSelect({ kind: 'booking', id: b.id })}
                     aria-label={`${b.name}, ${b.eventTypeName}, ${minutesToTimeLabel(p.startMinutes)}`}
                   >
@@ -818,79 +625,7 @@ function WeekSummary({
   );
 }
 
-function PaintPanel({
-  changed,
-  shifting,
-  before,
-  after,
-  saving,
-  onSave,
-  onDiscard,
-}: {
-  changed: number[];
-  shifting: number[];
-  before: number;
-  after: number;
-  saving: boolean;
-  onSave: () => void;
-  onDiscard: () => void;
-}) {
-  const names = (wds: number[]) => wds.map((wd) => WEEKDAY_NAMES[wd - 1]).join(', ');
-  const hours = (cells: number) => (cells * CELL_MINUTES) / 60;
 
-  return (
-    <div>
-      <p className="wk-side-eyebrow">Painting your usual week</p>
-      <p className="wk-side-lead">
-        Drag across the grid to open or close hours. This is the week that repeats; dates with
-        their own hours keep them, and anything already booked stays where it is.
-      </p>
-      <p className="wk-side-hint" style={{ marginBottom: 12 }}>
-        Closing for a holiday, a bank holiday or a single day? That is <b>Time off</b>, beside Paint — it leaves
-        these hours alone.
-      </p>
-
-      {/* The effect, before saving. */}
-      <dl className="wk-facts">
-        <div>
-          <dt>Open each week</dt>
-          <dd>
-            {hours(before)} h{after !== before && <> → {hours(after)} h</>}
-          </dd>
-        </div>
-      </dl>
-
-      {changed.length === 0 ? (
-        <p className="wk-side-hint">Nothing changed yet.</p>
-      ) : (
-        <p className="wk-side-lead">
-          <strong>Changing:</strong> {names(changed)}.
-        </p>
-      )}
-
-      {shifting.length > 0 && (
-        <p className="wk-warning">
-          {names(shifting)} had times that are not on the half hour. Saving moves them to the
-          half hour inside the hours you had, never outside them.
-        </p>
-      )}
-
-      <div className="wk-actions">
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={saving || changed.length === 0}
-          onClick={onSave}
-        >
-          {saving ? 'Saving…' : 'Save usual hours'}
-        </button>
-        <button type="button" className="btn-link" disabled={saving} onClick={onDiscard}>
-          Discard
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function BookingPanel({
   slug,
