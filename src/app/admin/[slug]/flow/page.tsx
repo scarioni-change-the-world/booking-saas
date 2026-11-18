@@ -29,7 +29,6 @@ import { LIMIT_REACHED, SERVICE_LIMIT, withinServiceLimit } from '@/lib/service-
 import { DeleteService } from '@/components/admin/DeleteService';
 import { openAskKhloe } from '@/components/admin/AskKhloe';
 import { SiteDraftPanel } from '@/components/admin/SiteDraft';
-import { OpeningHoursCard } from '@/components/admin/OpeningHoursCard';
 import { SERVICE_TYPES, hoursSummary, serviceTypeBody, type HoursRule } from '@/lib/setup';
 
 interface NextUp {
@@ -351,7 +350,6 @@ export default function FlowPage() {
                   activeCount={activeCount}
                   currency={data.tenant.currency}
                   hours={data.setup?.hours ?? null}
-                  timezone={data.timezone}
                   first={noServices}
                   onAdded={() => {
                     setAdding(false);
@@ -952,7 +950,6 @@ function AddService({
   activeCount,
   currency,
   hours,
-  timezone,
   first,
   onAdded,
   onCancel,
@@ -961,7 +958,6 @@ function AddService({
   activeCount: number;
   currency: string;
   hours: HoursRule[] | null;
-  timezone: string;
   /** The account has no services yet: say hello, and there is no Cancel. */
   first: boolean;
   onAdded: () => void;
@@ -979,9 +975,6 @@ function AddService({
   const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Opening hours, set right here when there are none (or changed).
-  const [editHours, setEditHours] = useState(false);
-  const [freshHours, setFreshHours] = useState<HoursRule[] | null>(null);
   const atCap = !withinServiceLimit(activeCount);
   const type = SERVICE_TYPES.find((t) => t.id === typeId) ?? SERVICE_TYPES.find((t) => t.id === 'other')!;
 
@@ -1005,8 +998,7 @@ function AddService({
       : parsedPrice.minor === 0
         ? 'Free'
         : formatMoney(parsedPrice.minor, currency);
-  const knownHours = freshHours ?? hours;
-  const hoursText = knownHours && knownHours.length > 0 ? hoursSummary(knownHours) : null;
+  const hoursText = hours && hours.length > 0 ? hoursSummary(hours) : null;
 
   async function create() {
     if (!name.trim()) return setStep(1);
@@ -1233,28 +1225,17 @@ function AddService({
               <p className="ns-say">
                 {hoursText ? (
                   <>
-                    Within your opening hours, shared by every service: <b>{hoursText}</b>.
+                    Whenever you&apos;re open: <b>{hoursText}</b>. To offer it only on some days or times, choose
+                    them on its page once it is added.
                   </>
                 ) : (
-                  'You have no opening hours yet. Set them here, or add the service now and set them on its page.'
+                  'You have no opening hours yet. They are your business’s, on Account: add the service now and set them there.'
                 )}
               </p>
-              {editHours ? (
-                <OpeningHoursCard
-                  slug={slug}
-                  timezone={timezone}
-                  weekHref={`/admin/${slug}/week`}
-                  onSaved={() => {
-                    void adminFetchJson<{ rules: HoursRule[] }>(`/api/admin/${slug}/availability-rules`)
-                      .then((r) => setFreshHours(r.rules))
-                      .catch(() => undefined);
-                    setEditHours(false);
-                  }}
-                />
-              ) : (
-                <button type="button" className="btn-link" onClick={() => setEditHours(true)}>
-                  {hoursText ? 'Change opening hours' : 'Set opening hours'}
-                </button>
+              {!hoursText && (
+                <a className="btn-link" href={`/admin/${slug}/account#opening-hours`}>
+                  Set your opening hours
+                </a>
               )}
               <button type="button" className="btn-primary" disabled={saving} onClick={() => void create()}>
                 {saving ? 'Adding…' : 'Add the service'}

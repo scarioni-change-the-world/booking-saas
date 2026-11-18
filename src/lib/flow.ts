@@ -521,7 +521,7 @@ export function serviceSteps(model: FlowModel, lane: Lane, slug: string): FlowSt
         detail: 'You haven’t set any hours, so there is nothing to choose.',
         state: 'missing',
         figure: null,
-        change: { label: 'Set your hours', href: `${settings}?tab=details&open=when` },
+        change: { label: 'Set your hours', href: 'account#opening-hours' },
         notes: [],
       }
     : {

@@ -52,6 +52,12 @@ export interface SlotQuery {
   dateOverrides: readonly DateOverride[];
   /** Union of confirmed bookings, ad-hoc blocks and external calendar busy. */
   busy: readonly BusyInterval[];
+  /**
+   * When this one service may be booked (migration 0042), inside the
+   * business's opening hours: null or empty means whenever it is open.
+   * Never widens the opening hours, only narrows them for this service.
+   */
+  serviceHours?: readonly AvailabilityRule[] | null;
   /** Minimum lead time before the earliest offerable slot. */
   noticeHours: number;
   /** How far ahead bookings are accepted. 0 means unlimited (brief 5). */
@@ -212,7 +218,8 @@ export function generateSlots(query: SlotQuery): DaySlots[] {
   for (let day = start; day <= end; day = day.plus({ days: 1 })) {
     const daySlots: string[] = [];
 
-    for (const window of windowsForDate(day, availabilityRules, overrideByDate)) {
+    const open = windowsForDate(day, availabilityRules, overrideByDate);
+    for (const window of limitToServiceHours(open, day.weekday, query.serviceHours)) {
       const windowStart = atLocalTime(day, window.startTime);
       const windowEnd = atLocalTime(day, window.endTime);
       if (!windowStart || !windowEnd || windowEnd <= windowStart) continue;
@@ -250,6 +257,33 @@ export function generateSlots(query: SlotQuery): DaySlots[] {
   }
 
   return results;
+}
+
+/** 'HH:mm' from 'HH:mm' or 'HH:mm:ss', so times compare as text. */
+const hhmm = (t: string) => t.slice(0, 5);
+
+/**
+ * A day's opening windows narrowed to when one service may be booked: the
+ * overlap of each opening window with each of the service's hours for that
+ * weekday. No service hours means the opening windows as they are; service
+ * hours on another weekday mean nothing that day.
+ */
+export function limitToServiceHours(
+  open: ReadonlyArray<{ startTime: string; endTime: string }>,
+  weekday: number,
+  serviceHours: readonly AvailabilityRule[] | null | undefined,
+): Array<{ startTime: string; endTime: string }> {
+  if (!serviceHours || serviceHours.length === 0) return open.map((w) => ({ ...w }));
+  const allowed = serviceHours.filter((h) => h.weekday === weekday);
+  const out: Array<{ startTime: string; endTime: string }> = [];
+  for (const w of open) {
+    for (const h of allowed) {
+      const start = hhmm(w.startTime) > hhmm(h.startTime) ? hhmm(w.startTime) : hhmm(h.startTime);
+      const end = hhmm(w.endTime) < hhmm(h.endTime) ? hhmm(w.endTime) : hhmm(h.endTime);
+      if (start < end) out.push({ startTime: start, endTime: end });
+    }
+  }
+  return out;
 }
 
 /**

@@ -1,3 +1,4 @@
+import { ServiceHoursError, parseServiceHours } from '@/lib/service-hours';
 import {
   fail,
   handleError,
@@ -57,6 +58,16 @@ export async function PATCH(
 
     const name = optionalString(body, 'name', { maxLength: 200 });
     if (name !== undefined) patch.name = name;
+
+    /* When it can be booked, inside the opening hours: null is whenever open. */
+    if (body.bookableHours !== undefined) {
+      try {
+        patch.bookable_hours = parseServiceHours(body.bookableHours);
+      } catch (cause) {
+        if (cause instanceof ServiceHoursError) return fail(cause.message, 400);
+        throw cause;
+      }
+    }
 
     const description = optionalString(body, 'description', {
       maxLength: 2000,

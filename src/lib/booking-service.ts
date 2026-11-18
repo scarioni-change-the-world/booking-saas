@@ -222,6 +222,7 @@ export async function buildSlotQuery(
     },
     availabilityRules,
     dateOverrides,
+    serviceHours: eventType.bookable_hours ?? null,
     busy,
     noticeHours: settings.booking_notice_hours,
     bookingWindowDays: settings.booking_window_days,

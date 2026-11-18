@@ -157,6 +157,9 @@ export interface EventTypeRow {
   /** How clients pay for it online (migration 0032). */
   payment_mode?: PaymentMode;
   deposit_minor?: number | null;
+  /** When this service may be booked, inside the opening hours (migration
+   *  0042). Null: whenever the business is open. Absent before 0042. */
+  bookable_hours?: Array<{ weekday: number; startTime: string; endTime: string }> | null;
 }
 
 export interface AvailabilityRuleRow {

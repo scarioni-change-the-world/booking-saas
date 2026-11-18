@@ -240,7 +240,7 @@ describe('serviceSteps', () => {
 
   it('draws no hours as the missing step, with the way to set them', () => {
     const list = steps({ availabilityRuleCount: 0 });
-    expect(step(list, 'times')).toMatchObject({ state: 'missing', change: { label: 'Set your hours', href: 'sessions/s1?tab=details&open=when' } });
+    expect(step(list, 'times')).toMatchObject({ state: 'missing', change: { label: 'Set your hours', href: 'account#opening-hours' } });
     expect(step(list, 'booked').state).toBe('waiting');
   });
 

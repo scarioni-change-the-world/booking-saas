@@ -147,7 +147,7 @@ export default function ServicePage() {
   // What stops it being booked even once offered: said before offering.
   const blockers: Blocker[] = [];
   if (payload.availabilityRuleCount === 0)
-    blockers.push({ text: 'set your opening hours', tab: 'details', open: 'when' });
+    blockers.push({ text: 'set your opening hours', href: `/admin/${slug}/account#opening-hours` });
   if (stages.find((st) => st.id === 'rules')?.blocking) blockers.push({ text: 'choose how many sessions are in the pack', tab: 'details' });
 
   async function patch(body: Record<string, unknown>) {
@@ -242,6 +242,7 @@ export default function ServicePage() {
           currency={currency}
           takesPayments={!!payload.takesPayments}
           hours={hours && hours.length > 0 ? hoursSummary(hours) : null}
+          openingRules={hours ?? []}
           packBroken={!!stages.find((st) => st.id === 'rules')?.blocking}
           onSave={patch}
           account={account}
@@ -309,9 +310,11 @@ type Saver = (body: Record<string, unknown>) => Promise<void>;
 
 interface Blocker {
   text: string;
-  tab: Tab;
-  /** The Details line to open, when it is one. */
+  /** A step of this service: its tab, and the Details line to open. */
+  tab?: Tab;
   open?: string;
+  /** Something of the business's own, like its opening hours, on Account. */
+  href?: string;
 }
 
 /**
@@ -378,9 +381,13 @@ function OfferState({
         {blockers.map((b, i) => (
           <span key={b.text}>
             {i > 0 && ' and '}
-            <button type="button" className="btn-link" onClick={() => onTab(b.tab, b.open)}>
-              {b.text}
-            </button>
+            {b.href ? (
+              <a href={b.href}>{b.text}</a>
+            ) : (
+              <button type="button" className="btn-link" onClick={() => b.tab && onTab(b.tab, b.open)}>
+                {b.text}
+              </button>
+            )}
           </span>
         ))}
         .

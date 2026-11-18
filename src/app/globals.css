@@ -12776,3 +12776,40 @@ body:has(.bk-embedded) {
 .svc-tab-lede {
   margin: 0 0 14px;
 }
+/* A service's days: the pill switch's track, but any number can be chosen;
+   chosen days are raised like the switch's choice. Wraps on a phone. */
+.admin-app .sh-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px 0 10px;
+  padding: 4px;
+  border-radius: 22px;
+  background: var(--side);
+  box-shadow: var(--well);
+}
+.admin-app .sh-days .filter-chip {
+  min-width: 46px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--faint);
+}
+.admin-app .sh-days .filter-chip[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 3px 6px -2px rgba(32, 34, 33, 0.35);
+}
+.admin-app .sh-times {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.admin-app .sh-times input {
+  width: 140px;
+  flex: 0 0 auto;
+}

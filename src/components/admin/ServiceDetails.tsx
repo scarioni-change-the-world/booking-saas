@@ -7,7 +7,8 @@ import { amountDue, paymentSettingProblem, type PaymentMode } from '@/lib/paymen
 import type { SerializedEventType } from '@/lib/admin-serializers';
 import type { BookingMode, ServiceLocationKind } from '@/lib/db/types';
 import { SettingForm, SettingsPanel, type Setting } from './SettingsPanel';
-import { OpeningHoursCard } from './OpeningHoursCard';
+import { serviceHoursSummary, type ServiceHour } from '@/lib/service-hours';
+import { limitToServiceHours } from '@/lib/availability';
 import { GettingPaidCard, type PaymentsInfo } from './BillingCards';
 
 type Saver = (body: Record<string, unknown>) => Promise<void>;
@@ -30,6 +31,7 @@ export function ServiceDetails({
   currency,
   takesPayments,
   hours,
+  openingRules,
   packBroken,
   onSave,
   account,
@@ -42,6 +44,8 @@ export function ServiceDetails({
   takesPayments: boolean;
   /** "Monday to Friday, 9:00–17:00", or null with no hours at all. */
   hours: string | null;
+  /** The opening hours themselves, to check this service's times fit them. */
+  openingRules: ReadonlyArray<{ weekday: number; startTime: string; endTime: string }>;
   /** A pack with no size: the one service setting that stops booking. */
   packBroken: boolean;
   onSave: Saver;
@@ -114,10 +118,10 @@ export function ServiceDetails({
     {
       id: 'when',
       label: 'When',
-      value: hours ?? 'No opening hours',
+      value: hours ? serviceHoursSummary(s.bookableHours) : 'No opening hours',
       needed: hours === null,
       empty: hours === null,
-      editor: <WhenEditor slug={slug} timezone={account?.timezone ?? null} onSaved={onAccountChanged} />,
+      editor: <WhenEditor key={JSON.stringify(s.bookableHours)} slug={slug} service={s} hours={hours} openingRules={openingRules} onSave={onSave} />,
     },
   ];
 
@@ -423,17 +427,120 @@ function PaymentEditor({
   );
 }
 
+const WEEKDAYS = [
+  [1, 'Mon'],
+  [2, 'Tue'],
+  [3, 'Wed'],
+  [4, 'Thu'],
+  [5, 'Fri'],
+  [6, 'Sat'],
+  [7, 'Sun'],
+] as const;
+
 /**
- * When it can be booked: the opening hours every service shares, edited
- * right here. Changing them here changes them for every service, and the
- * line says so.
+ * When this service can be booked: whenever the business is open, or only
+ * some days and times inside the opening hours. The opening hours
+ * themselves are the business's, set on Account, and nothing here changes
+ * them: a service can narrow them, never widen them.
  */
-function WhenEditor({ slug, timezone, onSaved }: { slug: string; timezone: string | null; onSaved: () => Promise<void> }) {
-  if (!timezone) return <p className="status">Loading…</p>;
+function WhenEditor({
+  slug,
+  service,
+  hours,
+  openingRules,
+  onSave,
+}: {
+  slug: string;
+  service: SerializedEventType;
+  hours: string | null;
+  openingRules: ReadonlyArray<{ weekday: number; startTime: string; endTime: string }>;
+  onSave: Saver;
+}) {
+  const saved: ServiceHour[] | null = service.bookableHours;
+  const [limited, setLimited] = useState(!!saved && saved.length > 0);
+  const [days, setDays] = useState<number[]>(saved?.length ? [...new Set(saved.map((h) => h.weekday))] : [1, 2, 3, 4, 5]);
+  const [from, setFrom] = useState(saved?.[0]?.startTime ?? '09:00');
+  const [to, setTo] = useState(saved?.[0]?.endTime ?? '17:00');
+
+  const next: ServiceHour[] | null = limited
+    ? [...days].sort().map((weekday) => ({ weekday, startTime: from, endTime: to }))
+    : null;
+  const dirty = JSON.stringify(next) !== JSON.stringify(saved && saved.length ? saved : null);
+  // Minutes a week this service could actually be booked, inside the opening hours.
+  const weekly = [1, 2, 3, 4, 5, 6, 7].reduce((sum, d) => {
+    const open = openingRules.filter((r) => r.weekday === d);
+    return (
+      sum +
+      limitToServiceHours(open, d, next).reduce((m, w) => {
+        const [sh, sm] = w.startTime.split(':').map(Number);
+        const [eh, em] = w.endTime.split(':').map(Number);
+        return m + (eh! * 60 + em!) - (sh! * 60 + sm!);
+      }, 0)
+    );
+  }, 0);
+
+  if (!hours) {
+    return (
+      <div className="sp-form">
+        <p className="sp-purpose">
+          You have no opening hours yet, so no service can be booked. They are your business&apos;s, set once for every
+          service.
+        </p>
+        <a className="btn-secondary is-need" href={`/admin/${slug}/account#opening-hours`}>
+          Set your opening hours
+        </a>
+      </div>
+    );
+  }
+
   return (
-    <div className="sp-form">
-      <p className="sp-purpose">Within your opening hours. Every service shares them, so a change here changes them all.</p>
-      <OpeningHoursCard slug={slug} timezone={timezone} weekHref={`/admin/${slug}/week`} onSaved={() => void onSaved()} />
-    </div>
+    <SettingForm
+      purpose={`Inside your opening hours (${hours}). Choose some days or times if this service is only for them; your opening hours stay as they are.`}
+      dirty={dirty && (!limited || (days.length > 0 && from < to))}
+      save={() => onSave({ bookableHours: next })}
+    >
+      <div className="wk-mode" role="group" aria-label="When it can be booked">
+        <button type="button" className="filter-chip" aria-pressed={!limited} onClick={() => setLimited(false)}>
+          Whenever you&apos;re open
+        </button>
+        <button type="button" className="filter-chip" aria-pressed={limited} onClick={() => setLimited(true)}>
+          Only some days and times
+        </button>
+      </div>
+      {limited && (
+        <>
+          <div className="sh-days" role="group" aria-label="Days">
+            {WEEKDAYS.map(([d, label]) => (
+              <button
+                key={d}
+                type="button"
+                className="filter-chip"
+                aria-pressed={days.includes(d)}
+                onClick={() => setDays(days.includes(d) ? days.filter((x) => x !== d) : [...days, d])}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="sh-times">
+            <input aria-label="From" type="time" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <span>to</span>
+            <input aria-label="To" type="time" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <p className={`field-note${weekly === 0 ? ' field-error' : ''}`}>
+            {days.length === 0
+              ? 'Choose at least one day.'
+              : from >= to
+                ? 'The end time must be after the start time.'
+                : weekly === 0
+                  ? 'None of these times are inside your opening hours, so nobody could book it.'
+                  : `Bookable about ${Math.round((weekly / 60) * 10) / 10} h a week, where these times meet your opening hours.`}
+          </p>
+        </>
+      )}
+      <p className="field-note">
+        <a href={`/admin/${slug}/account#opening-hours`}>Your opening hours</a> are for the whole business, on Account.
+      </p>
+    </SettingForm>
   );
 }

@@ -41,6 +41,7 @@ export function serializeEventType(row: EventTypeRow) {
     depositMinor: row.deposit_minor ?? null,
     locationKind: row.location_kind,
     locationDetail: row.location_detail,
+    bookableHours: row.bookable_hours ?? null,
   };
 }
 
