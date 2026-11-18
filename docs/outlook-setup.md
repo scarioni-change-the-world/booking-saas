@@ -39,7 +39,7 @@ Redeploy. `/api/health` shows `"microsoft": true`.
 
 ## 3. Test
 
-1. Week → Your calendar → **Connect Outlook**, sign in, accept.
+1. Your calendar → **Connect Outlook** (in the side panel), sign in, accept.
 2. Put a busy event in Outlook; that time disappears from your booking page.
 3. Book a time: the event appears in Outlook, with the client in its notes.
    The client gets khloe's confirmation only (Microsoft sends nothing).

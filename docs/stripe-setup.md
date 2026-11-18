@@ -10,8 +10,8 @@ khloe uses Stripe for two separate things:
    takes no cut. The business pays Stripe's fee.
 
 Without the keys below the app works exactly as before: trials and free
-access as they are, and the Account page says paying online isn't switched
-on yet. Do all of this in **test mode** first (the toggle top right in the
+access as they are, and Your business → Settings says paying online isn't
+switched on yet. Do all of this in **test mode** first (the toggle top right in the
 Stripe dashboard), then repeat it in live mode with live keys.
 
 ## 1. Run migration 0032
@@ -85,20 +85,21 @@ Redeploy afterwards.
 
 ## 7. Try it (test mode)
 
-- **Subscribing**: Account → Your plan → Subscribe. Card `4242 4242 4242 4242`,
+- **Subscribing**: Your business → Settings → Plan → Subscribe. Card `4242 4242 4242 4242`,
   any future date, any CVC. A business still in its trial is not charged
   until the trial ends.
-- **Connecting**: Account → Getting paid → Connect Stripe. In test mode
-  Stripe offers to skip the forms.
-- **A paid service**: the service’s settings → Booking rules → Paid when
-  booking → Pay in full or Deposit. Book it on your page; pay with 4242….
-  The booking appears on the Week once paid.
+- **Connecting**: Your business → Settings → Getting paid → Connect Stripe
+  (or a service → 1 About it → Payment, which returns to that service). In
+  test mode Stripe offers to skip the forms.
+- **A paid service**: Your services → the service → 1 About it → Payment →
+  In full or Deposit. Book it on your page; pay with 4242…. The booking
+  appears on Your calendar once paid.
 - **Refunds**: cancel that booking from the manage link more than your
-  minimum notice ahead → refunded. Cancel from the Week → always refunded.
+  minimum notice ahead → refunded. Cancel from Your calendar → always refunded.
   Programme sessions are not refunded; they go back to the client's
   balance.
 - **A failed card after the trial**: `4000 0000 0000 0341` attaches but
-  fails when charged — the Account page shows "Update your card", and the
+  fails when charged — Your business → Settings shows "Update your card", and the
   booking page stays open while Stripe retries.
 
 ## How it behaves
