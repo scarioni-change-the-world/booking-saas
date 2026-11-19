@@ -304,7 +304,7 @@ export default function SignupPage() {
             <a href="/privacy" target="_blank" rel="noreferrer">
               privacy policy
             </a>
-            . khloe does not process payments: they go through Stripe.
+            . Your clients’ payments go through your own Stripe account, not khloe.
           </span>
         </label>
 

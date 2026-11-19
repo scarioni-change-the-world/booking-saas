@@ -7,7 +7,7 @@ import { TERMS_VERSION } from '@/lib/terms';
  * it. People who book through a business are not party to it; their side
  * is the privacy policy and whatever the business itself tells them.
  *
- * Written to match what the code does (payments only ever processed by Stripe, never by khloe; the 30-day trial, the founding price, €15 a month VAT included
+ * Written to match what the code does (clients' payments to businesses processed by Stripe on the business's own account, never by khloe; subscription claims handled by khloe support; the 30-day trial, the founding price, €15 a month VAT included
  * through Stripe, the lock rather than deletion when a plan ends, client
  * payments on the business's own Stripe account with no cut taken). Not
  * legal advice: someone qualified should read it, particularly the
@@ -102,33 +102,39 @@ export default function TermsPage() {
               before then.
             </li>
             <li>
+              Stripe processes the card payment for your subscription on our behalf, but the subscription is with
+              khloe. For any question or claim about it (a charge, an invoice, a refund, a cancellation), write to
+              us at <a href="mailto:support@khloe.io">support@khloe.io</a> and we will sort it out with you.
+            </li>
+            <li>
               If a payment fails and Stripe cannot collect it, or your trial ends without a subscription, your
               account is locked until you subscribe. Locking deletes nothing.
             </li>
           </ul>
         </Section>
 
-        <Section title="Payments go through Stripe, not khloe">
+        <Section title="Your clients’ payments go through Stripe, not khloe">
           <p>
-            <strong>khloe does not process, receive or hold any payment.</strong> Every payment made through
-            khloe is processed by Stripe (Stripe Payments Europe, Limited, and its affiliates), under Stripe’s own
-            terms: your khloe subscription, and the payments your clients make to you. khloe only tells Stripe what
-            is being paid for and shows you the result. It is an intermediary between you, your clients and Stripe,
-            never a party to the payment itself.
+            <strong>khloe does not process, receive or hold your clients’ payments.</strong> If you ask clients to
+            pay when they book, the payment is taken on <strong>your own Stripe account</strong> and processed by
+            Stripe (Stripe Payments Europe, Limited, and its affiliates), under Stripe’s terms, which you accept with
+            Stripe when you connect it. khloe only tells Stripe what is being paid for and shows you the result. It
+            is an intermediary between you, your clients and Stripe, never a party to the payment itself.
           </p>
           <p>
-            If you ask clients to pay when they book, the payment is taken on <strong>your own Stripe account</strong>,
-            under Stripe’s terms, which you accept with Stripe when you connect it. The money goes straight to you,
-            and the sale is between you and your client. khloe takes no commission on it. You are responsible for
-            your prices, your refunds and cancellation rules, any taxes on what you sell, and what you promise your
-            clients.
+            The money goes straight to you, and the sale is between you and your client. khloe takes no commission
+            on it. You are responsible for your prices, your refunds and cancellation rules, any taxes on what you
+            sell, and what you promise your clients.
           </p>
           <p>
-            <strong>Any claim about a payment is made through Stripe:</strong> a charge, a refund, a dispute or
-            chargeback, a payout. For your subscription, use Manage billing or Stripe’s support. For your clients’
-            payments, use your own Stripe account. Your clients’ claims about what they paid go to you, and through
-            their card issuer to Stripe. As khloe does not process payments, it is not responsible for how Stripe
-            handles them.
+            <strong>Any claim about a client’s payment is made through Stripe:</strong> a charge, a refund, a
+            dispute or chargeback, a payout. You handle them in your own Stripe account. Your clients’ claims about
+            what they paid go to you, and through their card issuer to Stripe. As khloe does not process these
+            payments, it is not responsible for how Stripe handles them.
+          </p>
+          <p>
+            This is about your clients’ payments only. Your khloe subscription is between you and khloe: see
+            “Trial, price and payment” above.
           </p>
         </Section>
 
