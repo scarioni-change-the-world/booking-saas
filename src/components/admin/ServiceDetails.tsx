@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Lamp } from '@/components/admin/Instruments';
 import { formatMoney, parseMoney, parseOptionalMoney, priceRefusal, toMoneyInput } from '@/lib/money';
 import { LOCATION_OPTIONS, describeLocation } from '@/lib/service-location';
 import { amountDue, paymentSettingProblem, type PaymentMode } from '@/lib/payments';
@@ -336,6 +337,16 @@ function PaymentEditor({
   const [mode, setMode] = useState<PaymentMode>(service.paymentMode);
   const savedDeposit = toMoneyInput(service.depositMinor, currency);
   const [deposit, setDeposit] = useState(savedDeposit);
+  /* Just back from Stripe's onboarding (?stripe=back): say it worked, once,
+     and drop the marker so a reload does not say it again. */
+  const [justConnected, setJustConnected] = useState(false);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('stripe') !== 'back') return;
+    setJustConnected(true);
+    url.searchParams.delete('stripe');
+    window.history.replaceState(null, '', url.toString());
+  }, []);
 
   /* Not taking payments yet: connect Stripe right here, and come back here. */
   if (!takesPayments) {
@@ -379,6 +390,13 @@ function PaymentEditor({
         await onSave({ paymentMode: mode, depositMinor: mode === 'deposit' ? depositMinor : null });
       }}
     >
+      <p className="acct-line bp-readout" role={justConnected ? 'status' : undefined} style={{ margin: 0 }}>
+        <Lamp tone="live" />
+        {justConnected ? 'Stripe is connected. Now choose how clients pay for this service, and save.' : 'Stripe connected.'}{' '}
+        <a href="https://dashboard.stripe.com" target="_blank" rel="noreferrer">
+          Open Stripe
+        </a>
+      </p>
       <div className="wk-mode" role="group" aria-label="Paid when booking">
         {(
           [
