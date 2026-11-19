@@ -33,6 +33,12 @@ Stripe dashboard → **Product catalogue** → **Add product**
   subscribe at all, rather than being charged €15.
 - Save, then copy the price's id (`price_…`) → `STRIPE_PRICE_ID`
 
+Then **Settings → Managed Payments** (test and live mode each have their own):
+turn **off** "enabled by default". When it is on, Stripe refuses khloe's
+checkout with "the product tax code is missing", because Managed Payments
+(Stripe as merchant of record) needs a tax code on the product. VAT is
+decided with the accountant instead (`STRIPE_AUTOMATIC_TAX`).
+
 ## 3. Connect
 
 Stripe dashboard → **Connect** → get started, as a **platform**. Choose
