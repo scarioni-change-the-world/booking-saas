@@ -77,6 +77,7 @@ Its signing secret → `STRIPE_CONNECT_WEBHOOK_SECRET`
 | ------------------------------- | --------------------------------------------------------------------------------------- |
 | `STRIPE_SECRET_KEY`             | Developers → API keys → Secret key (`sk_test_…`, later `sk_live_…`)                     |
 | `STRIPE_PRICE_ID`               | from step 2                                                                             |
+| `STRIPE_FOUNDING_PRICE_ID`      | from step 2, the €9 founding price (without it founding businesses cannot subscribe)    |
 | `STRIPE_WEBHOOK_SECRET`         | from endpoint A                                                                         |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | from endpoint B                                                                         |
 | `STRIPE_AUTOMATIC_TAX`          | `1` to have Stripe Tax add VAT to the subscription (turn on Stripe Tax first)            |
