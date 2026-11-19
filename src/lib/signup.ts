@@ -18,6 +18,9 @@ export interface PendingBusiness {
   name: string;
   slug: string;
   timezone: string;
+  /** When the required terms box was ticked, and which terms (lib/terms.ts). */
+  termsAcceptedAt?: string;
+  termsVersion?: string;
 }
 
 /**
@@ -121,5 +124,11 @@ export function readPendingBusiness(metadata: unknown): PendingBusiness | null {
   if (typeof name !== 'string' || !name.trim()) return null;
   if (typeof slug !== 'string' || !isValidSlug(slug)) return null;
   if (typeof timezone !== 'string' || !timezone) return null;
-  return { name: name.trim().slice(0, BUSINESS_NAME_MAX), slug, timezone };
+  const { termsAcceptedAt, termsVersion } = pending;
+  return {
+    name: name.trim().slice(0, BUSINESS_NAME_MAX),
+    slug,
+    timezone,
+    ...(typeof termsAcceptedAt === 'string' && typeof termsVersion === 'string' ? { termsAcceptedAt, termsVersion } : {}),
+  };
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
 import { adminFetchJson } from '@/lib/admin-fetch';
 import { Lamp } from '@/components/admin/Instruments';
+import { openPendingTab } from '@/lib/new-tab';
 import type { BillingState } from '@/lib/subscription';
 import { STANDARD_PRICE, monthlyPrice } from '@/lib/plans';
 
@@ -27,15 +28,34 @@ export interface PaymentsInfo {
 
 const day = (iso: string) => DateTime.fromISO(iso).toFormat('d LLLL');
 
-async function go(url: string, setError: (e: string) => void, setBusy: (b: boolean) => void, body?: unknown) {
+/**
+ * Opens one of Stripe's pages in its own tab (src/lib/new-tab.ts), so this
+ * page stays put. When the person comes back to this tab, `onReturn` brings
+ * what it shows up to date with whatever they did there.
+ */
+async function go(
+  url: string,
+  setError: (e: string) => void,
+  setBusy: (b: boolean) => void,
+  body?: unknown,
+  onReturn?: () => void,
+) {
+  const tab = openPendingTab();
   setBusy(true);
   try {
     const { url: next } = await adminFetchJson<{ url: string }>(url, {
       method: 'POST',
       ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
     });
-    window.location.href = next;
+    if (!tab.go(next)) {
+      // The browser would not open a tab: go there in this one instead.
+      window.location.href = next;
+      return;
+    }
+    setBusy(false);
+    if (onReturn) window.addEventListener('focus', onReturn, { once: true });
   } catch (cause) {
+    tab.cancel();
     setError((cause as Error).message);
     setBusy(false);
   }
@@ -54,8 +74,10 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
     setJustPaid(new URLSearchParams(window.location.search).get('billing') === 'done');
   }, []);
 
-  const subscribe = () => void go(`/api/admin/${slug}/billing/checkout`, setError, setBusy);
-  const manage = () => void go(`/api/admin/${slug}/billing/portal`, setError, setBusy);
+  // Back from Stripe's tab: show the plan as it now stands.
+  const reload = () => window.location.reload();
+  const subscribe = () => void go(`/api/admin/${slug}/billing/checkout`, setError, setBusy, undefined, reload);
+  const manage = () => void go(`/api/admin/${slug}/billing/portal`, setError, setBusy, undefined, reload);
   const price = monthlyPrice(!!plan.founding);
   const trialLeft = plan.trialEndsAt ? DateTime.fromISO(plan.trialEndsAt).diffNow('days').days : 0;
 
@@ -188,7 +210,14 @@ export function GettingPaidCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, []);
 
-  const connect = () => void go(`/api/admin/${slug}/payments/connect`, setError, setBusy, returnTo ? { returnTo } : undefined);
+  /* Back from Stripe's tab: ask where the account stands now. */
+  const refresh = () => {
+    adminFetchJson(`/api/admin/${slug}/payments/status`, { method: 'POST' })
+      .then(() => onChanged())
+      .catch(() => undefined);
+  };
+  const connect = () =>
+    void go(`/api/admin/${slug}/payments/connect`, setError, setBusy, returnTo ? { returnTo } : undefined, refresh);
 
   return (
     <section className="card acct-card">

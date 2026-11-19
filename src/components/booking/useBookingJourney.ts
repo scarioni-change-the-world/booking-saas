@@ -1,5 +1,6 @@
 'use client';
 
+import { openPendingTab } from '@/lib/new-tab';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Phase, StepId } from './journey';
 import { applicableSteps, previousStep, stepIdFor } from './journey';
@@ -344,7 +345,8 @@ export function useBookingJourney(
 
     setBusy(true);
     setError(null);
-    let leaving = false;
+    // Paid when booked: Stripe's page opens in its own tab (src/lib/new-tab.ts).
+    const tab = eventType.payNow ? openPendingTab() : null;
     try {
       const result = await api.post<{
         booking: Confirmed;
@@ -363,22 +365,21 @@ export function useBookingJourney(
         source,
       });
       /* Paid when booked: the time is held and the rest happens on Stripe's
-         page, then /paid. Busy stays on so the button cannot be pressed twice
-         while the browser leaves. */
+         page, in the new tab, then /paid there. This tab says so and keeps
+         a button to open Stripe's page again, in case the tab was closed or
+         the browser would not open one. */
       if (result.checkoutUrl) {
-        if (window.self !== window.top) {
-          setCheckoutUrl(result.checkoutUrl);
-          return;
-        }
-        leaving = true;
-        window.location.href = result.checkoutUrl;
+        tab?.go(result.checkoutUrl);
+        setCheckoutUrl(result.checkoutUrl);
         return;
       }
+      tab?.cancel();
       setConfirmed(result.booking);
       setConfirmedPack(result.bookings ?? [result.booking]);
       setProgrammeLink(result.programmeLink ?? null);
       setPhase('confirmed');
     } catch (cause) {
+      tab?.cancel();
       setError((cause as Error).message);
       /* A 409 means a time went while the form was open. Back to the
          calendar with a clean slate rather than a stale grid — and for a
@@ -392,7 +393,7 @@ export function useBookingJourney(
         setPhase('time');
       }
     } finally {
-      if (!leaving) setBusy(false);
+      setBusy(false);
     }
   }
 

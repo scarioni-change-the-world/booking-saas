@@ -730,9 +730,14 @@ export function BookingExperience({ journey }: { journey: BookingJourney }) {
           )}
 
           {checkoutUrl ? (
-            <a className="btn-primary btn-full" href={checkoutUrl} target="_top">
-              Open Stripe’s secure page to pay
-            </a>
+            <>
+              <p className="bk-lede" role="status">
+                Stripe’s secure page is open in a new tab: pay there, and your time is confirmed in that tab.
+              </p>
+              <a className="btn-secondary btn-full" href={checkoutUrl} target="_blank" rel="noopener noreferrer">
+                Open Stripe’s page again
+              </a>
+            </>
           ) : (
             <button
               type="button"

@@ -120,6 +120,9 @@ export async function finishSignup(user: User, business: PendingBusiness): Promi
         timezone: business.timezone,
         ownerEmail: user.email!,
         owner: { userId: user.id, email: user.email ?? null },
+        ...(business.termsAcceptedAt && business.termsVersion
+          ? { terms: { acceptedAt: business.termsAcceptedAt, version: business.termsVersion } }
+          : {}),
       });
       // Done: nothing is waiting any more, so a second tab finds nothing to make.
       const cleared = await client.auth.admin.updateUserById(user.id, {

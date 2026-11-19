@@ -52,6 +52,8 @@ export default function SignupPage() {
       .catch(() => setFounding(false));
   }, []);
   const [error, setError] = useState<string | null>(null);
+  // Required: no account without accepting the terms (api/signup checks it too).
+  const [accepted, setAccepted] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const asked = useRef(0);
 
@@ -104,6 +106,10 @@ export default function SignupPage() {
       setError('A business already has that web address. Choose another.');
       return;
     }
+    if (!accepted) {
+      setError('Please accept the terms of service to create your account.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -116,6 +122,7 @@ export default function SignupPage() {
           email: email.trim(),
           password,
           timezone,
+          acceptTerms: accepted,
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { email?: string; error?: string };
@@ -286,6 +293,21 @@ export default function SignupPage() {
           )}
         </div>
 
+        <label className="signin-terms">
+          <input type="checkbox" required checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
+          <span>
+            I agree to the{' '}
+            <a href="/terms" target="_blank" rel="noreferrer">
+              terms of service
+            </a>{' '}
+            and the{' '}
+            <a href="/privacy" target="_blank" rel="noreferrer">
+              privacy policy
+            </a>
+            . khloe does not process payments: they go through Stripe.
+          </span>
+        </label>
+
         {error && (
           <p className="signin-error" role="alert">
             {error}
@@ -295,10 +317,6 @@ export default function SignupPage() {
         <button type="submit" className="btn-primary btn-full" disabled={busy}>
           {busy ? 'Creating your account…' : 'Create account'}
         </button>
-        <p className="signin-hint" style={{ textAlign: 'center' }}>
-          By creating an account you agree to our <a href="/terms">terms of service</a>, and to how we handle
-          data, set out in our <a href="/privacy">privacy policy</a>.
-        </p>
       </form>
 
       <p className="signin-aside">

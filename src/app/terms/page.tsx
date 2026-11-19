@@ -1,18 +1,19 @@
 import type { Metadata } from 'next';
 import { OPERATOR, WEBSITE } from '@/lib/operator';
+import { TERMS_VERSION } from '@/lib/terms';
 
 /**
  * Terms of service: the agreement between khloe and a business that uses
  * it. People who book through a business are not party to it; their side
  * is the privacy policy and whatever the business itself tells them.
  *
- * Written to match what the code does (the 30-day trial, the founding price, €15 a month VAT included
+ * Written to match what the code does (payments only ever processed by Stripe, never by khloe; the 30-day trial, the founding price, €15 a month VAT included
  * through Stripe, the lock rather than deletion when a plan ends, client
  * payments on the business's own Stripe account with no cut taken). Not
  * legal advice: someone qualified should read it, particularly the
  * liability and governing-law sections.
  */
-const LAST_UPDATED = '1 November 2026';
+const LAST_UPDATED = TERMS_VERSION;
 
 export const metadata: Metadata = {
   title: 'Terms of service — khloe',
@@ -87,12 +88,12 @@ export default function TermsPage() {
             </li>
             <li>
               After that, khloe costs <strong>€15 a month, VAT included</strong>, paid in advance through Stripe. The price you see is the price you pay. Businesses that joined while
-              our founding offer was open pay their founding price instead (shown on their Account page), for as long
+              our founding offer was open pay their founding price instead (shown in Your business → Settings → Plan), for as long
               as they keep their account. The
               subscription renews each month until you cancel it.
             </li>
             <li>
-              You can cancel at any time from Account → Manage billing. Cancelling stops the next renewal; you keep
+              You can cancel at any time from Your business → Settings → Plan → Manage billing. Cancelling stops the next renewal; you keep
               access until the end of the month you have paid for. Months already paid are not refunded, except
               where the law requires it.
             </li>
@@ -107,12 +108,27 @@ export default function TermsPage() {
           </ul>
         </Section>
 
-        <Section title="Payments from your clients">
+        <Section title="Payments go through Stripe, not khloe">
+          <p>
+            <strong>khloe does not process, receive or hold any payment.</strong> Every payment made through
+            khloe is processed by Stripe (Stripe Payments Europe, Limited, and its affiliates), under Stripe’s own
+            terms: your khloe subscription, and the payments your clients make to you. khloe only tells Stripe what
+            is being paid for and shows you the result. It is an intermediary between you, your clients and Stripe,
+            never a party to the payment itself.
+          </p>
           <p>
             If you ask clients to pay when they book, the payment is taken on <strong>your own Stripe account</strong>,
-            under Stripe’s terms, which you accept with Stripe when you connect it. The sale is between you and your
-            client. khloe takes no commission on it. You are responsible for your prices, your refunds and
-            cancellation rules, any taxes on what you sell, and what you promise your clients.
+            under Stripe’s terms, which you accept with Stripe when you connect it. The money goes straight to you,
+            and the sale is between you and your client. khloe takes no commission on it. You are responsible for
+            your prices, your refunds and cancellation rules, any taxes on what you sell, and what you promise your
+            clients.
+          </p>
+          <p>
+            <strong>Any claim about a payment is made through Stripe:</strong> a charge, a refund, a dispute or
+            chargeback, a payout. For your subscription, use Manage billing or Stripe’s support. For your clients’
+            payments, use your own Stripe account. Your clients’ claims about what they paid go to you, and through
+            their card issuer to Stripe. As khloe does not process payments, it is not responsible for how Stripe
+            handles them.
           </p>
         </Section>
 

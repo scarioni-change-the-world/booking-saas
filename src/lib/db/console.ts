@@ -86,6 +86,8 @@ export interface CreateTenantInput {
   /** An owner whose login already exists — self-serve signup, where the
    *  person creating the business is the one signed in. Skips the invite. */
   owner?: { userId: string; email: string | null };
+  /** Self-serve signup: the terms the owner accepted, and when (migration 0043). */
+  terms?: { acceptedAt: string; version: string };
 }
 
 /**
@@ -140,6 +142,7 @@ export async function createTenant(input: CreateTenantInput): Promise<TenantRow>
       timezone: input.timezone,
       trial_ends_at: trialEnds,
       ...(founding ? { founding: true } : {}),
+      ...(input.terms ? { terms_accepted_at: input.terms.acceptedAt, terms_version: input.terms.version } : {}),
     })
     .select()
     .single();

@@ -4,6 +4,7 @@ import { beginSignup, slugTaken } from '@/lib/db/signup';
 import { PLATFORM_SCOPE, enforceRateLimit } from '@/lib/rate-limit';
 import { signupProblem, BUSINESS_NAME_MAX, PASSWORD_MAX } from '@/lib/signup';
 import { sendAlreadyRegisteredEmail, sendSignupConfirmEmail } from '@/lib/signup-email';
+import { TERMS_VERSION } from '@/lib/terms';
 
 /**
  * Create an account: the first half of signing up.
@@ -33,6 +34,8 @@ export async function POST(request: Request) {
 
     const problem = signupProblem({ businessName, slug, email, password });
     if (problem) return fail(problem, 400);
+    // The required box on the form: no account without accepting the terms.
+    if (body.acceptTerms !== true) return fail('Please accept the terms of service to create your account.', 400);
 
     await enforceRateLimit(request, PLATFORM_SCOPE, 'signupRequest');
     await enforceRateLimit(request, PLATFORM_SCOPE, 'signupAddress', { subject: email });
@@ -42,7 +45,13 @@ export async function POST(request: Request) {
     const started = await beginSignup({
       email,
       password,
-      business: { name: businessName, slug, timezone },
+      business: {
+        name: businessName,
+        slug,
+        timezone,
+        termsAcceptedAt: new Date().toISOString(),
+        termsVersion: TERMS_VERSION,
+      },
       redirectTo: `${baseUrl()}/admin/welcome`,
     });
 

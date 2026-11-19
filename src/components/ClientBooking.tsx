@@ -1,5 +1,6 @@
 'use client';
 
+import { openPendingTab } from '@/lib/new-tab';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { clientThread, type HistoryBooking } from '@/lib/client-thread';
 import { useAutoResize } from './useAutoResize';
@@ -125,7 +126,8 @@ type Step =
   | 'done'
   | 'pick-time-single' // one-off booking — a single slot
   | 'booking-single'
-  | 'done-single';
+  | 'done-single'
+  | 'paying'; // Stripe's page is open in its own tab
 
 interface Props {
   slug: string;
@@ -205,6 +207,8 @@ export default function ClientBooking({ slug, token }: Props) {
   // One-off booking — a single slot.
   const [singleSlot, setSingleSlot] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<SingleBooking | null>(null);
+  // Stripe's page, opened in its own tab; kept to open it again from here.
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   const base = `/api/t/${encodeURIComponent(slug)}`;
 
@@ -372,6 +376,7 @@ export default function ClientBooking({ slug, token }: Props) {
     setBusy(true);
     setStep('booking');
     setError(null);
+    const tab = option.payNow ? openPendingTab() : null;
     try {
       const result = await postJson<{
         bookings: BatchResult['booking'][];
@@ -382,9 +387,12 @@ export default function ClientBooking({ slug, token }: Props) {
       });
       // Paid when booked: the times are held while they pay on Stripe.
       if (result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        tab?.go(result.checkoutUrl);
+        setCheckoutUrl(result.checkoutUrl);
+        setStep('paying');
         return;
       }
+      tab?.cancel();
       /* Shaped into the same results the redemption path produces, so the
          confirmation screen has one thing to render rather than two. The
          server books all of them or none, so every one of these is
@@ -399,6 +407,7 @@ export default function ClientBooking({ slug, token }: Props) {
       setRemaining(0);
       setStep('done');
     } catch (cause) {
+      tab?.cancel();
       setError((cause as Error).message);
       setStep('pick-times');
     } finally {
@@ -435,6 +444,7 @@ export default function ClientBooking({ slug, token }: Props) {
     setBusy(true);
     setStep('booking-single');
     setError(null);
+    const tab = option.payNow ? openPendingTab() : null;
     try {
       const result = await postJson<{
         booking: SingleBooking;
@@ -444,12 +454,16 @@ export default function ClientBooking({ slug, token }: Props) {
         startsAt: singleSlot,
       });
       if (result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        tab?.go(result.checkoutUrl);
+        setCheckoutUrl(result.checkoutUrl);
+        setStep('paying');
         return;
       }
+      tab?.cancel();
       setConfirmed(result.booking);
       setStep('done-single');
     } catch (cause) {
+      tab?.cancel();
       setError((cause as Error).message);
       setSingleSlot(null);
       setStep('pick-time-single');
@@ -1008,6 +1022,19 @@ export default function ClientBooking({ slug, token }: Props) {
               </button>
             </p>
           )}
+        </section>
+      )}
+
+      {step === 'paying' && checkoutUrl && (
+        <section>
+          <h1 className="bk-heading">Pay in the new tab</h1>
+          <p className="bk-lede" role="status">
+            Stripe’s secure page is open in a new tab. Your time is held for 30 minutes, and confirmed in that tab
+            once you pay.
+          </p>
+          <a className="btn-secondary btn-full" href={checkoutUrl} target="_blank" rel="noopener noreferrer">
+            Open Stripe’s page again
+          </a>
         </section>
       )}
 

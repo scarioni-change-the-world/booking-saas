@@ -24,7 +24,7 @@
  */
 const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL;
 
-export const SUPPORT_EMAIL = 'hello@khloe.io';
+export const SUPPORT_EMAIL = 'support@khloe.io';
 
 export function SignInLayout({ children }: { children: React.ReactNode }) {
   return (

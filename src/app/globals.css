@@ -697,7 +697,26 @@ a.btn-secondary {
   font-weight: 500;
   color: var(--ink);
 }
-.signin-form input {
+/* The required terms box: a plain checkbox, not a 52px field. */
+.signin-form .signin-terms {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 4px 0 18px;
+  font-weight: 400;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.signin-form .signin-terms input {
+  min-height: 0;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+.signin-form input:not([type='checkbox']) {
   min-height: 52px;
   background: var(--surface);
   border-color: var(--border);

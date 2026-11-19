@@ -31,6 +31,7 @@ const form = {
   email: 'Mara@Example.com',
   password: 'longenough',
   timezone: 'Europe/Madrid',
+  acceptTerms: true,
 };
 const post = (body: unknown) =>
   POST(
@@ -69,6 +70,13 @@ describe('POST /api/signup', () => {
     expect((await post({ ...form, password: 'short' })).status).toBe(400);
     expect((await post({ ...form, slug: 'admin' })).status).toBe(400);
     expect((await post({ ...form, timezone: 'Mars/Olympus' })).status).toBe(400);
+    expect(sent).toEqual([]);
+  });
+
+  it('refuses a sign-up whose terms box was not ticked, before anything is made', async () => {
+    const { acceptTerms: _ticked, ...unticked } = form;
+    expect((await post(unticked)).status).toBe(400);
+    expect((await post({ ...form, acceptTerms: 'yes' })).status).toBe(400);
     expect(sent).toEqual([]);
   });
 });
