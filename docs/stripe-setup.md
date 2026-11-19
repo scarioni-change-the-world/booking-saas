@@ -40,6 +40,11 @@ Stripe dashboard → **Connect** → get started, as a **platform**. Choose
 Under Connect → Settings → Branding, set the name and icon businesses see
 when they connect.
 
+Then **Settings → Developers → API policies**: set **Accounts v1 support**
+to **Enabled**. khloe creates each business's Standard account with the v1
+accounts API; newer Stripe accounts have it disabled, and "Connect Stripe"
+fails until it is on. Do it in test mode and again in live mode.
+
 ## 4. The billing portal
 
 Stripe dashboard → **Settings → Billing → Customer portal**. Turn on:
