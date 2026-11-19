@@ -77,11 +77,6 @@ export default function AccountPage() {
     void loadHours();
   }, [load, loadHours]);
 
-  /* The booking page lives on the same host as this admin (app.khloe.io),
-     so say that host rather than a guess. */
-  const [host, setHost] = useState('app.khloe.io');
-  useEffect(() => setHost(window.location.host), []);
-
   // A link to #opening-hours while already here opens that line.
   const [hashKey, setHashKey] = useState(0);
   useEffect(() => {
@@ -130,6 +125,9 @@ function accountSettings(
   load: () => Promise<void>,
   loadHours: () => Promise<void>,
 ): Setting[] {
+  /* The booking page lives on the same host as this admin (app.khloe.io).
+     Only built once the account has loaded, so always in the browser. */
+  const host = typeof window === 'undefined' ? 'app.khloe.io' : window.location.host;
   const b = account.branding;
   const look =
     b.logoUrl && b.accentColor ? 'Logo and colour' : b.logoUrl ? 'Logo' : b.accentColor ? 'Colour' : 'khloe’s plain look';
