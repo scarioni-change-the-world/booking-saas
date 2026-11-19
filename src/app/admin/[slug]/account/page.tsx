@@ -77,6 +77,11 @@ export default function AccountPage() {
     void loadHours();
   }, [load, loadHours]);
 
+  /* The booking page lives on the same host as this admin (app.khloe.io),
+     so say that host rather than a guess. */
+  const [host, setHost] = useState('app.khloe.io');
+  useEffect(() => setHost(window.location.host), []);
+
   // A link to #opening-hours while already here opens that line.
   const [hashKey, setHashKey] = useState(0);
   useEffect(() => {
@@ -156,10 +161,10 @@ function accountSettings(
     {
       id: 'address',
       label: 'Web address',
-      value: `khloe.io/${account.business.slug}`,
+      value: `${host}/${account.business.slug}`,
       editor: (
         <p className="sp-purpose">
-          Your booking page is at <b>khloe.io/{account.business.slug}</b>. It is fixed, so links you have already
+          Your booking page is at <b>{host}/{account.business.slug}</b>. It is fixed, so links you have already
           shared keep working.
         </p>
       ),

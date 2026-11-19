@@ -55,7 +55,7 @@ export default function PaidReturn({ slug, sessionId }: { slug: string; sessionI
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`/api/${encodeURIComponent(slug)}/payments/confirm`, {
+        const response = await fetch(`/api/t/${encodeURIComponent(slug)}/payments/confirm`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ sessionId }),
