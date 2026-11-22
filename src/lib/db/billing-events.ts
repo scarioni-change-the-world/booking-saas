@@ -1,5 +1,5 @@
 import { __unsafeServiceClient } from './client';
-import { billingState, type BillingSubject } from '../subscription';
+import { accountState, type BillingSubject } from '../subscription';
 import type { TenantRow } from './types';
 
 /**
@@ -26,7 +26,7 @@ type Subject = BillingSubject & Pick<TenantRow, 'id' | 'created_at'> & { foundin
 
 /** The state a business is in now, as the history records it. */
 export function eventStateOf(tenant: BillingSubject): BillingEventState {
-  return billingState(tenant);
+  return accountState(tenant);
 }
 
 /**

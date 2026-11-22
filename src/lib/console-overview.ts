@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 import { FOUNDING_PRICE_MINOR, STANDARD_PRICE_MINOR } from './plans';
-import { billingState } from './subscription';
+import { accountState } from './subscription';
 import type { BillingEventRow, BillingEventState } from './db/billing-events';
 import type { AiUsageKind, TenantPlan } from './db/types';
 
@@ -181,7 +181,7 @@ export function consoleOverview(input: OverviewInput) {
   if (!period) throw new Error('That period is not a range of days the console can show.');
   const live = tenants.filter((t) => t.status !== 'deleted');
   const stateOf = (t: OverviewTenant) =>
-    billingState({ plan: t.plan, free_access: t.freeAccess, subscription_status: t.subscriptionStatus });
+    accountState({ plan: t.plan, free_access: t.freeAccess, subscription_status: t.subscriptionStatus });
 
   const histories = events ? byTenant(events) : null;
   const historySince = events && events.length > 0 ? new Date(events[0]!.occurred_at) : null;

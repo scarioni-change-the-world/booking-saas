@@ -48,6 +48,18 @@ export interface BillingSubject {
   subscription_status?: string | null;
 }
 
+/**
+ * Where a business stands for the owner console and the billing history:
+ * the same as billingState, except that a subscription still inside its
+ * free trial (Stripe's 'trialing') is a trial, not paying. Nothing has been
+ * charged yet, so it counts in neither paying businesses nor revenue until
+ * the first payment, when Stripe moves it to 'active'.
+ */
+export function accountState(tenant: BillingSubject): BillingState {
+  const state = billingState(tenant);
+  return state === 'active' && tenant.subscription_status === 'trialing' ? 'trial' : state;
+}
+
 /** What the Account page says about paying khloe. */
 export function billingState(tenant: BillingSubject): BillingState {
   if (tenant.free_access) return 'free';

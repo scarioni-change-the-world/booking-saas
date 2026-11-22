@@ -88,6 +88,8 @@ describe('consoleOverview', () => {
           tenant({ id: 'd', plan: 'trial', subscriptionStatus: null }),
           tenant({ id: 'e', freeAccess: true }),
           tenant({ id: 'f', plan: 'cancelled', subscriptionStatus: 'canceled' }),
+          // Subscribed, but still inside the free trial: nothing charged yet.
+          tenant({ id: 'g', founding: true, subscriptionStatus: 'trialing' }),
         ],
       }),
     );

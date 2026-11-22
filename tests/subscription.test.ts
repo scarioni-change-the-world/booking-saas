@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accountState,
   subscriptionEndsAt,
   billingState,
   canStartSubscription,
@@ -102,5 +103,19 @@ describe('subscriptionEndsAt', () => {
   });
   it('is null once it has ended: then the plan says Cancelled', () => {
     expect(subscriptionEndsAt({ status: 'canceled', cancel_at: 1_790_000_000 }, 1_800_000_000)).toBeNull();
+  });
+});
+
+describe('accountState', () => {
+  it('counts a subscription inside its free trial as a trial, not paying', () => {
+    expect(accountState({ plan: 'starter', free_access: false, subscription_status: 'trialing' })).toBe('trial');
+  });
+  it('counts it as paying once Stripe has charged it', () => {
+    expect(accountState({ plan: 'starter', free_access: false, subscription_status: 'active' })).toBe('active');
+    expect(accountState({ plan: 'starter', free_access: false, subscription_status: 'past_due' })).toBe('past_due');
+  });
+  it('leaves free access and cancelled alone', () => {
+    expect(accountState({ plan: 'starter', free_access: true, subscription_status: 'trialing' })).toBe('free');
+    expect(accountState({ plan: 'cancelled', free_access: false, subscription_status: 'canceled' })).toBe('cancelled');
   });
 });

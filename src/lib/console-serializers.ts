@@ -1,5 +1,5 @@
 import type { TenantRow } from './db/types';
-import { billingState } from './subscription';
+import { accountState } from './subscription';
 
 /** camelCase, matching the same convention the tenant-admin API already uses. */
 export function serializeTenant(row: TenantRow) {
@@ -15,7 +15,7 @@ export function serializeTenant(row: TenantRow) {
     freeAccess: row.free_access,
     founding: !!row.founding,
     /** Account facts only: how the business stands with khloe's own billing. */
-    billing: billingState(row),
+    billing: accountState(row),
     renewsAt: row.subscription_current_period_end ?? null,
   };
 }
