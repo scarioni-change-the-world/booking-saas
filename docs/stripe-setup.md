@@ -33,11 +33,24 @@ Stripe dashboard → **Product catalogue** → **Add product**
   subscribe at all, rather than being charged €15.
 - Save, then copy the price's id (`price_…`) → `STRIPE_PRICE_ID`
 
-Then **Settings → Managed Payments** (test and live mode each have their own):
-turn **off** "enabled by default". When it is on, Stripe refuses khloe's
-checkout with "the product tax code is missing", because Managed Payments
-(Stripe as merchant of record) needs a tax code on the product. VAT is
-decided with the accountant instead (`STRIPE_AUTOMATIC_TAX`).
+### Tax: Managed Payments (Stripe as merchant of record)
+
+Stripe sells the subscription for khloe and works out, collects and files
+the tax in every country, for 3.5% per payment on top of Stripe's usual fees.
+Test and live mode each need it:
+
+1. The `khloe` product → **Product tax code**: *Software as a service (SaaS) -
+   business use* (`txcd_10103001`). The catalogue then shows it **Eligible**.
+2. **Settings → Managed Payments → Get started**: categories, then **Prebuilt
+   checkout** only (khloe does not use payment links).
+3. Vercel: `STRIPE_MANAGED_PAYMENTS=1`, and leave `STRIPE_AUTOMATIC_TAX` unset.
+   khloe then sends `managed_payments[enabled]=true` and none of the
+   parameters Stripe refuses with it (`lib/stripe.ts`, `checkoutTaxParams`).
+4. Test: the checkout page says "Sold through Link", the total is the price
+   with tax included (€9 / €15), and the trial days still show.
+
+Without Managed Payments, turn its "enabled by default" **off**, or Stripe
+refuses the checkout with "the product tax code is missing".
 
 ## 3. Connect
 
@@ -91,7 +104,8 @@ Its signing secret → `STRIPE_CONNECT_WEBHOOK_SECRET`
 | `STRIPE_FOUNDING_PRICE_ID`      | from step 2, the €9 founding price (without it founding businesses cannot subscribe)    |
 | `STRIPE_WEBHOOK_SECRET`         | from endpoint A                                                                         |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | from endpoint B                                                                         |
-| `STRIPE_AUTOMATIC_TAX`          | `1` to have Stripe Tax add VAT to the subscription (turn on Stripe Tax first)            |
+| `STRIPE_MANAGED_PAYMENTS`       | `1`: Stripe sells the subscription as merchant of record and handles all tax (see Tax above) |
+| `STRIPE_AUTOMATIC_TAX`          | Only without Managed Payments: `1` for Stripe Tax (turn on Stripe Tax first)            |
 
 Redeploy afterwards.
 

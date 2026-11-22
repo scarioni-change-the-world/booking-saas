@@ -102,9 +102,12 @@ export default function TermsPage() {
               before then.
             </li>
             <li>
-              Stripe processes the card payment for your subscription on our behalf, but the subscription is with
-              khloe. For any question or claim about it (a charge, an invoice, a refund, a cancellation), write to
-              us at <a href="mailto:support@khloe.io">support@khloe.io</a> and we will sort it out with you.
+              Your subscription is sold and charged through Stripe, acting as merchant of record (the payment page
+              says “Sold through Link”): Stripe takes the payment, works out and pays the tax that applies where you
+              are, and issues your receipts. The service, your account and our support are khloe’s. For any question
+              or claim about your subscription (a charge, an invoice, a refund, a cancellation), write to us at{' '}
+              <a href="mailto:support@khloe.io">support@khloe.io</a> and we will sort it out with you, together with
+              Stripe where needed.
             </li>
             <li>
               If a payment fails and Stripe cannot collect it, or your trial ends without a subscription, your

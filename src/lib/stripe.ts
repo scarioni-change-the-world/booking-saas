@@ -38,6 +38,36 @@ export function automaticTax(): boolean {
   return process.env.STRIPE_AUTOMATIC_TAX === '1';
 }
 
+/**
+ * Managed Payments (STRIPE_MANAGED_PAYMENTS=1): Stripe sells the khloe
+ * subscription as merchant of record, and works out, collects and files the
+ * tax in every country. The product needs an eligible tax code (SaaS).
+ */
+export function managedPayments(): boolean {
+  return process.env.STRIPE_MANAGED_PAYMENTS === '1';
+}
+
+/**
+ * What khloe's subscription checkout says about tax. Managed Payments wins:
+ * Stripe refuses its sessions if they carry automatic_tax, tax_id_collection
+ * or customer_update (it collects those itself), so they are never sent
+ * together. Otherwise Stripe Tax when STRIPE_AUTOMATIC_TAX=1, or nothing.
+ */
+export function checkoutTaxParams(): Pick<
+  Stripe.Checkout.SessionCreateParams,
+  'managed_payments' | 'automatic_tax' | 'customer_update' | 'tax_id_collection'
+> {
+  if (managedPayments()) return { managed_payments: { enabled: true } };
+  if (automaticTax()) {
+    return {
+      automatic_tax: { enabled: true },
+      customer_update: { address: 'auto', name: 'auto' },
+      tax_id_collection: { enabled: true },
+    };
+  }
+  return {};
+}
+
 /** The two webhook signing secrets: this account's events, and connected accounts'. */
 export function webhookSecrets(): string[] {
   return [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET].filter(

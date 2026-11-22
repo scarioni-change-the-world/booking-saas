@@ -2,7 +2,7 @@ import { fail, handleError, ok } from '@/lib/api';
 import { requireTenantAdmin } from '@/lib/auth';
 import { baseUrl } from '@/lib/base-url';
 import { updateTenantBilling } from '@/lib/db/billing';
-import { automaticTax, stripe, stripeConfigured, subscriptionPriceId } from '@/lib/stripe';
+import { checkoutTaxParams, stripe, stripeConfigured, subscriptionPriceId } from '@/lib/stripe';
 import { canStartSubscription, subscriptionToReplace } from '@/lib/subscription';
 
 /**
@@ -66,13 +66,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
         ...(trialEnd && trialEnd > twoDaysAhead ? { trial_end: trialEnd } : {}),
       },
       metadata: { tenant_id: tenant.id },
-      ...(automaticTax()
-        ? {
-            automatic_tax: { enabled: true },
-            customer_update: { address: 'auto', name: 'auto' },
-            tax_id_collection: { enabled: true },
-          }
-        : {}),
+      // Managed Payments, Stripe Tax, or neither (lib/stripe.ts).
+      ...checkoutTaxParams(),
       success_url: `${baseUrl()}/admin/${encodeURIComponent(slug)}/account?billing=done`,
       cancel_url: `${baseUrl()}/admin/${encodeURIComponent(slug)}/account`,
     });
