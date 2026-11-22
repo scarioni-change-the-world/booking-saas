@@ -16,6 +16,10 @@ export interface PlanInfo {
   founding?: boolean;
   state: BillingState;
   renewsAt: string | null;
+  /** Inside Stripe's free trial: nothing charged until renewsAt. */
+  trialing?: boolean;
+  /** Cancelled and still running: it ends on this day (migration 0044). */
+  endsAt?: string | null;
   hasCustomer: boolean;
   canSubscribe: boolean;
 }
@@ -134,16 +138,22 @@ export function PlanCard({ slug, plan }: { slug: string; plan: PlanInfo }) {
       {plan.state === 'active' && (
         <>
           <p className="acct-line">
-            {price}
-            {plan.founding ? ' (your founding price, for as long as you stay)' : ''}
-            {plan.renewsAt ? ` · renews on ${day(plan.renewsAt)}` : ''}.
+            {plan.endsAt
+              ? `Cancelled: you keep khloe until ${day(plan.endsAt)}, then it ends. Nothing more is charged.`
+              : plan.trialing && plan.renewsAt
+                ? `Free until ${day(plan.renewsAt)}, then ${price}${plan.founding ? ' (your founding price, for as long as you stay)' : ''}.`
+                : `${price}${plan.founding ? ' (your founding price, for as long as you stay)' : ''}${plan.renewsAt ? ` · renews on ${day(plan.renewsAt)}` : ''}.`}
           </p>
           {plan.hasCustomer && (
             <div className="wk-actions" style={{ marginTop: 0 }}>
               <button type="button" className="btn-secondary" disabled={busy} onClick={manage}>
                 {busy ? 'Opening Stripe…' : 'Manage billing'}
               </button>
-              <span className="field-note">Change your card, download invoices or cancel, on Stripe.</span>
+              <span className="field-note">
+                {plan.endsAt
+                  ? 'Changed your mind? Renew it there, on Stripe.'
+                  : 'Change your card, download invoices or cancel, on Stripe.'}
+              </span>
             </div>
           )}
         </>

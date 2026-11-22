@@ -18,6 +18,7 @@ type BillingPatch = Partial<
     | 'stripe_subscription_id'
     | 'subscription_status'
     | 'subscription_current_period_end'
+    | 'subscription_cancel_at'
     | 'stripe_account_id'
     | 'stripe_charges_enabled'
   >

@@ -37,6 +37,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
               founding: !!tenant.founding,
               state: billingState(tenant),
               renewsAt: tenant.subscription_current_period_end ?? null,
+              trialing: tenant.subscription_status === 'trialing',
+              endsAt: tenant.subscription_cancel_at ?? null,
               hasCustomer: !!tenant.stripe_customer_id,
               canSubscribe:
                 stripeConfigured() &&

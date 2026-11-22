@@ -68,6 +68,7 @@ export const EXPECTED_MIGRATIONS = [
   '0041_site_hits',
   '0042_service_hours',
   '0043_terms_acceptance',
+  '0044_subscription_cancel_at',
 ] as const;
 
 /**

@@ -11,7 +11,7 @@ import {
 import { completePayment, expirePayment } from './client-payments';
 import { stripe } from './stripe';
 import { recordBillingState } from './db/billing-events';
-import { canStartSubscription, planForSubscription } from './subscription';
+import { canStartSubscription, planForSubscription, subscriptionEndsAt } from './subscription';
 
 /**
  * What each Stripe event does. Every handler is safe to run twice: Stripe
@@ -105,12 +105,14 @@ async function applySubscription(sub: Stripe.Subscription): Promise<void> {
   )
     return;
   const periodEnd = sub.items?.data?.[0]?.current_period_end;
+  const cancelAt = subscriptionEndsAt(sub, periodEnd);
   const plan = planForSubscription(sub.status);
   await updateTenantBilling(tenant.id, {
     stripe_customer_id: customer,
     stripe_subscription_id: sub.id,
     subscription_status: sub.status,
     subscription_current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    subscription_cancel_at: cancelAt ? new Date(cancelAt * 1000).toISOString() : null,
     ...(plan ? { plan } : {}),
   });
   await recordBillingState({ ...tenant, subscription_status: sub.status, ...(plan ? { plan } : {}) });

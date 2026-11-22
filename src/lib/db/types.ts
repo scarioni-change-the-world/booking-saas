@@ -87,6 +87,8 @@ export interface TenantRow {
   stripe_subscription_id?: string | null;
   subscription_status?: string | null;
   subscription_current_period_end?: string | null;
+  /** A cancelled subscription's last day (migration 0044); null while it carries on. */
+  subscription_cancel_at?: string | null;
   /** Being paid by clients (migration 0032): the business's own connected
    * Stripe account, and whether Stripe lets it take payments yet. */
   stripe_account_id?: string | null;

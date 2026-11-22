@@ -144,7 +144,11 @@ function accountSettings(
   const planText = {
     free: 'Free access',
     trial: daysLeft > 0 ? `Free trial, ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : 'Free trial ended',
-    active: 'Active',
+    active: plan.endsAt
+      ? `Ends ${DateTime.fromISO(plan.endsAt).toFormat('d LLLL')}`
+      : plan.trialing && plan.renewsAt
+        ? `Free until ${DateTime.fromISO(plan.renewsAt).toFormat('d LLLL')}`
+        : 'Active',
     past_due: 'Payment failed',
     cancelled: 'Cancelled',
   }[plan.state];

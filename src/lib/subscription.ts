@@ -72,3 +72,19 @@ export function canStartSubscription(status: string | null | undefined): boolean
 export function subscriptionToReplace(status: string | null | undefined): boolean {
   return status === 'unpaid' || status === 'paused' || status === 'incomplete';
 }
+
+/**
+ * When a cancelled subscription that is still running ends, in Unix
+ * seconds, or null while it carries on. Stripe says so either with
+ * cancel_at, or with cancel_at_period_end (it ends with the current period,
+ * or the free trial).
+ */
+export function subscriptionEndsAt(
+  sub: { cancel_at?: number | null; cancel_at_period_end?: boolean | null; status?: string },
+  periodEnd: number | null | undefined,
+): number | null {
+  if (sub.status === 'canceled') return null;
+  if (sub.cancel_at) return sub.cancel_at;
+  if (sub.cancel_at_period_end && periodEnd) return periodEnd;
+  return null;
+}

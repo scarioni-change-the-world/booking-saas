@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  subscriptionEndsAt,
   billingState,
   canStartSubscription,
   planForSubscription,
@@ -86,5 +87,20 @@ describe('starting a subscription', () => {
     expect(subscriptionToReplace('incomplete')).toBe(true);
     expect(subscriptionToReplace('canceled')).toBe(false);
     expect(subscriptionToReplace(null)).toBe(false);
+  });
+});
+
+describe('subscriptionEndsAt', () => {
+  it('is null while a subscription carries on', () => {
+    expect(subscriptionEndsAt({ status: 'trialing', cancel_at: null, cancel_at_period_end: false }, 1_800_000_000)).toBeNull();
+  });
+  it('is the end of the period when cancelled at period end, trial included', () => {
+    expect(subscriptionEndsAt({ status: 'trialing', cancel_at_period_end: true }, 1_800_000_000)).toBe(1_800_000_000);
+  });
+  it('is cancel_at when Stripe gives one', () => {
+    expect(subscriptionEndsAt({ status: 'active', cancel_at: 1_790_000_000, cancel_at_period_end: false }, 1_800_000_000)).toBe(1_790_000_000);
+  });
+  it('is null once it has ended: then the plan says Cancelled', () => {
+    expect(subscriptionEndsAt({ status: 'canceled', cancel_at: 1_790_000_000 }, 1_800_000_000)).toBeNull();
   });
 });
